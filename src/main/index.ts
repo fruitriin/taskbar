@@ -4,6 +4,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png'
 import {activateWindow, getAndSubmitProcesses} from "./funcs/helper";
 
+
+
 function createWindow(): void {
   // Create the browser window.
 

@@ -10,9 +10,7 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 extraResources:
-  - resources/TaskbarHelper
-asarUnpack:
-  - resources/**
+  - 'src/main/*'
 afterSign: build/notarize.js
 win:
   executableName: taskbar
