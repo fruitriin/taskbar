@@ -1,5 +1,9 @@
-import ScreenCaptureKit
 import AppKit
+import ScreenCaptureKit
+
+let availableContent = try await SCShareableContent.excludingDesktopWindows(false,
+                                                                            onScreenWindowsOnly: true)
+
 
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
 func getWindowInfoListData() -> Data? {
@@ -32,6 +36,7 @@ func getWindowInfoListData() -> Data? {
         return nil
     }
 }
+
 
 // 使用例
 if let data = getWindowInfoListData() {

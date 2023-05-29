@@ -2,29 +2,25 @@ import { app, BrowserWindow} from "electron";
 import path from "path";
 const { spawn, exec } = require('child_process');
 import { Window } from "../../type";
+import TaskbarHelper from '../../../resources/TaskbarHelper?asset'
+import { execFile } from "child_process";
 
 
-let binaryPath;
-if (app.isPackaged) {
-  // packaged (e.g., using electron-builder)
-  binaryPath = path.join(process.resourcesPath, 'TaskbarHelper');
-} else {
-  // development
-  binaryPath = path.join(__dirname, '../../', 'TaskbarHelper');
-}
 
 export function getAndSubmitProcesses(win: BrowserWindow){
   let rawData = ""
   try {
-    const taskbarHelper = spawn( binaryPath );
-    // console.log("tick")
+    const taskbarHelper = execFile( TaskbarHelper);
+
     taskbarHelper.stdout.on("data",  (raw) => {
       rawData += raw
-
     });
+    taskbarHelper.stderr.on("data", (raw) => {
+      console.error(raw)
+    })
     taskbarHelper.on("close", async (code) => {
       await({result: (code === 0 ? "success" : "failed")})
-      win.webContents.send('process', new Buffer(rawData).toString("utf-8"))
+      win.webContents.send('process', rawData)
       rawData = ""
     })
   }catch (e) {

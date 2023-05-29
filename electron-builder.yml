@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: space.riinswork.taskbar
 productName: taskbar
 directories:
   buildResources: build
@@ -9,6 +9,8 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+extraResources:
+  - resources/TaskbarHelper
 asarUnpack:
   - resources/**
 afterSign: build/notarize.js

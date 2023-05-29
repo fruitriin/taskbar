@@ -75,6 +75,7 @@ export default {
 }
 </script>
 
-<style lang="less">
+<style lang="sass">
+@import "bulma/bulma"
 
 </style>

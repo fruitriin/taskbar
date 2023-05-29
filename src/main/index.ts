@@ -65,6 +65,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  app.setAccessibilitySupportEnabled(true)
   createWindow()
 
   app.on('activate', function () {
