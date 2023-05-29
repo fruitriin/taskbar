@@ -1,7 +1,8 @@
 import AppKit
 import ScreenCaptureKit
 
-
+// スクリーンキャプチャのアクセス要求
+CGRequestScreenCaptureAccess()
 
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
 func getWindowInfoListData() -> Data? {
@@ -36,7 +37,10 @@ func getWindowInfoListData() -> Data? {
 }
 
 
-// 使用例
+
+
+
+
 if let data = getWindowInfoListData() {
     let stdOut = FileHandle.standardOutput
     stdOut.write(data)
