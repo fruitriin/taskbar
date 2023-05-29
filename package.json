@@ -1,7 +1,7 @@
 {
-  "name": "taskbar",
+  "name": "taskbar.fm",
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "Taskbar like windows for mac",
   "main": "./out/main/index.js",
   "author": "FruitRiin",
   "build": {
