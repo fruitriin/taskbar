@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow ,ipcMain , screen} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png'
 import {activateWindow, getAndSubmitProcesses} from "./funcs/helper";
 
 
@@ -25,6 +24,7 @@ function createWindow(): void {
     // resizable: false,
     movable: false,
     maximizable: false,
+    minimizable: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
@@ -34,6 +34,7 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
+  mainWindow.setWindowButtonVisibility(false)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
