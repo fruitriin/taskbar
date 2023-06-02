@@ -7,10 +7,9 @@ import Versions from './components/Versions.vue'
 
   <div  style="display: flex;" class="">
     <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
-      <img :src="win.appIcon">
+      <img class="icon" :src="win.appIcon">
       <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
-      <div v-if="win.kCGWindowName">&nbsp;-&nbsp;</div>
-      <div>{{win.kCGWindowOwnerName}}</div>
+      <div v-else>{{win.kCGWindowOwnerName}}</div>
     </button>
   </div>
   <table>
@@ -31,7 +30,6 @@ import Versions from './components/Versions.vue'
       <td>{{win.kCGWindowName}}</td>
       <td>{{win.kCGWindowIsOnscreen}}</td>
       <td>{{win.kCGWindowSharingState}}</td>
-      <td>{{win.appIcon}}</td>
 
     </tr>
   </table>
@@ -75,7 +73,8 @@ export default defineComponent({
         if(win.kCGWindowOwnerName === "Notification Center") return false
         if(win.kCGWindowName === "Spotlight") return false
         if(win.kCGWindowOwnerName === "GoogleJapaneseInputRenderer") return false
-        if(win.kCGWindowOwnerName === "taskbar") return false
+        if(win.kCGWindowOwnerName === "taskbar.fm") return false
+        if(win.kCGWindowName === "taskbar.fm") return false
         return  true
       }).sort((win1, win2) => {
         return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
@@ -93,25 +92,19 @@ export default defineComponent({
   border-color: $grey-light !important;
   border-radius: 4px;
 }
-.button {
-  margin: 8px 3px;
-}
 
 .task {
   width: 200px;
-  display: inline-flex;
-  justify-content: left;
   white-space: initial;
 
-
-
   div {
-    width: fit-content;
+    width: 200px;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
-    word-break:break-all
+    word-break:break-all;
+    text-align: left;
   }
 }
 
