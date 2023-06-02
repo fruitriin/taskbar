@@ -14,4 +14,5 @@ export type Window = {
     "Y" : number,
     "Width" : number
   },
+  appIcon: string
 }

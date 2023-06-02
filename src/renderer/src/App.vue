@@ -7,6 +7,7 @@ import Versions from './components/Versions.vue'
 
   <div  style="display: flex;" class="">
     <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
+      <img :src="win.appIcon">
       <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
       <div v-if="win.kCGWindowName">&nbsp;-&nbsp;</div>
       <div>{{win.kCGWindowOwnerName}}</div>
@@ -30,6 +31,7 @@ import Versions from './components/Versions.vue'
       <td>{{win.kCGWindowName}}</td>
       <td>{{win.kCGWindowIsOnscreen}}</td>
       <td>{{win.kCGWindowSharingState}}</td>
+      <td>{{win.appIcon}}</td>
 
     </tr>
   </table>
