@@ -50,8 +50,8 @@ func stringify(data: Data) -> String {
 
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
 func getWindowInfoListData() -> Data? {
-    let option: CGWindowListOption = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
-    let windowsListInfo = CGWindowListCopyWindowInfo(option, kCGNullWindowID) as! [[String: AnyObject]]
+//  let option: CGWindowListOption = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
+    let windowsListInfo = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
 
     var windowInfoList: [[String: Any]] = []
 
@@ -59,25 +59,14 @@ func getWindowInfoListData() -> Data? {
         var formattedWindowInfo: [String: Any] = [:]
 
         for (key, value) in windowInfo {
-            if let stringValue = value as? String {
-                formattedWindowInfo[key] = stringValue
-            } else if let numberValue = value as? NSNumber {
-                formattedWindowInfo[key] = numberValue
-            } else if let arrayValue = value as? [AnyObject] {
-                formattedWindowInfo[key] = arrayValue
-            }
+            formattedWindowInfo[key] = value
         }
-        
+
         let pid = windowInfo["kCGWindowOwnerPID"] as! Int
         if  let icon = getIcon(pid: pid, size: 32) {
             formattedWindowInfo["appIcon"] = stringify(data: icon)
-        }else {
-//           print("Could not find app with PID \(pid)")
-//           print(formattedWindowInfo)
-       }
-           
-        
-        
+        }
+
         windowInfoList.append(formattedWindowInfo)
     }
 

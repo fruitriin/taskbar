@@ -12,15 +12,17 @@ import Versions from './components/Versions.vue'
       <div v-else>{{win.kCGWindowOwnerName}}</div>
     </button>
   </div>
+  <hr>
   <table>
     <tr>
-      <th>WindowOwner</th>
-      <th>OwnerPID</th>
-      <th>WindowNumber</th>
-      <th>WindowLayer</th>
-      <th>WindowName</th>
-      <th> WindowOnScreen</th>
-      <th>kCGWindowSharingState</th>
+      <td>WindowOwner</td>
+      <td>OwnerPID</td>
+      <td>WindowNumber</td>
+      <td>WindowLayer</td>
+      <td>WindowName</td>
+      <td> WindowOnScreen</td>
+      <td>kCGWindowSharingState</td>
+      <td>WindowBounds</td>
     </tr>
     <tr v-for="win in filteredWindows" @click="acticveWindow( win)">
       <td >{{win.kCGWindowOwnerName}}</td>
@@ -30,6 +32,7 @@ import Versions from './components/Versions.vue'
       <td>{{win.kCGWindowName}}</td>
       <td>{{win.kCGWindowIsOnscreen}}</td>
       <td>{{win.kCGWindowSharingState}}</td>
+      <td>{{win.kCGWindowBounds}}</td>
 
     </tr>
   </table>
@@ -67,6 +70,9 @@ export default defineComponent({
   computed: {
     filteredWindows(){
       return this.windows?.filter(win => {
+        if(!win.kCGWindowIsOnscreen) return false
+        if(win.kCGWindowBounds?.Height === 0) return false
+        if(win.kCGWindowBounds?.Width === 0) return false
         if(win.kCGWindowName === "Item-0") return false
         if(win.kCGWindowOwnerName === "Window Server") return false
         if(win.kCGWindowOwnerName === "コントロールセンター") return false
@@ -96,6 +102,7 @@ export default defineComponent({
 .task {
   width: 200px;
   white-space: initial;
+  margin: 8px 4px;
 
   div {
     width: 200px;
