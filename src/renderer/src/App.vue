@@ -64,7 +64,9 @@ export default defineComponent({
   },
   methods: {
     acticveWindow(win: Window){
-      window.electronAPI.sendActiveWindow({...win})
+      console.log("call renderer")
+
+      window.electronAPI.sendActiveWindow(JSON.parse(JSON.stringify(win)))
     }
   },
   computed: {
