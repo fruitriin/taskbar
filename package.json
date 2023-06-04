@@ -4,26 +4,6 @@
   "description": "Taskbar like windows for mac",
   "main": "./out/main/index.js",
   "author": "FruitRiin",
-  "build": {
-    "appId": "space.riinswork.taskbar",
-    "mac": {
-      "extraResources": [
-        {
-          "from":"resources/TaskbarHelper",
-          "to": "TaskbarHelper"
-        }
-      ],
-      "category": "public.app-category.productivity",
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "hardenedRuntime" : true,
-      "gatekeeperAssess": false,
-      "identity": false
-    }
-  },
-  "dmg": {
-    "sign": false
-  },
   "homepage": "https://www.electronjs.org",
   "scripts": {
     "format": "prettier --write .",
@@ -46,6 +26,7 @@
     "@electron-toolkit/preload": "^1.0.3",
     "@electron-toolkit/utils": "^1.0.2",
     "electron-updater": "^5.3.0"
+
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
