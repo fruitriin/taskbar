@@ -1,34 +1,4 @@
-# taskbar
+#Taskbar.fm (for mac)
+aim to make taskbar for use mac
 
-An Electron application with Vue and TypeScript
-
-## Recommended IDE Setup
-
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
-
-## Project Setup
-
-### Install
-
-```bash
-$ npm install
-```
-
-### Development
-
-```bash
-$ npm run dev
-```
-
-### Build
-
-```bash
-# For windows
-$ npm run build:win
-
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
-```
+![スクリーンショット 2023-06-02 10 18 56](https://github.com/fruitriin/taskbar/assets/18308639/e7138e77-6557-4150-904e-2bf52063b26c)
