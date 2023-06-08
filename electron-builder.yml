@@ -21,8 +21,8 @@ mac:
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  "hardenedRuntime": true,
-  "gatekeeperAssess": false,
+  hardenedRuntime: true
+  gatekeeperAssess: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 appImage:
