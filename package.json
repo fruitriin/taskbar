@@ -22,6 +22,9 @@
     "afterSign": "scripts/notarize.js",
     "install-app": "cp -a dist/mac-arm64/taskbar.fm.app /Applications/taskbar.fm.app"
   },
+  "dmg": {
+    "sign": false
+  },
   "dependencies": {
     "@electron-toolkit/preload": "^1.0.3",
     "@electron-toolkit/utils": "^1.0.2",
