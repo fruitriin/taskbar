@@ -10,7 +10,8 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 extraResources:
-  - 'resources/TaskbarHelper'
+  - from: "resources/TaskbarHelper"
+    to: "TaskbarHelper"
 afterPack: build/afterPack.js
 afterSign: build/notarize.js
 mac:

@@ -23,7 +23,7 @@ jobs:
         run: |
           echo ${{ secrets.CERT }} > encoded.txt
           base64 -d encoded.txt >> ~/.cert.p12
-
+      - run: yarn helper
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
