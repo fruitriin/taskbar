@@ -73,8 +73,12 @@ export default defineComponent({
     filteredWindows(){
       return this.windows?.filter(win => {
         if(!win.kCGWindowIsOnscreen) return false
-        if(win.kCGWindowBounds?.Height === 0) return false
-        if(win.kCGWindowBounds?.Width === 0) return false
+        if(win.kCGWindowBounds?.Height < 40) return false
+        if(win.kCGWindowBounds?.Width < 40) return false
+        if(win.kCGWindowOwnerName === "Dock") return false
+        if(win.kCGWindowOwnerName === "DockHelper") return false
+        if(win.kCGWindowOwnerName === "screencapture") return false
+        if(win.kCGWindowOwnerName === "スクリーンショット") return false
         if(win.kCGWindowName === "Item-0") return false
         if(win.kCGWindowOwnerName === "Window Server") return false
         if(win.kCGWindowOwnerName === "コントロールセンター") return false
