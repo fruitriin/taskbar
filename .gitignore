@@ -3,5 +3,7 @@ dist
 out
 *.log*
 
+.DS_Store
+
 .idea
 .env
