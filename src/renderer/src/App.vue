@@ -3,46 +3,45 @@ import Versions from './components/Versions.vue'
 </script>
 
 <template>
-  <div class="container is-fluid has-text-white has-background-dark" style="height: 100%">
+  <div class="container has-text-white has-background-dark" style="height: 100%">
+    <div :style="buttonContainerStyle" class="">
+      <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
+        <img class="icon" :src="win.appIcon">
+        <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
+        <div v-else>{{win.kCGWindowOwnerName}}</div>
+      </button>
+    </div>
+    <hr>
+    <div class="debug-control-container">
+      <label class="checkbox"><input type="checkbox" v-model="filters" value="isNotOnScreen" />画面に表示してないもの</label>
+      <label class="checkbox"><input type="checkbox" v-model="filters" value="hiddenByTaskbar" />taskbarに隠れてしまうもの</label>
+      <label class="checkbox"><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label>
+      <label class="checkbox"><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label>
+    </div>
+    <table>
+      <tr>
+        <td>WindowOwner</td>
+        <td>OwnerPID</td>
+        <td>WindowNumber</td>
+        <td>WindowLayer</td>
+        <td>WindowName</td>
+        <td> WindowOnScreen</td>
+        <td>kCGWindowSharingState</td>
+        <td>WindowBounds</td>
+      </tr>
+      <tr v-for="win in filteredWindows" @click="acticveWindow( win)">
+        <td >{{win.kCGWindowOwnerName}}</td>
+        <td>{{win.kCGWindowOwnerPID}}</td>
+        <td>{{win.kCGWindowNumber}}</td>
+        <td>{{ win.kCGWindowLayer }}</td>
+        <td>{{win.kCGWindowName}}</td>
+        <td>{{win.kCGWindowIsOnscreen}}</td>
+        <td>{{win.kCGWindowSharingState}}</td>
+        <td>{{win.kCGWindowBounds}}</td>
 
-  <div  style="display: flex;" class="">
-    <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
-      <img class="icon" :src="win.appIcon">
-      <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
-      <div v-else>{{win.kCGWindowOwnerName}}</div>
-    </button>
-  </div>
-  <hr>
-  <div class="debug-control-container">
-    <label class="checkbox"><input type="checkbox" v-model="filters" value="isNotOnScreen" />画面に表示してないもの</label>
-    <label class="checkbox"><input type="checkbox" v-model="filters" value="hiddenByTaskbar" />taskbarに隠れてしまうもの</label>
-    <label class="checkbox"><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label>
-    <label class="checkbox"><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label>
-  </div>
-  <table>
-    <tr>
-      <td>WindowOwner</td>
-      <td>OwnerPID</td>
-      <td>WindowNumber</td>
-      <td>WindowLayer</td>
-      <td>WindowName</td>
-      <td> WindowOnScreen</td>
-      <td>kCGWindowSharingState</td>
-      <td>WindowBounds</td>
-    </tr>
-    <tr v-for="win in filteredWindows" @click="acticveWindow( win)">
-      <td >{{win.kCGWindowOwnerName}}</td>
-      <td>{{win.kCGWindowOwnerPID}}</td>
-      <td>{{win.kCGWindowNumber}}</td>
-      <td>{{ win.kCGWindowLayer }}</td>
-      <td>{{win.kCGWindowName}}</td>
-      <td>{{win.kCGWindowIsOnscreen}}</td>
-      <td>{{win.kCGWindowSharingState}}</td>
-      <td>{{win.kCGWindowBounds}}</td>
-
-    </tr>
-  </table>
-  <Versions></Versions>
+      </tr>
+    </table>
+    <Versions></Versions>
   </div>
 
 </template>
@@ -77,6 +76,13 @@ export default defineComponent({
     }
   },
   computed: {
+    buttonContainerStyle(): object {
+      return {
+        display: "flex",
+        // FIXME: it should be controlled by layoutType, like: vertical-layout: column, horizontal-layout: row
+        "flex-direction": "column",
+      }
+    },
     filteredWindows(){
       return this.windows?.filter(win => {
         if (!this.filters.includes("isNotOnScreen") && !win.kCGWindowIsOnscreen) return false
