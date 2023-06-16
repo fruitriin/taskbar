@@ -13,6 +13,12 @@ import Versions from './components/Versions.vue'
     </button>
   </div>
   <hr>
+  <div class="debug-control-container">
+    <label class="checkbox"><input type="checkbox" v-model="filters" value="isNotOnScreen" />画面に表示してないもの</label>
+    <label class="checkbox"><input type="checkbox" v-model="filters" value="hiddenByTaskbar" />taskbarに隠れてしまうもの</label>
+    <label class="checkbox"><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label>
+    <label class="checkbox"><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label>
+  </div>
   <table>
     <tr>
       <td>WindowOwner</td>
@@ -54,7 +60,8 @@ declare global {
 export default defineComponent({
   data(){
     return {
-      windows: null as Window[] | null
+      windows: null as Window[] | null,
+      filters: []
     }
   },
   mounted() {
@@ -72,21 +79,21 @@ export default defineComponent({
   computed: {
     filteredWindows(){
       return this.windows?.filter(win => {
-        if(!win.kCGWindowIsOnscreen) return false
-        if(win.kCGWindowBounds?.Height < 40) return false
-        if(win.kCGWindowBounds?.Width < 40) return false
-        if(win.kCGWindowOwnerName === "Dock") return false
-        if(win.kCGWindowOwnerName === "DockHelper") return false
-        if(win.kCGWindowOwnerName === "screencapture") return false
-        if(win.kCGWindowOwnerName === "スクリーンショット") return false
-        if(win.kCGWindowName === "Item-0") return false
-        if(win.kCGWindowOwnerName === "Window Server") return false
-        if(win.kCGWindowOwnerName === "コントロールセンター") return false
-        if(win.kCGWindowOwnerName === "Notification Center") return false
-        if(win.kCGWindowName === "Spotlight") return false
-        if(win.kCGWindowOwnerName === "GoogleJapaneseInputRenderer") return false
-        if(win.kCGWindowOwnerName === "taskbar.fm") return false
-        if(win.kCGWindowName === "taskbar.fm") return false
+        if (!this.filters.includes("isNotOnScreen") && !win.kCGWindowIsOnscreen) return false
+        if (!this.filters.includes("hiddenByTaskbar") && win.kCGWindowBounds?.Height < 40) return false
+        if (!this.filters.includes("hiddenByTaskbar") && win.kCGWindowBounds?.Width < 40) return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "Dock") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "DockHelper") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "screencapture") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "スクリーンショット") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowName === "Item-0") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "Window Server") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "コントロールセンター") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "Notification Center") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowName === "Spotlight") return false
+        if (!this.filters.includes("utilities") && win.kCGWindowOwnerName === "GoogleJapaneseInputRenderer") return false
+        if (!this.filters.includes("taskbar") && win.kCGWindowOwnerName === "taskbar.fm") return false
+        if (!this.filters.includes("taskbar") && win.kCGWindowName === "taskbar.fm") return false
         return  true
       }).sort((win1, win2) => {
         return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
