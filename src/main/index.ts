@@ -3,7 +3,16 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import {activateWindow, getAndSubmitProcesses} from "./funcs/helper";
 
+type layoutType = "right" | "left" | "bottom";
 
+function windowPosition(display: Electron.Display, type: layoutType): { width: number, height: number, x: number, y: number} {
+  return {
+    width: type === "bottom" ? display.workArea.width : 200,
+    height: type !== "bottom" ? display.workArea.height: 50,
+    x: 0,
+    y: type === "bottom" ? display.workArea.height : 0
+  }
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -11,10 +20,6 @@ function createWindow(): void {
   const primaryDisplay = screen.getPrimaryDisplay()
 
   const mainWindow = new BrowserWindow({
-    width: primaryDisplay.workArea.width,
-    height: 50,
-    x: 0,
-    y: primaryDisplay.workArea.height,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -28,7 +33,7 @@ function createWindow(): void {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-
+    ...windowPosition(primaryDisplay, "left"),
   })
 
   mainWindow.on('ready-to-show', () => {
