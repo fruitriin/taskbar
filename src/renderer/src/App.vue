@@ -12,35 +12,15 @@ import Versions from './components/Versions.vue'
       </button>
     </div>
     <hr>
-    <div class="debug-control-container">
+    <div class="debug-control-container" v-if="debug">
       <label class="checkbox"><input type="checkbox" v-model="filters" value="isNotOnScreen" />画面に表示してないもの</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="hiddenByTaskbar" />taskbarに隠れてしまうもの</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label>
     </div>
-    <table>
-      <tr>
-        <td>WindowOwner</td>
-        <td>OwnerPID</td>
-        <td>WindowNumber</td>
-        <td>WindowLayer</td>
-        <td>WindowName</td>
-        <td> WindowOnScreen</td>
-        <td>kCGWindowSharingState</td>
-        <td>WindowBounds</td>
-      </tr>
-      <tr v-for="win in filteredWindows" @click="acticveWindow( win)">
-        <td >{{win.kCGWindowOwnerName}}</td>
-        <td>{{win.kCGWindowOwnerPID}}</td>
-        <td>{{win.kCGWindowNumber}}</td>
-        <td>{{ win.kCGWindowLayer }}</td>
-        <td>{{win.kCGWindowName}}</td>
-        <td>{{win.kCGWindowIsOnscreen}}</td>
-        <td>{{win.kCGWindowSharingState}}</td>
-        <td>{{win.kCGWindowBounds}}</td>
 
-      </tr>
-    </table>
+    <Debug v-if="debug" :windows="filteredWindows" />
+
     <Versions></Versions>
   </div>
 
@@ -50,6 +30,7 @@ import Versions from './components/Versions.vue'
 <script lang="ts">
 import { Window } from "../../type";
 import { defineComponent } from "vue";
+import Debug from "./components/Debug.vue"
 declare global {
   interface Window {
     electronAPI: any;
@@ -57,8 +38,12 @@ declare global {
 }
 
 export default defineComponent({
+  components: {
+    Debug
+  },
   data(){
     return {
+      debug: false,
       windows: null as Window[] | null,
       filters: []
     }
@@ -116,6 +101,10 @@ export default defineComponent({
   border: solid 2px;
   border-color: $grey-light !important;
   border-radius: 4px;
+}
+
+.checkbox:hover {
+  color: white;
 }
 
 .task {
