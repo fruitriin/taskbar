@@ -20,7 +20,7 @@ import Versions from './components/Versions.vue'
     </div>
 
     <Debug v-if="debug" :windows="filteredWindows" />
-
+    <Debug :windows="invertWindows" />
     <Versions></Versions>
   </div>
 
@@ -67,6 +67,11 @@ export default defineComponent({
         // FIXME: it should be controlled by layoutType, like: vertical-layout: column, horizontal-layout: row
         "flex-direction": "column",
       }
+    },
+    invertWindows(){
+      return this.windows?.filter(win =>{
+        return !this.filteredWindows.includes(win)
+      })
     },
     filteredWindows(){
       return this.windows?.filter(win => {
