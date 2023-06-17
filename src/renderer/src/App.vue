@@ -3,7 +3,7 @@ import Versions from './components/Versions.vue'
 </script>
 
 <template>
-  <div class="container has-text-white has-background-dark" style="height: 100%">
+  <div class="container has-text-white has-background-dark" style="height: 100%; max-width: 100%;">
     <div :style="buttonContainerStyle" class="">
       <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
         <img class="icon" :src="win.appIcon">
@@ -65,7 +65,7 @@ export default defineComponent({
       return {
         display: "flex",
         // FIXME: it should be controlled by layoutType, like: vertical-layout: column, horizontal-layout: row
-        "flex-direction": "column",
+        // "flex-direction": "column",
       }
     },
     invertWindows(){
