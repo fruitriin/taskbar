@@ -49,6 +49,8 @@ export default defineComponent({
     }
   },
   mounted() {
+    // 雰囲気はこう　今は setLayoutしたら再起動が必要
+    window.electronAPI.setLayout("bottom")
     window.electronAPI.process((event, value) => {
       this.windows = JSON.parse(value)
     })

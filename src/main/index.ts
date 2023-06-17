@@ -3,7 +3,19 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import {activateWindow, getAndSubmitProcesses} from "./funcs/helper";
 
+import Store from "electron-store"
+
+const store = new Store({defaults :{
+    layout: "bottom"
+  }})
+
+
 type layoutType = "right" | "left" | "bottom";
+
+function setLayout(layout: layoutType): void{
+  store.set("layout", layout)
+
+}
 
 function windowPosition(display: Electron.Display, type: layoutType): { width: number, height: number, x: number, y: number} {
   return {
@@ -33,7 +45,7 @@ function createWindow(): void {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    ...windowPosition(primaryDisplay, "left"),
+    ...windowPosition(primaryDisplay, store.get("layout")),
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -101,4 +113,9 @@ app.on('window-all-closed', () => {
 ipcMain.on('activeWindow', (event, windowId) => {
   console.log("called?", windowId)
   activateWindow(windowId)
+});
+
+ipcMain.on('setLayout', (_event, layout: layoutType) => {
+  console.log(layout)
+  setLayout(layout)
 });
