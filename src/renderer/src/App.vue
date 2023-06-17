@@ -20,7 +20,7 @@ import Versions from './components/Versions.vue'
     </div>
 
     <Debug v-if="debug" :windows="filteredWindows" />
-    <Debug :windows="invertWindows" />
+    <Debug v-if="debug" :windows="invertWindows" />
     <Versions></Versions>
   </div>
 
