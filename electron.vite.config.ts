@@ -12,7 +12,12 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      watch: {}
+      watch: {},
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/preload.ts')
+        }
+      }
     }
   },
   renderer: {
