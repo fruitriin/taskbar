@@ -1,28 +1,31 @@
-import { app, shell, BrowserWindow ,ipcMain , screen} from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import {activateWindow, getAndSubmitProcesses} from "@/funcs/helper";
+import { activateWindow, getAndSubmitProcesses } from '@/funcs/helper'
 
-import Store from "electron-store"
+import Store from 'electron-store'
 
-const store = new Store({defaults :{
-    layout: "bottom"
-  }})
+const store = new Store({
+  defaults: {
+    layout: 'bottom'
+  }
+})
 
+type LayoutType = 'right' | 'left' | 'bottom'
 
-type LayoutType = "right" | "left" | "bottom";
-
-function setLayout(layout: LayoutType): void{
-  store.set("layout", layout)
-
+function setLayout(layout: LayoutType): void {
+  store.set('layout', layout)
 }
 
-function windowPosition(display: Electron.Display, type: LayoutType): { width: number, height: number, x: number, y: number} {
+function windowPosition(
+  display: Electron.Display,
+  type: LayoutType
+): { width: number; height: number; x: number; y: number } {
   return {
-    width: type === "bottom" ? display.workArea.width : 200,
-    height: type !== "bottom" ? display.workArea.height: 50,
+    width: type === 'bottom' ? display.workArea.width : 200,
+    height: type !== 'bottom' ? display.workArea.height : 50,
     x: 0,
-    y: type === "bottom" ? display.workArea.height : 0
+    y: type === 'bottom' ? display.workArea.height : 0
   }
 }
 
@@ -36,7 +39,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     },
-    titleBarStyle: "hiddenInset",
+    titleBarStyle: 'hiddenInset',
     autoHideMenuBar: true,
     // resizable: false,
     movable: false,
@@ -45,7 +48,7 @@ function createWindow(): void {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    ...windowPosition(primaryDisplay, store.get("layout") as LayoutType),
+    ...windowPosition(primaryDisplay, store.get('layout') as LayoutType)
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -68,7 +71,6 @@ function createWindow(): void {
   setInterval(() => {
     getAndSubmitProcesses(mainWindow)
   }, 1000)
-
 }
 
 // This method will be called when Electron has finished
@@ -107,15 +109,13 @@ app.on('window-all-closed', () => {
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
 
-
-
 // レンダラープロセスからのメッセージを受信する
 ipcMain.on('activeWindow', (_event, windowId) => {
-  console.log("called?", windowId)
+  console.log('called?', windowId)
   activateWindow(windowId)
-});
+})
 
 ipcMain.on('setLayout', (_event, layout: LayoutType) => {
   console.log(layout)
   setLayout(layout)
-});
+})

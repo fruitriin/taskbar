@@ -1,3 +1,2 @@
-import { exposeElectronAPI} from '@electron-toolkit/preload'
+import { exposeElectronAPI } from '@electron-toolkit/preload'
 exposeElectronAPI()
-
