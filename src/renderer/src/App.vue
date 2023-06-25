@@ -3,69 +3,51 @@ import Versions from './components/Versions.vue'
 </script>
 
 <template>
-  <div class="container is-fluid has-text-white has-background-dark" style="height: 100%">
-
-  <div  style="display: flex;" class="">
-    <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
-      <img class="icon" :src="win.appIcon">
-      <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
-      <div v-else>{{win.kCGWindowOwnerName}}</div>
-    </button>
-  </div>
-    <div v-if="false">
+  <div class="container has-text-white has-background-dark" style="height: 100%; max-width: 100%;">
+    <div :style="buttonContainerStyle" class="">
+      <button class="button task is-dark" @click="acticveWindow( win)" v-for="win in filteredWindows" :key="win.kCGWindowOwnerPID + win.kCGWindowNumber">
+        <img class="icon" :src="win.appIcon">
+        <div v-if="win.kCGWindowName" >{{win.kCGWindowName}}</div>
+        <div v-else>{{win.kCGWindowOwnerName}}</div>
+      </button>
+    </div>
     <hr>
-
-    <div class="debug-control-container">
+    <div class="debug-control-container" v-if="debug">
       <label class="checkbox"><input type="checkbox" v-model="filters" value="isNotOnScreen" />画面に表示してないもの</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="hiddenByTaskbar" />taskbarに隠れてしまうもの</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label>
       <label class="checkbox"><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label>
     </div>
-    <table>
-      <tr>
-        <td>WindowOwner</td>
-        <td>OwnerPID</td>
-        <td>WindowNumber</td>
-        <td>WindowLayer</td>
-        <td>WindowName</td>
-        <td> WindowOnScreen</td>
-        <td>kCGWindowSharingState</td>
-        <td>WindowBounds</td>
-      </tr>
-      <tr v-for="win in filteredWindows" @click="acticveWindow( win)">
-        <td >{{win.kCGWindowOwnerName}}</td>
-        <td>{{win.kCGWindowOwnerPID}}</td>
-        <td>{{win.kCGWindowNumber}}</td>
-        <td>{{ win.kCGWindowLayer }}</td>
-        <td>{{win.kCGWindowName}}</td>
-        <td>{{win.kCGWindowIsOnscreen}}</td>
-        <td>{{win.kCGWindowSharingState}}</td>
-        <td>{{win.kCGWindowBounds}}</td>
 
-      </tr>
-    </table>
+    <Debug v-if="debug" :windows="filteredWindows" />
+    <Debug v-if="debug" :windows="invertWindows" />
     <Versions></Versions>
-    </div>
   </div>
 </template>
 
 
 <script lang="ts">
-import { Electron as hoge } from "./utils";
+import { Electron  } from "./utils";
 
 import { MacWindow } from "../../type";
 import { defineComponent } from "vue";
-
+import Debug from "./components/Debug.vue"
 
 export default defineComponent({
+  components: {
+    Debug
+  },
   data(){
     return {
       windows: null as MacWindow[] | null,
+      debug: false,
       filters: []
     }
   },
   mounted() {
-    hoge.listen('process',(event, value) => {
+    Electron.send("setLayout", "bottom")
+    Electron.listen('process',(event, value) => {
+      // 雰囲気はこう 今は setLayoutしたら再起動が必要
       this.windows = JSON.parse(value)
     })
   },
@@ -73,10 +55,22 @@ export default defineComponent({
     acticveWindow(win: Window){
       console.log("call renderer")
 
-      hoge.send('activeWindow', JSON.parse(JSON.stringify(win)))
+      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
   },
   computed: {
+    buttonContainerStyle(): object {
+      return {
+        display: "flex",
+        // FIXME: it should be controlled by layoutType, like: vertical-layout: column, horizontal-layout: row
+        // "flex-direction": "column",
+      }
+    },
+    invertWindows(){
+      return this.windows?.filter(win =>{
+        return !this.filteredWindows.includes(win)
+      })
+    },
     filteredWindows(){
       return this.windows?.filter(win => {
         if (!this.filters.includes("isNotOnScreen") && !win.kCGWindowIsOnscreen) return false
@@ -110,6 +104,10 @@ export default defineComponent({
   border: solid 2px;
   border-color: $grey-light !important;
   border-radius: 4px;
+}
+
+.checkbox:hover {
+  color: white;
 }
 
 .task {
