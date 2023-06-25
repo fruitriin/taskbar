@@ -6,8 +6,13 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
-      watch: {}
-    }
+      watch: {},
+    },
+    resolve: {
+      alias: {
+        '@': resolve('src/main/')
+      }
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

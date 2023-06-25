@@ -5,6 +5,7 @@
     "composite": true,
     "types": ["electron-vite/node"],
     "esModuleInterop": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": "**/*"
     }
