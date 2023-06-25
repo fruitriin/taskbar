@@ -1,4 +1,4 @@
-export type Window = {
+export type MacWindow = {
   "kCGWindowLayer" : number,
   "kCGWindowName" : string,
   "kCGWindowMemoryUsage" : number,

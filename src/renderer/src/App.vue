@@ -49,23 +49,27 @@ import Versions from './components/Versions.vue'
 
 
 <script lang="ts">
-import { Window } from "../../type";
-import { defineComponent } from "vue";
+import { ElectronAPI } from '@electron-toolkit/preload'
+
+
 declare global {
   interface Window {
-    electronAPI: any;
+    electron: ElectronAPI
   }
 }
+import { MacWindow } from "../../type";
+import { defineComponent } from "vue";
+
 
 export default defineComponent({
   data(){
     return {
-      windows: null as Window[] | null,
+      windows: null as MacWindow[] | null,
       filters: []
     }
   },
   mounted() {
-    window.electronAPI.process((event, value) => {
+    window.electron.ipcRenderer.on('process',(event, value) => {
       this.windows = JSON.parse(value)
     })
   },
@@ -73,7 +77,7 @@ export default defineComponent({
     acticveWindow(win: Window){
       console.log("call renderer")
 
-      window.electronAPI.sendActiveWindow(JSON.parse(JSON.stringify(win)))
+      window.electron.ipcRenderer.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
   },
   computed: {
