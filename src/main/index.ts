@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow ,ipcMain , screen} from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import {activateWindow, getAndSubmitProcesses} from "./funcs/helper";
+import {activateWindow, getAndSubmitProcesses} from "@/funcs/helper";
 
 import Store from "electron-store"
 
@@ -10,14 +10,14 @@ const store = new Store({defaults :{
   }})
 
 
-type layoutType = "right" | "left" | "bottom";
+type LayoutType = "right" | "left" | "bottom";
 
-function setLayout(layout: layoutType): void{
+function setLayout(layout: LayoutType): void{
   store.set("layout", layout)
 
 }
 
-function windowPosition(display: Electron.Display, type: layoutType): { width: number, height: number, x: number, y: number} {
+function windowPosition(display: Electron.Display, type: LayoutType): { width: number, height: number, x: number, y: number} {
   return {
     width: type === "bottom" ? display.workArea.width : 200,
     height: type !== "bottom" ? display.workArea.height: 50,
@@ -45,7 +45,7 @@ function createWindow(): void {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    ...windowPosition(primaryDisplay, store.get("layout")),
+    ...windowPosition(primaryDisplay, store.get("layout") as LayoutType),
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -115,7 +115,7 @@ ipcMain.on('activeWindow', (_event, windowId) => {
   activateWindow(windowId)
 });
 
-ipcMain.on('setLayout', (_event, layout: layoutType) => {
+ipcMain.on('setLayout', (_event, layout: LayoutType) => {
   console.log(layout)
   setLayout(layout)
 });

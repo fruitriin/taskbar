@@ -1,7 +1,7 @@
 import { app, BrowserWindow} from "electron";
 import path from "path";
 const { spawn, exec } = require('child_process');
-import { MacWindow } from "../../type";
+import { MacWindow } from "@/type";
 
 
 let binaryPath;
