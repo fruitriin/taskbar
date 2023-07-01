@@ -20,7 +20,7 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux --config",
     "afterSign": "scripts/notarize.js",
-    "install-app": "cp -a dist/mac-arm64/taskbar.fm.app /Applications/taskbar.fm.app"
+    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-arm64/taskbar.fm.app /Applications/taskbar.fm.app"
   },
   "dmg": {
     "sign": false
