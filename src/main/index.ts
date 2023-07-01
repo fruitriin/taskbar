@@ -13,6 +13,8 @@ const store = new Store({
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
+let mainWindow:BrowserWindow
+
 function setLayout(layout: LayoutType): void {
   store.set('layout', layout)
 }
@@ -22,10 +24,10 @@ function windowPosition(
   type: LayoutType
 ): { width: number; height: number; x: number; y: number } {
   return {
-    width: type === 'bottom' ? display.workArea.width : 200,
-    height: type !== 'bottom' ? display.workArea.height : 50,
-    x: 0,
-    y: type === 'bottom' ? display.workArea.height : 0
+    width: type === 'bottom' ? display.workArea.width : 210,
+    height: type !== 'bottom' ? display.workArea.height : 60,
+    x: type === "right" ? display.workArea.width - 210 : 0,
+    y: type === 'bottom' ? display.workArea.height - 35 : 0
   }
 }
 
@@ -34,7 +36,7 @@ function createWindow(): void {
 
   const primaryDisplay = screen.getPrimaryDisplay()
 
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -95,6 +97,21 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  // レンダラープロセスからのメッセージを受信する
+  ipcMain.on('activeWindow', (_event, windowId) => {
+    console.log('called?', windowId)
+    activateWindow(windowId)
+  })
+
+  ipcMain.on('setLayout', (_event, layout: LayoutType) => {
+
+    setLayout(layout)
+    const primaryDisplay = screen.getPrimaryDisplay()
+    const position = windowPosition(primaryDisplay, layout)
+    mainWindow.setBounds(position)
+  })
+
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -104,18 +121,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
-})
-
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
-
-// レンダラープロセスからのメッセージを受信する
-ipcMain.on('activeWindow', (_event, windowId) => {
-  console.log('called?', windowId)
-  activateWindow(windowId)
-})
-
-ipcMain.on('setLayout', (_event, layout: LayoutType) => {
-  console.log(layout)
-  setLayout(layout)
 })

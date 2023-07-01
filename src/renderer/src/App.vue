@@ -3,47 +3,59 @@ import Versions from './components/Versions.vue'
 </script>
 
 <template>
-  <div class="container has-text-white has-background-dark" style="height: 100%; max-width: 100%">
-    <div :style="buttonContainerStyle" class="">
+  <div :class="layout">
+    <div  class="tasks">
       <button
-        class="button task is-dark"
+        class="button task"
         @click="acticveWindow(win)"
         v-for="win in filteredWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
       >
         <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName">{{ win.kCGWindowName }}</div>
-        <div v-else>{{ win.kCGWindowOwnerName }}</div>
+        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
     </div>
-    <hr />
-    <div class="debug-control-container" v-if="debug">
-      <label class="checkbox"
-        ><input
-          type="checkbox"
-          v-model="filters"
-          value="isNotOnScreen"
-        />画面に表示してないもの</label
-      >
-      <label class="checkbox"
-        ><input
-          type="checkbox"
-          v-model="filters"
-          value="hiddenByTaskbar"
-        />taskbarに隠れてしまうもの</label
-      >
-      <label class="checkbox"
-        ><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label
-      >
-      <label class="checkbox"
-        ><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label
-      >
-    </div>
+    <div class="submenu">
+      <div class="select">
+        <select v-model="layout">
+          <option value="left">left</option>
+          <option value="bottom">bottom</option>
+          <option value="right">right</option>
+        </select>
+      </div>
+      <Debug v-if="debug" :windows="filteredWindows" />
+      <Debug v-if="debug" :windows="invertWindows" />
+      <Versions v-if="debug"></Versions>
 
-    <Debug v-if="debug" :windows="filteredWindows" />
-    <Debug v-if="debug" :windows="invertWindows" />
-    <Versions></Versions>
+    </div>
   </div>
+
+  <hr />
+  <div class="debug-control-container" v-if="debug">
+    <label class="checkbox"
+    ><input
+      type="checkbox"
+      v-model="filters"
+      value="isNotOnScreen"
+    />画面に表示してないもの</label
+    >
+    <label class="checkbox"
+    ><input
+      type="checkbox"
+      v-model="filters"
+      value="hiddenByTaskbar"
+    />taskbarに隠れてしまうもの</label
+    >
+    <label class="checkbox"
+    ><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label
+    >
+    <label class="checkbox"
+    ><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label
+    >
+  </div>
+
+
 </template>
 
 <script lang="ts">
@@ -53,6 +65,9 @@ import { MacWindow } from '../../type'
 import { defineComponent } from 'vue'
 import Debug from './components/Debug.vue'
 
+type LayoutType = 'right' | 'left' | 'bottom'
+
+
 export default defineComponent({
   components: {
     Debug
@@ -61,11 +76,18 @@ export default defineComponent({
     return {
       windows: null as MacWindow[] | null,
       debug: false,
-      filters: []
+      filters: [],
+      layout: "bottom" as LayoutType,
+    }
+  },
+  watch:{
+    layout(value){
+      console.log(value)
+      Electron.send("setLayout", value)
     }
   },
   mounted() {
-    Electron.send('setLayout', 'bottom')
+    Electron.send("setLayout", "bottom")
     Electron.listen('process', (event, value) => {
       // 雰囲気はこう 今は setLayoutしたら再起動が必要
       this.windows = JSON.parse(value)
@@ -79,13 +101,6 @@ export default defineComponent({
     }
   },
   computed: {
-    buttonContainerStyle(): object {
-      return {
-        display: 'flex'
-        // FIXME: it should be controlled by layoutType, like: vertical-layout: column, horizontal-layout: row
-        // "flex-direction": "column",
-      }
-    },
     invertWindows() {
       return this.windows?.filter((win) => {
         return !this.filteredWindows.includes(win)
@@ -142,20 +157,50 @@ export default defineComponent({
 </script>
 
 <style lang="scss">
-@import 'bulma/bulma';
 
-.button.is-dark {
-  border: solid 2px;
-  border-color: $grey-light !important;
-  border-radius: 4px;
-}
 
 .checkbox:hover {
   color: white;
 }
 
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 100%;
+  .tasks {
+    display: flex;
+  }
+  .submenu {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.left , .right {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .tasks {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .submenu {
+    align-items: flex-end;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+
+    .select , .select select{
+      width: 100%;
+    }
+  }
+}
+
 .task {
-  width: 200px;
+  max-width: 200px;
   white-space: initial;
   margin: 8px 4px;
 
@@ -169,4 +214,79 @@ export default defineComponent({
     text-align: left;
   }
 }
+
+
+</style>
+
+<style lang="scss">
+.button {
+  user-select: none;
+  display: flex;
+  vertical-align: center;
+  align-items: center;
+  line-height: 1.5;
+  font-size: 1rem;
+  height: 2.5em;
+  color: #fff;
+  cursor: pointer;
+  justify-content: center;
+  padding: calc(0.5em - 1px) 1em;
+  white-space: nowrap;
+  background-color: hsl(0, 0%, 21%);
+  border: solid 2px  hsl(0, 0%, 71%);
+  border-radius: 4px;
+
+  .icon:first-child:not(:last-child) {
+    margin-left: calc(-0.5em - 1px);
+    margin-right: 0.25em;
+    height: 1.5em;
+    width: 1.5em;
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+  }
+}
+
+.select {
+  display: inline-block;
+  max-width: 100%;
+  position: relative;
+  vertical-align: top;
+  height: 2.5em;
+  color: black;
+
+  select {
+    align-items: center;
+    box-shadow: none;
+    height: 2.5em;
+    justify-content: flex-start;
+    line-height: 1.5;
+    position: relative;
+    vertical-align: top;
+
+    padding: calc(0.75em - 1px) calc(0.5em - 1px) 2.5em calc(0.5em - 1px);
+    cursor: pointer;
+    display: block;
+    font-size: 1em;
+    max-width: 100%;
+    outline: none;
+    background-color: hsl(0, 0%, 100%);
+    border-color: hsl(0, 0%, 86%);
+    border-radius: 4px;
+
+  }
+}
+</style>
+
+<style lang="sass">
+/*! bulma.io v0.9.4 | MIT License | github.com/jgthms/bulma */
+@import "bulma/sass/utilities/_all"
+//@import "bulma/sass/base/_all"
+//@import "bulma/sass/elements/_all"
+@import "bulma/sass/form/_all"
+@import "bulma/sass/components/_all"
+//@import "bulma/sass/grid/_all"
+//@import "bulma/sass/helpers/_all"
+//@import "bulma/sass/layout/_all"
+
 </style>
