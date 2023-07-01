@@ -1,6 +1,6 @@
 {
   "name": "taskbar.fm",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Taskbar like windows for mac",
   "main": "./out/main/index.js",
   "author": "FruitRiin",
