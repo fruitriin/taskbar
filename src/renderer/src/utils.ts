@@ -1,8 +1,11 @@
 import { ElectronAPI, IpcRendererEvent } from '@electron-toolkit/preload'
-
 declare global {
   interface Window {
     electron: ElectronAPI
+    store: {
+      granted: boolean
+      layout: string
+    }
   }
 }
 

@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { activateWindow, getAndSubmitProcesses } from '@/funcs/helper'
 
 import Store from 'electron-store'
+import { grantPermission } from "./funcs/helper";
 
 const store = new Store({
   defaults: {
@@ -14,10 +15,6 @@ const store = new Store({
 type LayoutType = 'right' | 'left' | 'bottom'
 
 let mainWindow:BrowserWindow
-
-function setLayout(layout: LayoutType): void {
-  store.set('layout', layout)
-}
 
 function windowPosition(
   display: Electron.Display,
@@ -100,16 +97,20 @@ app.whenReady().then(() => {
 
   // レンダラープロセスからのメッセージを受信する
   ipcMain.on('activeWindow', (_event, windowId) => {
-    console.log('called?', windowId)
     activateWindow(windowId)
   })
 
   ipcMain.on('setLayout', (_event, layout: LayoutType) => {
 
-    setLayout(layout)
+    store.set('layout', layout)
     const primaryDisplay = screen.getPrimaryDisplay()
     const position = windowPosition(primaryDisplay, layout)
     mainWindow.setBounds(position)
+  })
+
+  ipcMain.on('grantPermission', () => {
+    grantPermission()
+    store.set("granted", true)
   })
 
 })

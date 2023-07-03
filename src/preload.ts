@@ -2,22 +2,28 @@ import { exposeElectronAPI } from '@electron-toolkit/preload'
 exposeElectronAPI()
 import * as electron from "electron"
 
-import * as Store from 'electron-store';
+import  Store from 'electron-store';
+
+const store = new Store({
+  defaults: {
+    granted: false
+  }
+})
+
 
 declare global {
   interface Window {
-    store: Store
+    store: typeof store
   }
 }
-
 if (process.contextIsolated) {
   try {
-    electron.contextBridge.exposeInMainWorld('store', () => new Store());
+    electron.contextBridge.exposeInMainWorld('store', store.store);
   }
   catch (error) {
     console.error(error);
   }
 }
 else {
-  window.store = new Store();
+  window.store = store;
 }

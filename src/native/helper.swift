@@ -1,8 +1,9 @@
 import AppKit
 import ScreenCaptureKit
-
-// スクリーンキャプチャのアクセス要求
-CGRequestScreenCaptureAccess()
+import Foundation
+import ApplicationServices
+import Cocoa
+import CoreGraphics
 
 extension NSBitmapImageRep {
     func png() -> Data? {
@@ -84,7 +85,23 @@ func getWindowInfoListData() -> Data? {
 
 
 
-if let data = getWindowInfoListData() {
-    let stdOut = FileHandle.standardOutput
-    stdOut.write(data)
+let arguments = CommandLine.arguments
+guard arguments.count > 1 else {
+    print("引数が必要です")
+    exit(0)
+}
+// 第1引数の値によって処理を分岐
+let option = arguments[1]
+switch option {
+case "grant":
+    // スクリーンキャプチャのアクセス要求
+    CGRequestScreenCaptureAccess()
+case "list":
+
+    if let data = getWindowInfoListData() {
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(data)
+    }
+default:
+    print("default")
 }
