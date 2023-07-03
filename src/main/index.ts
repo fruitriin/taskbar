@@ -24,7 +24,7 @@ function windowPosition(
     width: type === 'bottom' ? display.workArea.width : 210,
     height: type !== 'bottom' ? display.workArea.height : 60,
     x: type === "right" ? display.workArea.width - 210 : 0,
-    y: type === 'bottom' ? display.workArea.height - 35 : 0
+    y: type === 'bottom' ? display.workArea.height : 0
   }
 }
 
