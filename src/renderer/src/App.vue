@@ -4,6 +4,9 @@ import Versions from './components/Versions.vue'
 
 <template>
   <div :class="layout">
+    <div class="permissions">
+      <button v-if="!granted" @click="grant" class="button">タイトルを取得</button>
+    </div>
     <div  class="tasks">
       <button
         class="button task"
@@ -24,14 +27,15 @@ import Versions from './components/Versions.vue'
           <option value="right">right</option>
         </select>
       </div>
-      <Debug v-if="debug" :windows="filteredWindows" />
-      <Debug v-if="debug" :windows="invertWindows" />
-      <Versions v-if="debug"></Versions>
+
 
     </div>
   </div>
 
   <hr />
+  <Debug v-if="debug" :windows="filteredWindows" />
+  <Debug v-if="debug" :windows="invertWindows" />
+  <Versions v-if="debug"></Versions>
   <div class="debug-control-container" v-if="debug">
     <label class="checkbox"
     ><input
@@ -64,9 +68,7 @@ import { Electron } from './utils'
 import { MacWindow } from '../../type'
 import { defineComponent } from 'vue'
 import Debug from './components/Debug.vue'
-
 type LayoutType = 'right' | 'left' | 'bottom'
-
 
 export default defineComponent({
   components: {
@@ -75,29 +77,32 @@ export default defineComponent({
   data() {
     return {
       windows: null as MacWindow[] | null,
-      debug: false,
+      debug: true,
       filters: [],
       layout: "bottom" as LayoutType,
+      granted: window.store.granted,
     }
   },
   watch:{
     layout(value){
-      console.log(value)
       Electron.send("setLayout", value)
     }
   },
   mounted() {
-    Electron.send("setLayout", "bottom")
+    this.layout = window.store.layout
     Electron.listen('process', (event, value) => {
       // 雰囲気はこう 今は setLayoutしたら再起動が必要
       this.windows = JSON.parse(value)
     })
   },
   methods: {
-    acticveWindow(win: Window) {
-      console.log('call renderer')
-
-      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
+    grant(){
+      Electron.send("grantPermission")
+      this.granted = true
+    },
+    async acticveWindow(win: Window) {
+      await this.$nextTick()
+        Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
   },
   computed: {
@@ -137,6 +142,11 @@ export default defineComponent({
             win.kCGWindowOwnerName === 'Notification Center'
           )
             return false
+          if (
+            !this.filters.includes('utilities') &&
+            win.kCGWindowOwnerName === 'Finder' && win.kCGWindowName === ""
+          )
+            return false
           if (!this.filters.includes('utilities') && win.kCGWindowName === 'Spotlight') return false
           if (
             !this.filters.includes('utilities') &&
@@ -157,7 +167,11 @@ export default defineComponent({
 </script>
 
 <style lang="scss">
-
+.permissions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .checkbox:hover {
   color: white;
@@ -169,6 +183,7 @@ export default defineComponent({
   width: 100%;
   max-width: 100%;
   .tasks {
+    width: 100%;
     display: flex;
   }
   .submenu {
