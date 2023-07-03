@@ -15,7 +15,7 @@ if (app.isPackaged) {
 export function getAndSubmitProcesses(win: BrowserWindow): void {
   let rawData = ''
   try {
-    const taskbarHelper = spawn(binaryPath)
+    const taskbarHelper = spawn(binaryPath, ["list"])
     // console.log("tick")
     taskbarHelper.stdout.on('data', (raw) => {
       rawData += raw
@@ -35,16 +35,31 @@ export function getAndSubmitProcesses(win: BrowserWindow): void {
   }
 }
 
+export function grantPermission(): void{
+  spawn(binaryPath, ["grant"])
+}
+
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {
-  const script =
-    `tell application "System Events" to set frontmost of (first application process whose unix id is ${window.kCGWindowOwnerPID}) to true\n` +
-    `tell application "System Events" to perform action "AXRaise" of window ${window.kCGWindowNumber} of (first application process whose unix id is ${window.kCGWindowOwnerPID})`
+  const script = "" +
+`tell application "System Events"
+    set targetProcess to first application process whose unix id is ${window.kCGWindowOwnerPID}
+    set targetAppWindows to windows of targetProcess
+    set frontmost of targetProcess to true
+    repeat with currentWindow in targetAppWindows
+       if name of currentWindow contains "${window.kCGWindowName}" then
+          perform action "AXRaise" of currentWindow
+       end if
+
+    end repeat
+end tell
+`
   exec(`osascript -e '${script}'`, (error, _stdout, _stderr) => {
     if (error) {
       console.error(`Error executing AppleScript: ${error}`)
       return
     }
-    // console.log(stdout);
+    // console.log(_stderr);
+    // console.log(_stdout);
   })
 }
