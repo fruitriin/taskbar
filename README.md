@@ -1,5 +1,11 @@
 # Taskbar.fm (for mac)
-aim to make taskbar for use mac
+aim to make taskbar for use mac  
+Macにタスクバーをつけます（Windowsのような！）
+
+
+<center>
+![TaskBar](https://raw.githubusercontent.com/fruitriin/taskbar/master/resources/taskbar-logo.png)
+</center>
 
 ![スクリーンショット 2023-06-02 10 18 56](https://github.com/fruitriin/taskbar/assets/18308639/e7138e77-6557-4150-904e-2bf52063b26c)
 
@@ -13,3 +19,5 @@ Apple(Mac)がそう定めているので付与してあげてください。
 Q. Dockと場所がかぶってしまいました  
 A. Dockの場所を移動しましょう（横とか）    
 さらに最小サイズにして、普段は非表示にもしています。  
+
+タスクバーくんは強い！
