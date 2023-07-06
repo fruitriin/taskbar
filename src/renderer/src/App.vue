@@ -101,8 +101,7 @@ export default defineComponent({
       this.granted = true
     },
     async acticveWindow(win: Window) {
-      await this.$nextTick()
-        Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
+      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
   },
   computed: {

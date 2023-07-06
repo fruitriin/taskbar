@@ -39,15 +39,18 @@ export function grantPermission(): void{
   spawn(binaryPath, ["grant"])
 }
 
+import { escape } from "html-escaper";
+
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {
-  const script = "" +
-`tell application "System Events"
+  const script =
+  `tell application "System Events"
     set targetProcess to first application process whose unix id is ${window.kCGWindowOwnerPID}
     set targetAppWindows to windows of targetProcess
     set frontmost of targetProcess to true
+
     repeat with currentWindow in targetAppWindows
-       if name of currentWindow contains "${window.kCGWindowName}" then
+       if name of currentWindow contains "${escape(window.kCGWindowName)}" then
           perform action "AXRaise" of currentWindow
        end if
 
