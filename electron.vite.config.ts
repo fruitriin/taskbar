@@ -7,6 +7,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       watch: {},
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/main.ts')
+        }
+      }
     },
     resolve: {
       alias: {
