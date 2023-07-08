@@ -28,7 +28,27 @@ function windowPosition(
   }
 }
 
-function createWindow(): void {
+function createOptionWindow(){
+  const optionWindow = new BrowserWindow({
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    },
+    // resizable: false,
+    skipTaskbar: true,
+    show: false,
+  })
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + "#option")
+  } else {
+    optionWindow.loadFile(join(__dirname, '../renderer/index.html#option'))
+  }
+  optionWindow.on('ready-to-show', () => {
+    optionWindow.show()
+  })
+}
+
+function createWindow() {
   // Create the browser window.
 
   const primaryDisplay = screen.getPrimaryDisplay()
@@ -88,6 +108,7 @@ app.whenReady().then(() => {
 
   app.setAccessibilitySupportEnabled(true)
   createWindow()
+  createOptionWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
