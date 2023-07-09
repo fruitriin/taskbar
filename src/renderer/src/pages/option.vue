@@ -45,12 +45,9 @@ type LayoutType = 'right' | 'left' | 'bottom'
 export default {
   data() {
     return {
-      layout: 'bottom' as LayoutType,
+      layout: window.store.layout,
       filters: window.store.filters
     }
-  },
-  mounted() {
-    this.layout = window.store.layout
   },
   methods: {
     clearSetting() {

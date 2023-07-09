@@ -26,9 +26,10 @@ export function getAndSubmitProcesses(win: BrowserWindow): void {
       console.error(raw)
     })
     taskbarHelper.on('close', async (code) => {
-      await { result: code === 0 ? 'success' : 'failed' }
-      win.webContents.send('process', new Buffer(rawData).toString('utf-8'))
-      rawData = ''
+      if ((await code) === 0) {
+        win.webContents.send('process', new Buffer(rawData).toString('utf-8'))
+        rawData = ''
+      }
     })
   } catch (e) {
     console.log(e)
