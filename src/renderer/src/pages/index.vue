@@ -48,7 +48,7 @@ export default defineComponent({
       icon,
       windows: null as MacWindow[] | null,
       debug: true,
-      layout: 'bottom' as LayoutType,
+      layout: window.store.layout,
       granted: window.store.granted,
       filters: window.store.filters
     }
@@ -80,8 +80,6 @@ export default defineComponent({
   },
   watch: {},
   mounted() {
-    this.layout = window.store.layout
-    this.filters = window.store.filters
     Electron.listen('setLayout', (event, value) => {
       this.layout = value
     })
@@ -110,6 +108,15 @@ export default defineComponent({
   margin: 0 8px;
   align-items: center;
 }
+.left,
+.right {
+  .icon {
+    display: flex;
+    justify-content: center;
+    margin: 8px;
+  }
+}
+
 .permissions {
   display: flex;
   align-items: center;
@@ -123,11 +130,11 @@ export default defineComponent({
 .bottom {
   display: flex;
   justify-content: space-between;
-  width: 100%;
-  max-width: 100%;
+  width: fit-content;
   .tasks {
     width: 100%;
     display: flex;
+    flex-wrap: wrap;
   }
   .submenu {
     display: flex;
@@ -163,21 +170,6 @@ export default defineComponent({
   max-width: 200px;
   white-space: initial;
   margin: 8px 4px;
-
-  div {
-    width: 200px;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    overflow: hidden;
-    word-break: break-all;
-    text-align: left;
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-.button {
   user-select: none;
   display: flex;
   vertical-align: center;
@@ -194,7 +186,7 @@ export default defineComponent({
   border: solid 2px hsl(0, 0%, 71%);
   border-radius: 4px;
 
-  .icon:first-child:not(:last-child) {
+  .icon {
     margin-left: calc(-0.5em - 1px);
     margin-right: 0.25em;
     height: 1.5em;
@@ -202,6 +194,16 @@ export default defineComponent({
     align-items: center;
     display: inline-flex;
     justify-content: center;
+  }
+
+  .name {
+    max-width: 200px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+    word-break: break-all;
+    text-align: left;
   }
 }
 </style>
