@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { activateWindow, getAndSubmitProcesses } from '@/funcs/helper'
 
 import Store from 'electron-store'
-import { grantPermission } from "./funcs/helper";
+import { grantPermission } from './funcs/helper'
 
 const store = new Store({
   defaults: {
@@ -14,7 +14,7 @@ const store = new Store({
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
-let mainWindow:BrowserWindow
+let mainWindow: BrowserWindow
 
 function windowPosition(
   display: Electron.Display,
@@ -23,12 +23,12 @@ function windowPosition(
   return {
     width: type === 'bottom' ? display.workArea.width : 210,
     height: type !== 'bottom' ? display.workArea.height : 60,
-    x: type === "right" ? display.workArea.width - 210 : 0,
-    y: type === 'bottom' ? display.workArea.height : 0
+    x: type === 'right' ? display.workArea.width - 210 : 0,
+    y: type === 'bottom' ? display.workArea.height - 30 : 0
   }
 }
 
-function createOptionWindow(){
+function createOptionWindow() {
   const optionWindow = new BrowserWindow({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -36,10 +36,10 @@ function createOptionWindow(){
     },
     // resizable: false,
     skipTaskbar: true,
-    show: false,
+    show: false
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + "#option")
+    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#option')
   } else {
     optionWindow.loadFile(join(__dirname, '../renderer/index.html#option'))
   }
@@ -122,18 +122,17 @@ app.whenReady().then(() => {
   })
 
   ipcMain.on('setLayout', (_event, layout: LayoutType) => {
-
     store.set('layout', layout)
     const primaryDisplay = screen.getPrimaryDisplay()
     const position = windowPosition(primaryDisplay, layout)
     mainWindow.setBounds(position)
+    mainWindow.webContents.send('setLayout', layout)
   })
 
   ipcMain.on('grantPermission', () => {
     grantPermission()
-    store.set("granted", true)
+    store.set('granted', true)
   })
-
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

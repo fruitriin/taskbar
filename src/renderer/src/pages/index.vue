@@ -1,31 +1,19 @@
 <template>
-
   <div :class="layout">
     <div class="permissions">
-      <button v-if="!granted" @click="grant" class="button">タイトルを取得</button>
+      <button v-if="!granted" class="button" @click="grant">タイトルを取得</button>
     </div>
-    <div  class="tasks">
+    <div class="tasks">
       <button
-        class="button task"
-        @click="acticveWindow(win)"
         v-for="win in filteredWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+        @click="acticveWindow(win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
-    </div>
-    <div class="submenu">
-      <div class="select">
-        <select v-model="layout">
-          <option value="left">left</option>
-          <option value="bottom">bottom</option>
-          <option value="right">right</option>
-        </select>
-      </div>
-
-
     </div>
   </div>
 
@@ -33,26 +21,26 @@
   <Debug v-if="debug" :windows="filteredWindows" />
   <Debug v-if="debug" :windows="invertWindows" />
   <Versions v-if="debug"></Versions>
-  <div class="debug-control-container" v-if="debug">
+  <div v-if="debug" class="debug-control-container">
     <label class="checkbox"
-    ><input
-      type="checkbox"
-      v-model="filters"
-      value="isNotOnScreen"
-    />画面に表示してないもの</label
+      ><input
+        v-model="filters"
+        type="checkbox"
+        value="isNotOnScreen"
+      />画面に表示してないもの</label
     >
     <label class="checkbox"
-    ><input
-      type="checkbox"
-      v-model="filters"
-      value="hiddenByTaskbar"
-    />taskbarに隠れてしまうもの</label
+      ><input
+        v-model="filters"
+        type="checkbox"
+        value="hiddenByTaskbar"
+      />taskbarに隠れてしまうもの</label
     >
     <label class="checkbox"
-    ><input type="checkbox" v-model="filters" value="utilities" />Utility 系その他</label
+      ><input v-model="filters" type="checkbox" value="utilities" />Utility 系その他</label
     >
     <label class="checkbox"
-    ><input type="checkbox" v-model="filters" value="taskbar" />taskbar</label
+      ><input v-model="filters" type="checkbox" value="taskbar" />taskbar</label
     >
   </div>
 </template>
@@ -74,29 +62,8 @@ export default defineComponent({
       windows: null as MacWindow[] | null,
       debug: true,
       filters: [],
-      layout: "bottom" as LayoutType,
-      granted: window.store.granted,
-    }
-  },
-  watch:{
-    layout(value){
-      Electron.send("setLayout", value)
-    }
-  },
-  mounted() {
-    this.layout = window.store.layout
-    Electron.listen('process', (event, value) => {
-      // 雰囲気はこう 今は setLayoutしたら再起動が必要
-      this.windows = JSON.parse(value)
-    })
-  },
-  methods: {
-    grant(){
-      Electron.send("grantPermission")
-      this.granted = true
-    },
-    async acticveWindow(win: Window) {
-      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
+      layout: 'bottom' as LayoutType,
+      granted: window.store.granted
     }
   },
   computed: {
@@ -138,7 +105,8 @@ export default defineComponent({
             return false
           if (
             !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'Finder' && win.kCGWindowName === ""
+            win.kCGWindowOwnerName === 'Finder' &&
+            win.kCGWindowName === ''
           )
             return false
           if (!this.filters.includes('utilities') && win.kCGWindowName === 'Spotlight') return false
@@ -155,6 +123,25 @@ export default defineComponent({
         .sort((win1, win2) => {
           return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
         })
+    }
+  },
+  watch: {},
+  mounted() {
+    this.layout = window.store.layout
+    Electron.listen('setLayout', (event, value) => {
+      this.layout = value
+    })
+    Electron.listen('process', (event, value) => {
+      this.windows = JSON.parse(value)
+    })
+  },
+  methods: {
+    grant() {
+      Electron.send('grantPermission')
+      this.granted = true
+    },
+    async acticveWindow(win: Window) {
+      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
   }
 })
@@ -186,7 +173,8 @@ export default defineComponent({
   }
 }
 
-.left , .right {
+.left,
+.right {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -202,7 +190,8 @@ export default defineComponent({
     display: flex;
     justify-content: center;
 
-    .select , .select select{
+    .select,
+    .select select {
       width: 100%;
     }
   }
@@ -223,8 +212,6 @@ export default defineComponent({
     text-align: left;
   }
 }
-
-
 </style>
 
 <style lang="scss" scoped>
@@ -242,7 +229,7 @@ export default defineComponent({
   padding: calc(0.5em - 1px) 1em;
   white-space: nowrap;
   background-color: hsl(0, 0%, 21%);
-  border: solid 2px  hsl(0, 0%, 71%);
+  border: solid 2px hsl(0, 0%, 71%);
   border-radius: 4px;
 
   .icon:first-child:not(:last-child) {
@@ -253,36 +240,6 @@ export default defineComponent({
     align-items: center;
     display: inline-flex;
     justify-content: center;
-  }
-}
-
-.select {
-  display: inline-block;
-  max-width: 100%;
-  position: relative;
-  vertical-align: top;
-  height: 2.5em;
-  color: black;
-
-  select {
-    align-items: center;
-    box-shadow: none;
-    height: 2.5em;
-    justify-content: flex-start;
-    line-height: 1.5;
-    position: relative;
-    vertical-align: top;
-
-    padding: calc(0.75em - 1px) calc(0.5em - 1px) 2.5em calc(0.5em - 1px);
-    cursor: pointer;
-    display: block;
-    font-size: 1em;
-    max-width: 100%;
-    outline: none;
-    background-color: hsl(0, 0%, 100%);
-    border-color: hsl(0, 0%, 86%);
-    border-radius: 4px;
-
   }
 }
 </style>

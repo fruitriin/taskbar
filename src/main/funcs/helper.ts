@@ -15,7 +15,7 @@ if (app.isPackaged) {
 export function getAndSubmitProcesses(win: BrowserWindow): void {
   let rawData = ''
   try {
-    const taskbarHelper = spawn(binaryPath, ["list"])
+    const taskbarHelper = spawn(binaryPath, ['list'])
     // console.log("tick")
     taskbarHelper.stdout.on('data', (raw) => {
       rawData += raw
@@ -35,16 +35,15 @@ export function getAndSubmitProcesses(win: BrowserWindow): void {
   }
 }
 
-export function grantPermission(): void{
-  spawn(binaryPath, ["grant"])
+export function grantPermission(): void {
+  spawn(binaryPath, ['grant'])
 }
 
-import { escape } from "html-escaper";
+import { escape } from 'html-escaper'
 
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {
-  const script =
-  `tell application "System Events"
+  const script = `tell application "System Events"
     set targetProcess to first application process whose unix id is ${window.kCGWindowOwnerPID}
     set targetAppWindows to windows of targetProcess
     set frontmost of targetProcess to true
