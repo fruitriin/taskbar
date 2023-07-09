@@ -30,8 +30,10 @@ import { MacWindow } from '../../../type'
 export default {
   props: {
     windows: {
-      type: Object as PropType<MacWindow[]>,
-      required: true
+      type: Array as PropType<MacWindow[]>,
+      default: () => {
+        return []
+      }
     }
   }
 }
