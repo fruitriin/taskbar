@@ -49,7 +49,8 @@ export default defineComponent({
       windows: null as MacWindow[] | null,
       debug: true,
       layout: 'bottom' as LayoutType,
-      granted: window.store.granted
+      granted: window.store.granted,
+      filters: window.store.filters
     }
   },
   computed: {
@@ -61,23 +62,15 @@ export default defineComponent({
     filteredWindows() {
       return this.windows
         ?.filter((win) => {
-          if (!win.kCGWindowIsOnscreen) return false
           if (win.kCGWindowBounds?.Height < 40) return false
           if (win.kCGWindowBounds?.Width < 40) return false
-          if (win.kCGWindowOwnerName === 'Dock') return false
-          if (win.kCGWindowOwnerName === 'DockHelper') return false
-          if (win.kCGWindowOwnerName === 'screencapture') return false
-          if (win.kCGWindowOwnerName === 'スクリーンショット') return false
-          if (win.kCGWindowName == 'Notification Center') return false
-          if (win.kCGWindowName === 'Item-0') return false
-          if (win.kCGWindowOwnerName === 'Window Server') return false
-          if (win.kCGWindowOwnerName === 'コントロールセンター') return false
-          if (win.kCGWindowOwnerName === 'Notification Center') return false
-          if (win.kCGWindowOwnerName === 'Finder' && win.kCGWindowName === '') return false
-          if (win.kCGWindowName === 'Spotlight') return false
-          if (win.kCGWindowOwnerName === 'GoogleJapaneseInputRenderer') return false
-          if (win.kCGWindowOwnerName === 'taskbar.fm') return false
-          if (win.kCGWindowName === 'taskbar.fm') return false
+
+          for (const filter of this.filters) {
+            for (const filterElement of filter) {
+              if (win[filterElement.property] === undefined) return false
+              if (win[filterElement.property] == filterElement.is) return false
+            }
+          }
           return true
         })
         .sort((win1, win2) => {
@@ -88,6 +81,7 @@ export default defineComponent({
   watch: {},
   mounted() {
     this.layout = window.store.layout
+    this.filters = window.store.filters
     Electron.listen('setLayout', (event, value) => {
       this.layout = value
     })

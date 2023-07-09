@@ -8,7 +8,26 @@ import { grantPermission } from './funcs/helper'
 
 const store = new Store({
   defaults: {
-    layout: 'bottom'
+    layout: 'bottom',
+    filters: [
+      [{ property: 'kCGWindowIsOnscreen', is: false }],
+      [{ property: 'kCGWindowOwnerName', is: 'Dock' }],
+      [{ property: 'kCGWindowOwnerName', is: 'DockHelper' }],
+      [{ property: 'kCGWindowOwnerName', is: 'screencapture' }],
+      [{ property: 'kCGWindowOwnerName', is: 'スクリーンショット' }],
+      [{ property: 'kCGWindowName', is: 'Notification Center' }],
+      [{ property: 'kCGWindowName', is: 'Item-0' }],
+      [{ property: 'kCGWindowOwnerName', is: 'Window Server' }],
+      [{ property: 'kCGWindowOwnerName', is: 'コントロールセンター' }],
+      [
+        { property: 'kCGWindowOwnerName', is: 'Finder' },
+        { property: 'kCGWindowName', is: '' }
+      ],
+      [{ property: 'kCGWindowName', is: 'Spotlight' }],
+      [{ property: 'kCGWindowOwnerName', is: 'GoogleJapaneseInputRenderer' }],
+      [{ property: 'kCGWindowOwnerName', is: 'taskbar.fm' }],
+      [{ property: 'kCGWindowName', is: 'taskbar.fm' }]
+    ]
   }
 })
 
@@ -28,15 +47,18 @@ function windowPosition(
   }
 }
 
+let optionWindow: BrowserWindow
 function createOptionWindow() {
-  const optionWindow = new BrowserWindow({
+  // すでにウィンドウを開いているならそれをアクティブにする
+  if (optionWindow) {
+    optionWindow.show()
+    return
+  }
+  optionWindow = new BrowserWindow({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
-    },
-    // resizable: false,
-    skipTaskbar: true,
-    show: false
+    }
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#option')
@@ -134,6 +156,9 @@ app.whenReady().then(() => {
   ipcMain.on('grantPermission', () => {
     grantPermission()
     store.set('granted', true)
+  })
+  ipcMain.on('clearSetting', () => {
+    store.clear()
   })
 })
 
