@@ -108,7 +108,6 @@ app.whenReady().then(() => {
 
   app.setAccessibilitySupportEnabled(true)
   createWindow()
-  createOptionWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -119,6 +118,9 @@ app.whenReady().then(() => {
   // レンダラープロセスからのメッセージを受信する
   ipcMain.on('activeWindow', (_event, windowId) => {
     activateWindow(windowId)
+  })
+  ipcMain.on('openOption', () => {
+    createOptionWindow()
   })
 
   ipcMain.on('setLayout', (_event, layout: LayoutType) => {

@@ -24,10 +24,13 @@
 </template>
 
 <script lang="ts">
+import { PropType } from 'vue'
+import { MacWindow } from '../../../type'
+
 export default {
   props: {
     windows: {
-      type: Object,
+      type: Object as PropType<MacWindow[]>,
       required: true
     }
   }

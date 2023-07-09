@@ -1,5 +1,8 @@
 <template>
   <div :class="layout">
+    <div class="icon" @click="openOption">
+      <img :src="icon" style="height: 40px" />
+    </div>
     <div class="permissions">
       <button v-if="!granted" class="button" @click="grant">タイトルを取得</button>
     </div>
@@ -16,36 +19,19 @@
       </button>
     </div>
   </div>
+  <div>
+    <hr />
 
-  <hr />
-  <Debug v-if="debug" :windows="filteredWindows" />
-  <Debug v-if="debug" :windows="invertWindows" />
-  <Versions v-if="debug"></Versions>
-  <div v-if="debug" class="debug-control-container">
-    <label class="checkbox"
-      ><input
-        v-model="filters"
-        type="checkbox"
-        value="isNotOnScreen"
-      />画面に表示してないもの</label
-    >
-    <label class="checkbox"
-      ><input
-        v-model="filters"
-        type="checkbox"
-        value="hiddenByTaskbar"
-      />taskbarに隠れてしまうもの</label
-    >
-    <label class="checkbox"
-      ><input v-model="filters" type="checkbox" value="utilities" />Utility 系その他</label
-    >
-    <label class="checkbox"
-      ><input v-model="filters" type="checkbox" value="taskbar" />taskbar</label
-    >
+    <h2 class="block">見えているもの</h2>
+    <Debug v-if="debug" :windows="filteredWindows" />
+    <hr />
+    <h2 class="block">隠しているもの</h2>
+    <Debug v-if="debug" :windows="invertWindows" />
   </div>
 </template>
 
 <script lang="ts">
+import icon from '../assets/icon.png'
 import { Electron } from '../utils'
 
 import { MacWindow } from '../../../type'
@@ -59,9 +45,9 @@ export default defineComponent({
   },
   data() {
     return {
+      icon,
       windows: null as MacWindow[] | null,
       debug: true,
-      filters: [],
       layout: 'bottom' as LayoutType,
       granted: window.store.granted
     }
@@ -75,49 +61,23 @@ export default defineComponent({
     filteredWindows() {
       return this.windows
         ?.filter((win) => {
-          if (!this.filters.includes('isNotOnScreen') && !win.kCGWindowIsOnscreen) return false
-          if (!this.filters.includes('hiddenByTaskbar') && win.kCGWindowBounds?.Height < 40)
-            return false
-          if (!this.filters.includes('hiddenByTaskbar') && win.kCGWindowBounds?.Width < 40)
-            return false
-          if (!this.filters.includes('utilities') && win.kCGWindowOwnerName === 'Dock') return false
-          if (!this.filters.includes('utilities') && win.kCGWindowOwnerName === 'DockHelper')
-            return false
-          if (!this.filters.includes('utilities') && win.kCGWindowOwnerName === 'screencapture')
-            return false
-          if (
-            !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'スクリーンショット'
-          )
-            return false
-          if (!this.filters.includes('utilities') && win.kCGWindowName === 'Item-0') return false
-          if (!this.filters.includes('utilities') && win.kCGWindowOwnerName === 'Window Server')
-            return false
-          if (
-            !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'コントロールセンター'
-          )
-            return false
-          if (
-            !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'Notification Center'
-          )
-            return false
-          if (
-            !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'Finder' &&
-            win.kCGWindowName === ''
-          )
-            return false
-          if (!this.filters.includes('utilities') && win.kCGWindowName === 'Spotlight') return false
-          if (
-            !this.filters.includes('utilities') &&
-            win.kCGWindowOwnerName === 'GoogleJapaneseInputRenderer'
-          )
-            return false
-          if (!this.filters.includes('taskbar') && win.kCGWindowOwnerName === 'taskbar.fm')
-            return false
-          if (!this.filters.includes('taskbar') && win.kCGWindowName === 'taskbar.fm') return false
+          if (!win.kCGWindowIsOnscreen) return false
+          if (win.kCGWindowBounds?.Height < 40) return false
+          if (win.kCGWindowBounds?.Width < 40) return false
+          if (win.kCGWindowOwnerName === 'Dock') return false
+          if (win.kCGWindowOwnerName === 'DockHelper') return false
+          if (win.kCGWindowOwnerName === 'screencapture') return false
+          if (win.kCGWindowOwnerName === 'スクリーンショット') return false
+          if (win.kCGWindowName == 'Notification Center') return false
+          if (win.kCGWindowName === 'Item-0') return false
+          if (win.kCGWindowOwnerName === 'Window Server') return false
+          if (win.kCGWindowOwnerName === 'コントロールセンター') return false
+          if (win.kCGWindowOwnerName === 'Notification Center') return false
+          if (win.kCGWindowOwnerName === 'Finder' && win.kCGWindowName === '') return false
+          if (win.kCGWindowName === 'Spotlight') return false
+          if (win.kCGWindowOwnerName === 'GoogleJapaneseInputRenderer') return false
+          if (win.kCGWindowOwnerName === 'taskbar.fm') return false
+          if (win.kCGWindowName === 'taskbar.fm') return false
           return true
         })
         .sort((win1, win2) => {
@@ -140,6 +100,9 @@ export default defineComponent({
       Electron.send('grantPermission')
       this.granted = true
     },
+    openOption() {
+      Electron.send('openOption')
+    },
     async acticveWindow(win: Window) {
       Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
     }
@@ -148,6 +111,11 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
+.icon {
+  display: flex;
+  margin: 0 8px;
+  align-items: center;
+}
 .permissions {
   display: flex;
   align-items: center;
