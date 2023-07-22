@@ -50,7 +50,16 @@ export default defineComponent({
       options: window.store.options,
       granted: window.store.granted,
       filters: window.store.filters,
-      displayInfo: {}
+      displayInfo: {} as {
+        workArea:
+          | {
+              x: number
+              y: number
+              width: number
+              height: number
+            }
+          | undefined
+      }
     }
   },
   computed: {
@@ -60,32 +69,23 @@ export default defineComponent({
       })
     },
     filteredWindows() {
-      return this.windows
-        ?.filter((win) => {
-          if (win.kCGWindowBounds?.Height < 40) return false
-          if (win.kCGWindowBounds?.Width < 40) return false
-
-          const displayConrner = {
-            left: this.displayInfo.workArea.x,
-            right: this.displayInfo.workArea.x + this.displayInfo.workArea.width,
-            top: this.displayInfo.workArea.y,
-            bottom: this.displayInfo.workArea.y + this.displayInfo.workArea.height
-          }
-
+      const displayConrner = {
+        left: this.displayInfo.workArea?.x,
+        right: this.displayInfo.workArea?.x + this.displayInfo.workArea?.width,
+        top: this.displayInfo.workArea?.y,
+        bottom: this.displayInfo?.workArea?.y + this.displayInfo.workArea?.height
+      }
+      return [...this.windows]
+        .filter((win) => {
           // ディスプレイの左端から左にウィンドウがはみ出していれば表示しない
           if (displayConrner.left > win.kCGWindowBounds.X) return false
           // ディスプレイの右端から右にウィンドウがはみ出していれば表示しない
           if (win.kCGWindowBounds.X + win.kCGWindowBounds.Width > displayConrner.right) return false
 
           if (displayConrner.top > win.kCGWindowBounds.Y) return false
-          if (win.kCGWindowBounds.Y + win.kCGWindowBounds.Height > displayConrner.bottom) return
+          if (win.kCGWindowBounds.Y + win.kCGWindowBounds.Height > displayConrner.bottom)
+            return false
 
-          for (const filter of this.filters) {
-            for (const filterElement of filter) {
-              if (win[filterElement.property] === undefined) return false
-              if (win[filterElement.property] == filterElement.is) return false
-            }
-          }
           return true
         })
         .sort((win1, win2) => {
@@ -106,9 +106,10 @@ export default defineComponent({
       console.log('[taskbar]updated:', value)
       this.options = value
     })
-    Electron.listen('process', (event, value) => {
-      this.windows.splice(0, this.windows.length, ...JSON.parse(value))
+    Electron.listen('process', (event, value: MacWindow[]) => {
+      this.windows.splice(0, this.windows.length, ...value)
     })
+    Electron.send('windowReady')
     Electron.listen('displayInfo', (event, value) => {
       this.displayInfo = value
     })
@@ -121,7 +122,7 @@ export default defineComponent({
     openOption() {
       Electron.send('openOption')
     },
-    async acticveWindow(win: Window) {
+    async acticveWindow(win: MacWindow) {
       Electron.send('activeWindow', win)
     }
   }

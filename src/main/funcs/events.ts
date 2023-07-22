@@ -1,6 +1,6 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, taskbars, windowPosition } from './windows'
-import { activateWindow, grantPermission } from './helper'
+import { activateWindow, grantPermission, macWindowProcesses } from './helper'
 import { ipcMain, screen } from 'electron'
 import { Options, store } from './store'
 
@@ -10,6 +10,12 @@ export function setEventHandlers() {
   })
   ipcMain.on('openOption', () => {
     createOptionWindow()
+  })
+  // ウィンドウの準備ができたらプロセスリストを破棄
+  // ホットリロードフロントのdataが破棄されても
+  // nodeプロセスがそのままなので差分なしになるのを防ぐ
+  ipcMain.on('windowReady', () => {
+    macWindowProcesses.splice(0, macWindowProcesses.length)
   })
 
   ipcMain.on('setOptions', (_event, value: Options) => {

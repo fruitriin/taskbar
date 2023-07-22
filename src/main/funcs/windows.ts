@@ -1,12 +1,14 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { BrowserWindow, screen } from 'electron'
-import { getAndSubmitProcesses } from './helper'
+import { BrowserWindow, ipcMain, screen, Display } from 'electron'
 import { store } from './store'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
-export const taskbars: Record<string, BrowserWindow> = {}
+type Taskbar = BrowserWindow
+type displayId = Display['id']
+export const taskbars: Record<displayId, Taskbar> = {}
+export type Taskbars = typeof taskbars
 
 export function createWindow() {
   const allDisplays = screen.getAllDisplays()
@@ -44,15 +46,13 @@ export function createWindow() {
     }
 
     taskbars[display.id] = taskbarWindow
-    // 1秒ごとにプロセスのリストを取得
-    setInterval(() => {
-      getAndSubmitProcesses(taskbarWindow)
+    ipcMain.on('windowReady', () => {
       taskbarWindow.webContents.send('displayInfo', {
         label: display.label,
         id: display.id,
         workArea: display.workArea
       })
-    }, 1000)
+    })
   })
 }
 
