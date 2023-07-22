@@ -1,5 +1,5 @@
 <template>
-  <div :class="layout">
+  <div :class="options.layout">
     <div class="icon" @click="openOption">
       <img :src="icon" style="height: 40px" />
     </div>
@@ -37,7 +37,6 @@ import { Electron } from '../utils'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
-type LayoutType = 'right' | 'left' | 'bottom'
 
 export default defineComponent({
   components: {
@@ -46,11 +45,21 @@ export default defineComponent({
   data() {
     return {
       icon,
-      windows: null as MacWindow[] | null,
+      windows: [] as MacWindow[] | null,
       debug: true,
-      layout: window.store.layout,
+      options: window.store.options,
       granted: window.store.granted,
-      filters: window.store.filters
+      filters: window.store.filters,
+      displayInfo: {} as {
+        workArea:
+          | {
+              x: number
+              y: number
+              width: number
+              height: number
+            }
+          | undefined
+      }
     }
   },
   computed: {
@@ -60,31 +69,49 @@ export default defineComponent({
       })
     },
     filteredWindows() {
-      return this.windows
-        ?.filter((win) => {
-          if (win.kCGWindowBounds?.Height < 40) return false
-          if (win.kCGWindowBounds?.Width < 40) return false
+      const displayConrner = {
+        left: this.displayInfo.workArea?.x,
+        right: this.displayInfo.workArea?.x + this.displayInfo.workArea?.width,
+        top: this.displayInfo.workArea?.y,
+        bottom: this.displayInfo?.workArea?.y + this.displayInfo.workArea?.height
+      }
+      return [...this.windows]
+        .filter((win) => {
+          // ディスプレイの左端から左にウィンドウがはみ出していれば表示しない
+          if (displayConrner.left > win.kCGWindowBounds.X) return false
+          // ディスプレイの右端から右にウィンドウがはみ出していれば表示しない
+          if (win.kCGWindowBounds.X + win.kCGWindowBounds.Width > displayConrner.right) return false
 
-          for (const filter of this.filters) {
-            for (const filterElement of filter) {
-              if (win[filterElement.property] === undefined) return false
-              if (win[filterElement.property] == filterElement.is) return false
-            }
-          }
+          if (displayConrner.top > win.kCGWindowBounds.Y) return false
+          if (win.kCGWindowBounds.Y + win.kCGWindowBounds.Height > displayConrner.bottom)
+            return false
+
           return true
         })
         .sort((win1, win2) => {
-          return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
+          // プロセスID順ソート
+          if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
+            return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
+
+          // ウィンドウの座標順ソート
+          if (this.options.windowSortByPositionInApp)
+            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
+
+          return 0
         })
     }
   },
-  watch: {},
   mounted() {
-    Electron.listen('setLayout', (event, value) => {
-      this.layout = value
+    Electron.listen('updateOptions', (event, value) => {
+      console.log('[taskbar]updated:', value)
+      this.options = value
     })
-    Electron.listen('process', (event, value) => {
-      this.windows = JSON.parse(value)
+    Electron.listen('process', (event, value: MacWindow[]) => {
+      this.windows.splice(0, this.windows.length, ...value)
+    })
+    Electron.send('windowReady')
+    Electron.listen('displayInfo', (event, value) => {
+      this.displayInfo = value
     })
   },
   methods: {
@@ -95,8 +122,8 @@ export default defineComponent({
     openOption() {
       Electron.send('openOption')
     },
-    async acticveWindow(win: Window) {
-      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
+    async acticveWindow(win: MacWindow) {
+      Electron.send('activeWindow', win)
     }
   }
 })

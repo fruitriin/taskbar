@@ -8,7 +8,10 @@ declare global {
 
 type Store = {
   granted: boolean
-  layout: string
+  options: {
+    layout: string
+    windowSortByPositionInApp: false
+  }
   filters: { property: string; is: string }[][]
 }
 
@@ -17,6 +20,6 @@ export const Electron = {
     window.electron.ipcRenderer.on(channel, listener)
   },
   send(channel: string, ...args: any[]): void {
-    window.electron.ipcRenderer.send(channel, ...args)
+    window.electron.ipcRenderer.send(channel, ...JSON.parse(JSON.stringify(args)))
   }
 }

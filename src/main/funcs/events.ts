@@ -1,10 +1,8 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, mainWindow, windowPosition } from './windows'
-import { activateWindow, grantPermission } from './helper'
+import { createOptionWindow, taskbars, windowPosition } from './windows'
+import { activateWindow, grantPermission, macWindowProcesses } from './helper'
 import { ipcMain, screen } from 'electron'
-import { store } from './store'
-
-type LayoutType = 'right' | 'left' | 'bottom'
+import { Options, store } from './store'
 
 export function setEventHandlers() {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -13,13 +11,28 @@ export function setEventHandlers() {
   ipcMain.on('openOption', () => {
     createOptionWindow()
   })
+  // ウィンドウの準備ができたらプロセスリストを破棄
+  // ホットリロードフロントのdataが破棄されても
+  // nodeプロセスがそのままなので差分なしになるのを防ぐ
+  ipcMain.on('windowReady', () => {
+    macWindowProcesses.splice(0, macWindowProcesses.length)
+  })
 
-  ipcMain.on('setLayout', (_event, layout: LayoutType) => {
-    store.set('layout', layout)
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const position = windowPosition(primaryDisplay, layout)
-    mainWindow.setBounds(position)
-    mainWindow.webContents.send('setLayout', layout)
+  ipcMain.on('setOptions', (_event, value: Options) => {
+    const layout = store.get('options.layout')
+    const displays = screen.getAllDisplays()
+
+    store.set('options', value)
+    for (const displayId in taskbars) {
+      taskbars[displayId].webContents.send('updateOptions', value)
+
+      // メインプロセスに作用するものを別途処理
+      if (layout != value.layout) {
+        const targetDisplay = displays.find((display) => display.id.toString() === displayId)
+        if (targetDisplay)
+          taskbars[displayId].setBounds(windowPosition(targetDisplay, value.layout))
+      }
+    }
   })
 
   ipcMain.on('grantPermission', () => {

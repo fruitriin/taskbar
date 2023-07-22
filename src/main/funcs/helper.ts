@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { MacWindow } from '@/type'
@@ -12,22 +12,22 @@ if (app.isPackaged) {
   binaryPath = path.join(__dirname, '../../resources', 'TaskbarHelper')
 }
 
-export function getAndSubmitProcesses(win: BrowserWindow): void {
+export const macWindowProcesses: MacWindow[] = []
+
+export function getAndSubmitProcesses(): void {
   let rawData = ''
   try {
     const taskbarHelper = spawn(binaryPath, ['list'])
-    // console.log("tick")
     taskbarHelper.stdout.on('data', (raw) => {
       rawData += raw
-      // console.log(raw)
     })
-    // taskbarHelper.on("data", console.info)
     taskbarHelper.stderr.on('data', (raw) => {
       console.error(raw)
     })
     taskbarHelper.on('close', async (code) => {
       if ((await code) === 0) {
-        win.webContents.send('process', new Buffer(rawData).toString('utf-8'))
+        const jsoned = JSON.parse(new Buffer(rawData).toString('utf-8'))
+        applyProcessChange(jsoned)
         rawData = ''
       }
     })
@@ -40,7 +40,23 @@ export function grantPermission(): void {
   spawn(binaryPath, ['grant'])
 }
 
+import { diff } from 'just-diff'
+import { diffApply } from 'just-diff-apply'
+
+function applyProcessChange(newProcesses: typeof macWindowProcesses) {
+  const result = diff(macWindowProcesses, filterProcesses(newProcesses))
+
+  if (result.length > 0) {
+    diffApply(macWindowProcesses, result)
+    for (const taskbarKey in taskbars) {
+      taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
+    }
+  }
+}
+
 import { escape } from 'html-escaper'
+import { store } from './store'
+import { taskbars } from './windows'
 
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {
@@ -64,5 +80,23 @@ end tell
     }
     // console.log(_stderr);
     // console.log(_stdout);
+  })
+}
+
+/**
+ * 高さ・幅が低すぎるものと、store.filters から条件に一致するものを除外する
+ */
+function filterProcesses(windows: MacWindow[]) {
+  return windows.filter((win) => {
+    if (win.kCGWindowBounds?.Height < 40) return false
+    if (win.kCGWindowBounds?.Width < 40) return false
+
+    for (const filter of store.store.filters) {
+      for (const filterElement of filter) {
+        if (win[filterElement.property] === undefined) return false
+        if (win[filterElement.property] == filterElement.is) return false
+      }
+    }
+    return true
   })
 }

@@ -1,53 +1,59 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { BrowserWindow, screen } from 'electron'
-import { getAndSubmitProcesses } from './helper'
+import { BrowserWindow, ipcMain, screen, Display } from 'electron'
 import { store } from './store'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
-export let mainWindow: BrowserWindow
+type Taskbar = BrowserWindow
+type displayId = Display['id']
+export const taskbars: Record<displayId, Taskbar> = {}
+export type Taskbars = typeof taskbars
+
 export function createWindow() {
-  // Create the browser window.
+  const allDisplays = screen.getAllDisplays()
+  allDisplays.forEach((display) => {
+    const taskbarWindow = new BrowserWindow({
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      },
+      titleBarStyle: 'hiddenInset',
+      autoHideMenuBar: true,
+      // resizable: false,
+      movable: false,
+      maximizable: false,
+      minimizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      show: false,
+      ...windowPosition(display, store.get('layout') as LayoutType)
+    })
 
-  const primaryDisplay = screen.getPrimaryDisplay()
+    // 準備ができたら表示
+    taskbarWindow.on('ready-to-show', () => {
+      taskbarWindow.show()
+    })
+    // 閉じるボタンなどを消す
+    taskbarWindow.setWindowButtonVisibility(false)
 
-  mainWindow = new BrowserWindow({
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    },
-    titleBarStyle: 'hiddenInset',
-    autoHideMenuBar: true,
-    // resizable: false,
-    movable: false,
-    maximizable: false,
-    minimizable: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    show: false,
-    ...windowPosition(primaryDisplay, store.get('layout') as LayoutType)
+    // HMR for renderer base on electron-vite cli.
+    // Load the remote URL for development or the local html file for production.
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      taskbarWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    } else {
+      taskbarWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    }
+
+    taskbars[display.id] = taskbarWindow
+    ipcMain.on('windowReady', () => {
+      taskbarWindow.webContents.send('displayInfo', {
+        label: display.label,
+        id: display.id,
+        workArea: display.workArea
+      })
+    })
   })
-
-  // 準備ができたら表示
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-  // 閉じるボタンなどを消す
-  mainWindow.setWindowButtonVisibility(false)
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-
-  // 1秒ごとにプロセスのリストを取得
-  setInterval(() => {
-    getAndSubmitProcesses(mainWindow)
-  }, 1000)
 }
 
 export let optionWindow: BrowserWindow
@@ -80,7 +86,10 @@ export function windowPosition(
   return {
     width: type === 'bottom' ? display.workArea.width : 210,
     height: type !== 'bottom' ? display.workArea.height : 60,
-    x: type === 'right' ? display.workArea.width - 210 : 0,
-    y: type === 'bottom' ? display.workArea.height - 30 : 0
+    x: type === 'right' ? display.workArea.x - 210 : display.workArea.x,
+    y:
+      type === 'bottom'
+        ? display.workArea.height + display.workArea.y - 30
+        : display.workArea.height + display.workArea.y
   }
 }
