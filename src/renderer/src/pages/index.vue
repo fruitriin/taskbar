@@ -84,7 +84,7 @@ export default defineComponent({
       this.layout = value
     })
     Electron.listen('process', (event, value) => {
-      this.windows = JSON.parse(value)
+      this.$set(this, 'windows', JSON.parse(value))
     })
   },
   methods: {
