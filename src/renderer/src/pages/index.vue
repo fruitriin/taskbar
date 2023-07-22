@@ -49,7 +49,8 @@ export default defineComponent({
       debug: true,
       options: window.store.options,
       granted: window.store.granted,
-      filters: window.store.filters
+      filters: window.store.filters,
+      displayInfo: {}
     }
   },
   computed: {
@@ -63,6 +64,21 @@ export default defineComponent({
         ?.filter((win) => {
           if (win.kCGWindowBounds?.Height < 40) return false
           if (win.kCGWindowBounds?.Width < 40) return false
+
+          const displayConrner = {
+            left: this.displayInfo.workArea.x,
+            right: this.displayInfo.workArea.x + this.displayInfo.workArea.width,
+            top: this.displayInfo.workArea.y,
+            bottom: this.displayInfo.workArea.y + this.displayInfo.workArea.height
+          }
+
+          // ディスプレイの左端から左にウィンドウがはみ出していれば表示しない
+          if (displayConrner.left > win.kCGWindowBounds.X) return false
+          // ディスプレイの右端から右にウィンドウがはみ出していれば表示しない
+          if (win.kCGWindowBounds.X + win.kCGWindowBounds.Width > displayConrner.right) return false
+
+          if (displayConrner.top > win.kCGWindowBounds.Y) return false
+          if (win.kCGWindowBounds.Y + win.kCGWindowBounds.Height > displayConrner.bottom) return
 
           for (const filter of this.filters) {
             for (const filterElement of filter) {
@@ -85,7 +101,6 @@ export default defineComponent({
         })
     }
   },
-  watch: {},
   mounted() {
     Electron.listen('updateOptions', (event, value) => {
       console.log('[taskbar]updated:', value)
@@ -93,6 +108,9 @@ export default defineComponent({
     })
     Electron.listen('process', (event, value) => {
       this.windows.splice(0, this.windows.length, ...JSON.parse(value))
+    })
+    Electron.listen('displayInfo', (event, value) => {
+      this.displayInfo = value
     })
   },
   methods: {

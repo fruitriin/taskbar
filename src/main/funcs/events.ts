@@ -1,5 +1,5 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, mainWindow, windowPosition } from './windows'
+import { createOptionWindow, taskbars, windowPosition } from './windows'
 import { activateWindow, grantPermission } from './helper'
 import { ipcMain, screen } from 'electron'
 import { Options, store } from './store'
@@ -14,14 +14,18 @@ export function setEventHandlers() {
 
   ipcMain.on('setOptions', (_event, value: Options) => {
     const layout = store.get('options.layout')
-    store.set('options', value)
-    mainWindow.webContents.send('updateOptions', value)
+    const displays = screen.getAllDisplays()
 
-    // メインプロセスに作用するものを別途処理
-    if (layout != value.layout) {
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const position = windowPosition(primaryDisplay, value.layout)
-      mainWindow.setBounds(position)
+    store.set('options', value)
+    for (const displayId in taskbars) {
+      taskbars[displayId].webContents.send('updateOptions', value)
+
+      // メインプロセスに作用するものを別途処理
+      if (layout != value.layout) {
+        const targetDisplay = displays.find((display) => display.id.toString() === displayId)
+        if (targetDisplay)
+          taskbars[displayId].setBounds(windowPosition(targetDisplay, value.layout))
+      }
     }
   })
 
