@@ -2,11 +2,14 @@ import { ElectronAPI, IpcRendererEvent } from '@electron-toolkit/preload'
 declare global {
   interface Window {
     electron: ElectronAPI
-    store: {
-      granted: boolean
-      layout: string
-    }
+    store: Store
   }
+}
+
+type Store = {
+  granted: boolean
+  layout: string
+  filters: { property: string; is: string }[][]
 }
 
 export const Electron = {

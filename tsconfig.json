@@ -1,7 +1,8 @@
 {
   "files": [],
   "references": [{ "path": "src/main/tsconfig.node.json" }, { "path": "src/renderer/tsconfig.web.json" }],
-  "rules": {
-    "@typescript-eslint/explicit-function-return-type": 0
+  "include": [    "src/renderer/typed-router.d.ts"],
+  "compilerOptions": {
+    "esModuleInterop": true,
   }
 }
