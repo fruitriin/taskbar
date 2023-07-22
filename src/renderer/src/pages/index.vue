@@ -1,5 +1,5 @@
 <template>
-  <div :class="layout">
+  <div :class="options.layout">
     <div class="icon" @click="openOption">
       <img :src="icon" style="height: 40px" />
     </div>
@@ -37,7 +37,6 @@ import { Electron } from '../utils'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
-type LayoutType = 'right' | 'left' | 'bottom'
 
 export default defineComponent({
   components: {
@@ -48,7 +47,7 @@ export default defineComponent({
       icon,
       windows: [] as MacWindow[] | null,
       debug: true,
-      layout: window.store.layout,
+      options: window.store.options,
       granted: window.store.granted,
       filters: window.store.filters
     }
@@ -77,15 +76,20 @@ export default defineComponent({
           // プロセスID順ソート
           if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
             return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
+
           // ウィンドウの座標順ソート
-          return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
+          if (this.options.windowSortByPositionInApp)
+            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
+
+          return 0
         })
     }
   },
   watch: {},
   mounted() {
-    Electron.listen('setLayout', (event, value) => {
-      this.layout = value
+    Electron.listen('updateOptions', (event, value) => {
+      console.log('[taskbar]updated:', value)
+      this.options = value
     })
     Electron.listen('process', (event, value) => {
       this.windows.splice(0, this.windows.length, ...JSON.parse(value))
@@ -100,7 +104,7 @@ export default defineComponent({
       Electron.send('openOption')
     },
     async acticveWindow(win: Window) {
-      Electron.send('activeWindow', JSON.parse(JSON.stringify(win)))
+      Electron.send('activeWindow', win)
     }
   }
 })

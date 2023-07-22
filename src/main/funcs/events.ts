@@ -2,9 +2,7 @@
 import { createOptionWindow, mainWindow, windowPosition } from './windows'
 import { activateWindow, grantPermission } from './helper'
 import { ipcMain, screen } from 'electron'
-import { store } from './store'
-
-type LayoutType = 'right' | 'left' | 'bottom'
+import { Options, store } from './store'
 
 export function setEventHandlers() {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -14,12 +12,17 @@ export function setEventHandlers() {
     createOptionWindow()
   })
 
-  ipcMain.on('setLayout', (_event, layout: LayoutType) => {
-    store.set('layout', layout)
-    const primaryDisplay = screen.getPrimaryDisplay()
-    const position = windowPosition(primaryDisplay, layout)
-    mainWindow.setBounds(position)
-    mainWindow.webContents.send('setLayout', layout)
+  ipcMain.on('setOptions', (_event, value: Options) => {
+    const layout = store.get('options.layout')
+    store.set('options', value)
+    mainWindow.webContents.send('updateOptions', value)
+
+    // メインプロセスに作用するものを別途処理
+    if (layout != value.layout) {
+      const primaryDisplay = screen.getPrimaryDisplay()
+      const position = windowPosition(primaryDisplay, value.layout)
+      mainWindow.setBounds(position)
+    }
   })
 
   ipcMain.on('grantPermission', () => {

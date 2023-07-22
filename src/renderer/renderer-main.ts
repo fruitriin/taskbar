@@ -9,6 +9,5 @@ const router = createRouter({
   history: createWebHistory('#'),
   routes
 })
-console.log(routes)
 
 createApp(App).use(router).mount('#app')

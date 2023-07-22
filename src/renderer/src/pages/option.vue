@@ -6,10 +6,23 @@
     </div>
     <div class="field-body">
       <div class="select">
-        <select v-model="layout">
+        <select v-model="options.layout">
           <option value="left">left</option>
           <option value="bottom">bottom</option>
           <option value="right">right</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="field is-horizontal">
+    <div class="field-label is-normal">
+      <label class="label">並び順</label>
+    </div>
+    <div class="field-body">
+      <div class="select">
+        <select v-model="options.windowSortByPositionInApp">
+          <option :value="false">起動順</option>
+          <option :value="true">座標順</option>
         </select>
       </div>
     </div>
@@ -45,7 +58,10 @@ type LayoutType = 'right' | 'left' | 'bottom'
 export default {
   data() {
     return {
-      layout: window.store.layout,
+      options: {
+        layout: window.store.options.layout,
+        windowSortByPositionInApp: window.store.options.windowSortByPositionInApp
+      },
       filters: window.store.filters
     }
   },
@@ -55,9 +71,11 @@ export default {
     }
   },
   watch: {
-    layout(value) {
-      Electron.send('setLayout', value)
-      this.layout = value
+    options: {
+      deep: true,
+      handler(value) {
+        Electron.send('setOptions', value)
+      }
     }
   }
 }

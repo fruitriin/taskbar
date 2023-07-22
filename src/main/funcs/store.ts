@@ -1,8 +1,12 @@
-import Store from 'electron-store'
+import ElectronStore from 'electron-store'
 
-export const store = new Store({
+type LayoutType = 'right' | 'left' | 'bottom'
+export const store = new ElectronStore({
   defaults: {
-    layout: 'bottom',
+    options: {
+      layout: 'bottom' as LayoutType,
+      windowSortByPositionInApp: false
+    },
     filters: [
       [{ property: 'kCGWindowIsOnscreen', is: false }],
       [{ property: 'kCGWindowOwnerName', is: 'Dock' }],
@@ -24,3 +28,4 @@ export const store = new Store({
     ]
   }
 })
+export type Options = typeof store.store.options
