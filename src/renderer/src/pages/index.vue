@@ -46,7 +46,7 @@ export default defineComponent({
   data() {
     return {
       icon,
-      windows: null as MacWindow[] | null,
+      windows: [] as MacWindow[] | null,
       debug: true,
       layout: window.store.layout,
       granted: window.store.granted,
@@ -74,7 +74,11 @@ export default defineComponent({
           return true
         })
         .sort((win1, win2) => {
-          return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
+          // プロセスID順ソート
+          if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
+            return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
+          // ウィンドウの座標順ソート
+          return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
         })
     }
   },
@@ -84,7 +88,7 @@ export default defineComponent({
       this.layout = value
     })
     Electron.listen('process', (event, value) => {
-      this.$set(this, 'windows', JSON.parse(value))
+      this.windows.splice(0, this.windows.length, ...JSON.parse(value))
     })
   },
   methods: {
