@@ -1,5 +1,5 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, taskbars, windowPosition } from './windows'
+import { createOptionWindow, createWindow, taskbars, windowPosition } from './windows'
 import { activateWindow, grantPermission, macWindowProcesses } from './helper'
 import { ipcMain, screen } from 'electron'
 import { Options, store } from './store'
@@ -41,5 +41,12 @@ export function setEventHandlers() {
   })
   ipcMain.on('clearSetting', () => {
     store.clear()
+  })
+  screen.on('display-added', (_, newDisplay) => {
+    createWindow(newDisplay)
+  })
+  // TODO 動作確認
+  screen.on('display-removed', (_, oldDisplay) => {
+    delete taskbars[oldDisplay.id]
   })
 }

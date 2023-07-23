@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
-import { createWindow } from './funcs/windows'
+import { createAllWindows, createWindow } from './funcs/windows'
 import { setEventHandlers } from './funcs/events'
 import { getAndSubmitProcesses } from './funcs/helper'
 
@@ -20,7 +20,7 @@ app.whenReady().then(() => {
   })
 
   app.setAccessibilitySupportEnabled(true)
-  createWindow()
+  createAllWindows()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
