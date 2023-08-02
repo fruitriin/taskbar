@@ -92,11 +92,18 @@ function filterProcesses(windows: MacWindow[]) {
     if (win.kCGWindowBounds?.Width < 40) return false
 
     for (const filter of store.store.filters) {
+      const match: boolean[] = []
       for (const filterElement of filter) {
         if (win[filterElement.property] === undefined) return false
-        if (win[filterElement.property] == filterElement.is) return false
+        if (win[filterElement.property] == filterElement.is) {
+          match.push(true)
+        } else {
+          match.push(false)
+        }
       }
+      if (match.every((elem) => elem)) return false
     }
+
     return true
   })
 }
