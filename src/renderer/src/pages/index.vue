@@ -89,13 +89,14 @@ export default defineComponent({
           return true
         })
         .sort((win1, win2) => {
+          // ウィンドウの座標順ソート
+          if (this.options.windowSortByPositionInApp) {
+            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
+          }
+
           // プロセスID順ソート
           if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
             return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
-
-          // ウィンドウの座標順ソート
-          if (this.options.windowSortByPositionInApp)
-            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
 
           return 0
         })
@@ -178,6 +179,9 @@ export default defineComponent({
   .tasks {
     display: flex;
     flex-direction: column;
+    .task {
+      justify-content: start;
+    }
   }
 
   .submenu {
@@ -194,7 +198,7 @@ export default defineComponent({
 }
 
 .task {
-  max-width: 200px;
+  width: 200px;
   white-space: initial;
   margin: 8px 4px;
   user-select: none;
@@ -206,7 +210,8 @@ export default defineComponent({
   height: 2.5em;
   color: #fff;
   cursor: pointer;
-  justify-content: center;
+  justify-content: start;
+
   padding: calc(0.5em - 1px) 1em;
   white-space: nowrap;
   background-color: hsl(0, 0%, 21%);
@@ -224,7 +229,7 @@ export default defineComponent({
   }
 
   .name {
-    max-width: 200px;
+    max-width: fit-content;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;

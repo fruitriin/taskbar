@@ -17,14 +17,14 @@ export const store = new ElectronStore({
       [{ property: 'kCGWindowName', is: 'Item-0' }],
       [{ property: 'kCGWindowOwnerName', is: 'Window Server' }],
       [{ property: 'kCGWindowOwnerName', is: 'コントロールセンター' }],
+      [{ property: 'kCGWindowOwnerName', is: 'Spotlight' }],
+      [{ property: 'kCGWindowOwnerName', is: 'GoogleJapaneseInputRenderer' }],
+      [{ property: 'kCGWindowOwnerName', is: 'taskbar.fm' }],
+      [{ property: 'kCGWindowName', is: 'taskbar.fm' }],
       [
         { property: 'kCGWindowOwnerName', is: 'Finder' },
         { property: 'kCGWindowName', is: '' }
-      ],
-      [{ property: 'kCGWindowName', is: 'Spotlight' }],
-      [{ property: 'kCGWindowOwnerName', is: 'GoogleJapaneseInputRenderer' }],
-      [{ property: 'kCGWindowOwnerName', is: 'taskbar.fm' }],
-      [{ property: 'kCGWindowName', is: 'taskbar.fm' }]
+      ]
     ]
   }
 })
