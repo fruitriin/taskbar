@@ -210,7 +210,7 @@ export default defineComponent({
   height: 2.5em;
   color: #fff;
   cursor: pointer;
-  justify-content: center;
+  justify-content: start;
 
   padding: calc(0.5em - 1px) 1em;
   white-space: nowrap;
