@@ -76,7 +76,7 @@ export function createOptionWindow() {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#option')
   } else {
-    optionWindow.loadFile(join(__dirname, '../renderer/index.html#option'))
+    optionWindow.loadFile(join(__dirname, '../renderer/option.html'))
   }
   optionWindow.on('ready-to-show', () => {
     optionWindow.show()

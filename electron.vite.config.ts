@@ -26,7 +26,8 @@ export default defineConfig({
       watch: {},
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload.ts')
+          index: resolve(__dirname, 'src/preload.ts'),
+          option: resolve(__dirname, 'src/preload.ts')
         }
       }
     }
@@ -36,7 +37,8 @@ export default defineConfig({
       watch: {},
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html')
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          option: resolve(__dirname, 'src/renderer/option.html')
         }
       }
     },

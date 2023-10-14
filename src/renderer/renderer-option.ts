@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import App from './src/App.vue'
+import App from './src/Option.vue'
 // @ts-ignored
 import { routes } from 'vue-router/auto/routes'
 
