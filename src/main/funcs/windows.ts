@@ -87,13 +87,13 @@ export function windowPosition(
   display: Electron.Display,
   type: LayoutType
 ): { width: number; height: number; x: number; y: number } {
+  // なんかこの返り値だいぶ怪しそう
+
   return {
+    // 右のときは 画面右端から - 210ピクセル
+    x: type === 'right' ? display.workArea.x + display.workArea.width - 210 : display.workArea.x,
+    y: type === 'bottom' ? display.workArea.height + display.workArea.y - 60 : display.workArea.y,
     width: type === 'bottom' ? display.workArea.width : 210,
-    height: type !== 'bottom' ? display.workArea.height : 60,
-    x: type === 'right' ? display.workArea.x - 210 : display.workArea.x,
-    y:
-      type === 'bottom'
-        ? display.workArea.height + display.workArea.y - 30
-        : display.workArea.height + display.workArea.y
+    height: type !== 'bottom' ? display.workArea.height : 60
   }
 }
