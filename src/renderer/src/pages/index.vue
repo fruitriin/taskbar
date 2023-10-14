@@ -179,6 +179,9 @@ export default defineComponent({
   .tasks {
     display: flex;
     flex-direction: column;
+    .task {
+      justify-content: start;
+    }
   }
 
   .submenu {
@@ -194,15 +197,8 @@ export default defineComponent({
   }
 }
 
-.left,
-.right {
-  .task {
-    justify-content: start;
-  }
-}
-
 .task {
-  max-width: 200px;
+  width: 200px;
   white-space: initial;
   margin: 8px 4px;
   user-select: none;
