@@ -193,6 +193,13 @@ export default defineComponent({
   }
 }
 
+.left,
+.right {
+  .task {
+    justify-content: start;
+  }
+}
+
 .task {
   max-width: 200px;
   white-space: initial;
@@ -207,6 +214,7 @@ export default defineComponent({
   color: #fff;
   cursor: pointer;
   justify-content: center;
+
   padding: calc(0.5em - 1px) 1em;
   white-space: nowrap;
   background-color: hsl(0, 0%, 21%);
@@ -224,7 +232,7 @@ export default defineComponent({
   }
 
   .name {
-    max-width: 200px;
+    max-width: fit-content;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
