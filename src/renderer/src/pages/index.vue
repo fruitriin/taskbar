@@ -89,13 +89,14 @@ export default defineComponent({
           return true
         })
         .sort((win1, win2) => {
+          // ウィンドウの座標順ソート
+          if (this.options.windowSortByPositionInApp) {
+            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
+          }
+
           // プロセスID順ソート
           if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
             return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
-
-          // ウィンドウの座標順ソート
-          if (this.options.windowSortByPositionInApp)
-            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
 
           return 0
         })
