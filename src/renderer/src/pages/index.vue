@@ -6,7 +6,7 @@
     <div class="permissions">
       <button v-if="!granted" class="button" @click="grant">タイトルを取得</button>
     </div>
-    <div class="tasks">
+    <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
       <button
         v-for="win in filteredWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
@@ -161,8 +161,7 @@ export default defineComponent({
   width: fit-content;
   .tasks {
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
   }
   .submenu {
     display: flex;
@@ -198,7 +197,8 @@ export default defineComponent({
 }
 
 .task {
-  width: 200px;
+  max-width: 200px;
+  overflow: hidden;
   white-space: initial;
   margin: 8px 4px;
   user-select: none;
