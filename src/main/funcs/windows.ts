@@ -32,7 +32,7 @@ export function createWindow(display: Display) {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    ...windowPosition(display, store.get('options').layout as LayoutType)
+    ...windowPosition(display, store.store.options.layout as LayoutType)
   })
 
   // 準備ができたら表示
@@ -87,8 +87,6 @@ export function windowPosition(
   display: Electron.Display,
   type: LayoutType
 ): { width: number; height: number; x: number; y: number } {
-  // なんかこの返り値だいぶ怪しそう
-
   return {
     // 右のときは 画面右端から - 210ピクセル
     x: type === 'right' ? display.workArea.x + display.workArea.width - 210 : display.workArea.x,

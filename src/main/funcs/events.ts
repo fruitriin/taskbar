@@ -1,7 +1,7 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, createWindow, taskbars, windowPosition } from './windows'
 import { activateWindow, grantPermission, macWindowProcesses } from './helper'
-import { ipcMain, screen } from 'electron'
+import { app, ipcMain, screen } from 'electron'
 import { Options, store } from './store'
 
 export function setEventHandlers() {
@@ -41,6 +41,8 @@ export function setEventHandlers() {
   })
   ipcMain.on('clearSetting', () => {
     store.clear()
+    app.relaunch()
+    app.quit()
   })
   screen.on('display-added', (_, newDisplay) => {
     createWindow(newDisplay)

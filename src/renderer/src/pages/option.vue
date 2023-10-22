@@ -46,7 +46,7 @@
       <label class="label">設定の初期化</label>
     </div>
     <div class="field-body">
-      <button class="button is-danger">初期化</button>
+      <button class="button is-danger" @click="clearSetting">初期化</button>
     </div>
   </div>
 </template>
