@@ -74,7 +74,7 @@ export function createOptionWindow() {
     }
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#option')
+    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/option.html')
   } else {
     optionWindow.loadFile(join(__dirname, '../renderer/option.html'))
   }
