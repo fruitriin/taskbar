@@ -14,6 +14,7 @@ export const store = new ElectronStore({
       [{ property: 'kCGWindowOwnerName', is: 'screencapture' }],
       [{ property: 'kCGWindowOwnerName', is: 'スクリーンショット' }],
       [{ property: 'kCGWindowName', is: 'Notification Center' }],
+      [{ property: 'kCGWindowOwnerName', is: '通知センター' }],
       [{ property: 'kCGWindowName', is: 'Item-0' }],
       [{ property: 'kCGWindowOwnerName', is: 'Window Server' }],
       [{ property: 'kCGWindowOwnerName', is: 'コントロールセンター' }],
