@@ -32,7 +32,7 @@ export function createWindow(display: Display) {
     alwaysOnTop: true,
     skipTaskbar: true,
     show: false,
-    ...windowPosition(display, store.get('layout') as LayoutType)
+    ...windowPosition(display, store.get('options').layout as LayoutType)
   })
 
   // 準備ができたら表示
