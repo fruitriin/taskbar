@@ -8,10 +8,33 @@
     </div>
     <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
       <button
-        v-for="win in filteredWindows"
+        v-for="win in headerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
         @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
+      >
+        <img class="icon" :src="win.appIcon" />
+        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+      </button>
+      <button
+        v-for="win in centerWindows"
+        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+        @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
+      >
+        <img class="icon" :src="win.appIcon" />
+        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+      </button>
+      <button
+        v-for="win in footerWindows"
+        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+        @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
@@ -21,6 +44,7 @@
   </div>
   <div>
     <hr />
+    <pre>{{ options }}</pre>
 
     <h2 class="block">見えているもの</h2>
     <Debug v-if="debug" :windows="filteredWindows" />
@@ -50,6 +74,8 @@ export default defineComponent({
       options: window.store.options,
       granted: window.store.granted,
       filters: window.store.filters,
+      headers: window.store.headers,
+      footers: window.store.footers,
       displayInfo: {} as {
         workArea:
           | {
@@ -66,6 +92,25 @@ export default defineComponent({
     invertWindows() {
       return this.windows?.filter((win) => {
         return !this.filteredWindows.includes(win)
+      })
+    },
+    headerWindows() {
+      return this.filteredWindows.filter((w) => {
+        if (this.options.headers.includes(w.kCGWindowOwnerName)) return true
+      })
+    },
+    footerWindows() {
+      return this.filteredWindows.filter((w) => {
+        if (this.options.footers.includes(w.kCGWindowOwnerName)) return true
+      })
+    },
+    centerWindows() {
+      return this.filteredWindows.filter((w) => {
+        if (
+          !this.options.headers.includes(w.kCGWindowOwnerName) &&
+          !this.options.footers.includes(w.kCGWindowOwnerName)
+        )
+          return true
       })
     },
     filteredWindows() {
@@ -116,6 +161,10 @@ export default defineComponent({
     })
   },
   methods: {
+    test(ev) {
+      Electron.send('contextTask', ev)
+      console.log('test')
+    },
     grant() {
       Electron.send('grantPermission')
       this.granted = true

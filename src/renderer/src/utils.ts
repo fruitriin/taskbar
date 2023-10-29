@@ -13,6 +13,8 @@ type Store = {
     windowSortByPositionInApp: false
   }
   filters: { property: string; is: string }[][]
+  headers: string[]
+  footers: string[]
 }
 
 export const Electron = {
