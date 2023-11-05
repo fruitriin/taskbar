@@ -24,14 +24,9 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   hardenedRuntime: true
   gatekeeperAssess: false
-   target:
-     - target: dmg
-       arch:
-         - x64
-         - arm
 dmg:
   artifactName: ${name}-${version}.${ext}
-  
+
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
