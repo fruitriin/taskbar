@@ -8,10 +8,33 @@
     </div>
     <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
       <button
-        v-for="win in filteredWindows"
+        v-for="win in headerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
         @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
+      >
+        <img class="icon" :src="win.appIcon" />
+        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+      </button>
+      <button
+        v-for="win in centerWindows"
+        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+        @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
+      >
+        <img class="icon" :src="win.appIcon" />
+        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+      </button>
+      <button
+        v-for="win in footerWindows"
+        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+        @click="acticveWindow(win)"
+        @click.right.prevent="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
@@ -21,10 +44,12 @@
   </div>
   <div>
     <hr />
+    <pre>{{ options }}</pre>
 
     <h2 class="block">見えているもの</h2>
     <Debug v-if="debug" :windows="filteredWindows" />
     <hr />
+    filteredWindows
     <h2 class="block">隠しているもの</h2>
     <Debug v-if="debug" :windows="invertWindows" />
   </div>
@@ -37,6 +62,7 @@ import { Electron } from '../utils'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
+import { createNewSortInstance, sort } from 'fast-sort'
 
 export default defineComponent({
   components: {
@@ -50,6 +76,8 @@ export default defineComponent({
       options: window.store.options,
       granted: window.store.granted,
       filters: window.store.filters,
+      headers: window.store.options.headers,
+      footers: window.store.options.footers,
       displayInfo: {} as {
         workArea:
           | {
@@ -68,6 +96,28 @@ export default defineComponent({
         return !this.filteredWindows.includes(win)
       })
     },
+    headerWindows() {
+      const headers = this.filteredWindows.filter((w) => {
+        if (this.options.headers.includes(w.kCGWindowOwnerName)) return true
+      })
+
+      return this.sort(headers, 'headers')
+    },
+    footerWindows() {
+      const footers = this.filteredWindows.filter((w) => {
+        if (this.options.footers.includes(w.kCGWindowOwnerName)) return true
+      })
+      return this.sort(footers, 'footers')
+    },
+    centerWindows() {
+      return this.filteredWindows.filter((w) => {
+        if (
+          !this.options.headers.includes(w.kCGWindowOwnerName) &&
+          !this.options.footers.includes(w.kCGWindowOwnerName)
+        )
+          return true
+      })
+    },
     filteredWindows() {
       const displayConrner = {
         left: this.displayInfo.workArea?.x,
@@ -75,33 +125,19 @@ export default defineComponent({
         top: this.displayInfo.workArea?.y,
         bottom: this.displayInfo?.workArea?.y + this.displayInfo.workArea?.height
       }
-      return [...this.windows]
-        .filter((win) => {
-          // ディスプレイの左端から左にウィンドウがはみ出していれば表示しない
-          if (displayConrner.left > win.kCGWindowBounds.X) return false
-          // ディスプレイの右端から右にウィンドウがはみ出していれば表示しない
-          if (win.kCGWindowBounds.X + win.kCGWindowBounds.Width > displayConrner.right) return false
+      return [...this.windows].filter((win) => {
+        // ディスプレイの中にウィンドウの内側になければ表示しない
+        if (displayConrner.left > win.kCGWindowBounds.X + win.kCGWindowBounds.Width) return false
+        if (win.kCGWindowBounds.X > displayConrner.right) return false
 
-          if (displayConrner.top > win.kCGWindowBounds.Y) return false
-          if (win.kCGWindowBounds.Y + win.kCGWindowBounds.Height > displayConrner.bottom)
-            return false
+        if (displayConrner.top > win.kCGWindowBounds.Y + win.kCGWindowBounds.Height) return false
+        if (win.kCGWindowBounds.Y > displayConrner.bottom) return false
 
-          return true
-        })
-        .sort((win1, win2) => {
-          // ウィンドウの座標順ソート
-          if (this.options.windowSortByPositionInApp) {
-            return win1.kCGWindowBounds.X - win2.kCGWindowBounds.X
-          }
-
-          // プロセスID順ソート
-          if (win1.kCGWindowOwnerPID !== win2.kCGWindowOwnerPID)
-            return win1.kCGWindowOwnerPID - win2.kCGWindowOwnerPID
-
-          return 0
-        })
+        return true
+      })
     }
   },
+
   mounted() {
     Electron.listen('updateOptions', (event, value) => {
       console.log('[taskbar]updated:', value)
@@ -116,6 +152,32 @@ export default defineComponent({
     })
   },
   methods: {
+    sort(arr: MacWindow[], area: 'headers' | 'footers') {
+      const orderRule = {
+        Headers: 'desc',
+        Footers: 'asc'
+      } as const
+
+      const order = orderRule[area]
+
+      const rule = {}
+      this.options[area].forEach((e, i) => {
+        rule[e] = i
+      })
+
+      const ruleSorter = createNewSortInstance({
+        comparer: (a, b) => (rule[a] || 0) - (rule[b] || 0)
+      })
+
+      return ruleSorter(arr).by([
+        { asc: (u) => u.kCGWindowOwnerName },
+        order === 'asc' ? { asc: (u) => u.kCGWindowBounds.X } : { desc: (u) => u.kCGWindowBounds.X }
+      ])
+    },
+    test(ev) {
+      Electron.send('contextTask', ev)
+      console.log('test')
+    },
     grant() {
       Electron.send('grantPermission')
       this.granted = true

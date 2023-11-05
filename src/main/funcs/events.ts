@@ -1,8 +1,10 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, createWindow, taskbars, windowPosition } from './windows'
-import { activateWindow, grantPermission, macWindowProcesses } from './helper'
+import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from './helper'
 import { app, ipcMain, screen } from 'electron'
 import { Options, store } from './store'
+import { Menu, MenuItem } from 'electron'
+import { MacWindow } from '../type'
 
 export function setEventHandlers() {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -44,6 +46,30 @@ export function setEventHandlers() {
     app.relaunch()
     app.quit()
   })
+  // タスクを右クリックしたときのコンテキストメニュー
+  ipcMain.on('contextTask', (_event, value: MacWindow) => {
+    const menu = new Menu()
+    menu.append(moveAreaMenu(value.kCGWindowOwnerName, 'headers'))
+    menu.append(moveAreaMenu(value.kCGWindowOwnerName, 'footers'))
+    menu.append(
+      new MenuItem({
+        label: '閉じる',
+        click() {
+          activateWindow(value)
+          closeWindow(value)
+        }
+      })
+    )
+    menu.append(
+      new MenuItem({
+        label: '強制終了',
+        click() {
+          process.kill(value.kCGWindowOwnerPID)
+        }
+      })
+    )
+    menu.popup({})
+  })
   screen.on('display-added', (_, newDisplay) => {
     createWindow(newDisplay)
   })
@@ -51,4 +77,31 @@ export function setEventHandlers() {
   screen.on('display-removed', (_, oldDisplay) => {
     delete taskbars[oldDisplay.id]
   })
+}
+
+function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
+  const position = store.store.options[area].indexOf(kCGWindowOwnerName)
+  const labelName = {
+    headers: '先頭',
+    footers: '末尾'
+  } as const
+
+  return new MenuItem({
+    click(_menuItem, _browserWindow) {
+      if (position < 0) {
+        store.set('options.' + area, [...store.store.options[area], kCGWindowOwnerName])
+      } else {
+        const tmp = store.store.options[area]
+        tmp.splice(position, 1)
+        store.set('options.' + area, tmp)
+      }
+      updateOptions()
+    },
+    label: position < 0 ? `${labelName[area]}へ追加` : `${labelName[area]}から削除`
+  })
+}
+function updateOptions() {
+  for (const taskbarsKey in taskbars) {
+    taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
+  }
 }

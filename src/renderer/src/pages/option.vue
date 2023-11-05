@@ -1,67 +1,118 @@
 <template>
   <h1>Taskbar.fm 設定</h1>
-  <div class="field is-horizontal">
-    <div class="field-label is-normal">
-      <label class="label">表示位置</label>
-    </div>
-    <div class="field-body">
-      <div class="select">
-        <select v-model="options.layout">
-          <option value="left">left</option>
-          <option value="bottom">bottom</option>
-          <option value="right">right</option>
-        </select>
+  <div class="main-options">
+    <div class="field is-horizontal">
+      <div class="field-label is-normal">
+        <label class="label">表示位置</label>
+      </div>
+      <div class="field-body">
+        <div class="select">
+          <select v-model="options.layout">
+            <option value="left">left</option>
+            <option value="bottom">bottom</option>
+            <option value="right">right</option>
+          </select>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="field is-horizontal">
-    <div class="field-label is-normal">
-      <label class="label">並び順</label>
-    </div>
-    <div class="field-body">
-      <div class="select">
-        <select v-model="options.windowSortByPositionInApp">
-          <option :value="false">起動順</option>
-          <option :value="true">座標順</option>
-        </select>
+    <div class="in-app-sort field is-horizontal">
+      <div class="field-label is-normal">
+        <label class="label">並び順</label>
+      </div>
+      <div class="field-body">
+        <div class="select">
+          <select v-model="options.windowSortByPositionInApp">
+            <option :value="false">起動順</option>
+            <option :value="true">座標順</option>
+          </select>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="field is-horizontal">
-    <div class="field-label">
-      <label class="label">フィルター </label>
-    </div>
-    <div class="field-body">
-      <div>
-        <div class="" v-for="(filterElements, i) in filters" :key="i" style="display: flex">
-          <div class="" v-for="(filter, k) in filterElements" :key="k">
-            {{ filter.property }} - {{ filter.is }}
+    <div class="filterRule field is-horizontal">
+      <div class="field-label">
+        <label class="label">フィルター </label>
+      </div>
+      <div class="field-body">
+        <div>
+          <div class="" v-for="(filterElements, i) in filters" :key="i" style="display: flex">
+            <div class="" v-for="(filter, k) in filterElements" :key="k">
+              {{ filter.property }} - {{ filter.is }}
+            </div>
           </div>
         </div>
       </div>
     </div>
+    <div class="sort-rule field is-horizontal">
+      <div class="field-label">
+        <label class="label">並べ替えルール</label>
+      </div>
+      <div class="field-body" style="display: block">
+        <div class="sort-rule" v-for="rule in sortRule">
+          <div class="field is-normal">
+            <label class="label">{{ rule.name }}</label>
+          </div>
+          <div class="field-body">
+            <draggable
+              tag="transition-group"
+              v-model="options[rule.name]"
+              :component-data="{
+                tag: 'ul',
+                type: 'transition-group',
+                key: '1',
+                name: !drag ? 'flip-list' : null
+              }"
+              :group="rule.name"
+              item-key="id"
+              ghost-class=".ghost"
+              @start="drag = true"
+              @end="drag = false"
+              key="index"
+            >
+              <template #item="{ element }">
+                <li :key="element" class="button" style="cursor: pointer">
+                  {{ rule.name }}
+                  {{ element }}
+                </li>
+              </template>
+            </draggable>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="init field is-horizontal">
+      <div class="field-label">
+        <label class="label">設定の初期化</label>
+      </div>
+      <div class="field-body">
+        <button class="button is-danger" @click="clearSetting">初期化</button>
+      </div>
+    </div>
   </div>
-  <div class="field is-horizontal">
-    <div class="field-label">
-      <label class="label">設定の初期化</label>
-    </div>
-    <div class="field-body">
-      <button class="button is-danger" @click="clearSetting">初期化</button>
-    </div>
+  <div class="sort-rule">
+    <div class="ghost"></div>
   </div>
 </template>
 
 <script lang="ts">
 import { Electron } from '../utils'
+import draggable from 'vuedraggable'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 export default {
+  components: {
+    draggable
+  },
   data() {
     return {
+      drag: false,
       options: {
-        layout: window.store.options.layout,
-        windowSortByPositionInApp: window.store.options.windowSortByPositionInApp
+        ...window.store.options
       },
+      sortRule: [
+        { name: 'headers', label: '先頭' },
+        { name: 'footers', label: '末尾' }
+      ],
       filters: window.store.filters
     }
   },
@@ -84,6 +135,35 @@ export default {
 <style lang="scss" scoped>
 .label {
   color: white !important;
+}
+
+.sort-rule li {
+  margin-left: 12px;
+}
+
+.flip-list-move {
+  transition: transform 0.5s;
+}
+
+.no-move {
+  transition: transform 0s;
+}
+
+.ghost {
+  opacity: 0.5;
+  background: #c8ebfb;
+}
+
+.list-group {
+  min-height: 20px;
+}
+
+.list-group-item {
+  cursor: move;
+}
+
+.list-group-item i {
+  cursor: pointer;
 }
 </style>
 

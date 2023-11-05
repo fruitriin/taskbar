@@ -83,6 +83,36 @@ end tell
   })
 }
 
+// ウィンドウを閉じるにする関数
+export function closeWindow(window: MacWindow): void {
+  const script = `tell application "System Events"
+    set targetProcess to first application process whose unix id is ${window.kCGWindowOwnerPID}
+    set targetAppWindows to windows of targetProcess
+
+    repeat with currentWindow in targetAppWindows
+      if name of currentWindow contains "${escape(window.kCGWindowName)}" then
+        try
+          perform action "AXPress" of (first button of currentWindow whose subrole is "AXCloseButton")
+          exit repeat  -- ウィンドウを閉じたらリピートから抜ける
+        on error
+          display dialog "閉じるボタンが見つかりません。"
+          exit repeat  -- エラーが発生した場合もリピートから抜ける
+        end try
+        end try
+      end if
+    end repeat
+end tell
+`
+  exec(`osascript -e '${script}'`, (error, _stdout, _stderr) => {
+    if (error) {
+      console.error(`Error executing AppleScript: ${error}`)
+      return
+    }
+    // console.log(_stderr);
+    // console.log(_stdout);
+  })
+}
+
 /**
  * 高さ・幅が低すぎるものと、store.filters から条件に一致するものを除外する
  */

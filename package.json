@@ -1,6 +1,6 @@
 {
   "name": "taskbar.fm",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Taskbar like windows for mac",
   "main": "./out/main/index.js",
   "author": "FruitRiin",
@@ -13,11 +13,11 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "helper": "swiftc src/native/helper.swift -o resources/TaskbarHelper ",
+    "helper": "swiftc src/native/helper.swift -o resources/TaskbarHelper",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:win": "npm run build && electron-builder --win --config",
-    "build:mac": "npm run build && electron-builder --mac",
+    "build:mac": "npm run build && electron-builder --mac ",
     "build:linux": "npm run build && electron-builder --linux --config",
     "afterSign": "scripts/notarize.js",
     "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-arm64/taskbar.fm.app /Applications/taskbar.fm.app"
@@ -25,12 +25,18 @@
   "dmg": {
     "sign": false
   },
+
+  "mac": {
+    "universal": true
+  },
   "dependencies": {
     "@electron-toolkit/preload": "^1.0.3",
     "@electron-toolkit/utils": "^1.0.2",
     "electron-updater": "^5.3.0",
+    "fast-sort": "^3.4.0",
     "pinia": "^2.1.4",
-    "vue-router": "^4.2.4"
+    "vue-router": "^4.2.4",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",

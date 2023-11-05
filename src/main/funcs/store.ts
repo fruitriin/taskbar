@@ -5,7 +5,9 @@ export const store = new ElectronStore({
   defaults: {
     options: {
       layout: 'bottom' as LayoutType,
-      windowSortByPositionInApp: false
+      windowSortByPositionInApp: false,
+      headers: [] as string[],
+      footers: [] as string[]
     },
     filters: [
       [{ property: 'kCGWindowIsOnscreen', is: false }],
