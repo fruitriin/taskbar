@@ -49,6 +49,9 @@
       <button class="button is-danger" @click="clearSetting">初期化</button>
     </div>
   </div>
+  <div>
+    {{ options }}
+  </div>
 </template>
 
 <script lang="ts">
@@ -59,8 +62,7 @@ export default {
   data() {
     return {
       options: {
-        layout: window.store.options.layout,
-        windowSortByPositionInApp: window.store.options.windowSortByPositionInApp
+        ...window.store.options
       },
       filters: window.store.filters
     }

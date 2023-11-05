@@ -11,10 +11,10 @@ type Store = {
   options: {
     layout: string
     windowSortByPositionInApp: false
+    headers: string[]
+    footers: string[]
   }
   filters: { property: string; is: string }[][]
-  headers: string[]
-  footers: string[]
 }
 
 export const Electron = {
