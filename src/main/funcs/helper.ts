@@ -26,7 +26,7 @@ export function getAndSubmitProcesses(): void {
     })
     taskbarHelper.on('close', async (code) => {
       if ((await code) === 0) {
-        const jsoned = JSON.parse(new Buffer(rawData).toString('utf-8'))
+        const jsoned = JSON.parse(Buffer.from(rawData).toString('utf-8'))
         applyProcessChange(jsoned)
         rawData = ''
       }
