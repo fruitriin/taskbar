@@ -98,22 +98,22 @@ export default defineComponent({
     },
     headerWindows() {
       const headers = this.filteredWindows.filter((w) => {
-        if (this.options.headers.includes(w.kCGWindowOwnerName)) return true
+        if (this.options?.headers.includes(w.kCGWindowOwnerName)) return true
       })
 
       return this.sort(headers, 'headers')
     },
     footerWindows() {
       const footers = this.filteredWindows.filter((w) => {
-        if (this.options.footers.includes(w.kCGWindowOwnerName)) return true
+        if (this.options?.footers.includes(w.kCGWindowOwnerName)) return true
       })
       return this.sort(footers, 'footers')
     },
     centerWindows() {
       return this.filteredWindows.filter((w) => {
         if (
-          !this.options.headers.includes(w.kCGWindowOwnerName) &&
-          !this.options.footers.includes(w.kCGWindowOwnerName)
+          !this.options?.headers.includes(w.kCGWindowOwnerName) &&
+          !this.options?.footers.includes(w.kCGWindowOwnerName)
         )
           return true
       })
@@ -161,7 +161,7 @@ export default defineComponent({
       const order = orderRule[area]
 
       const rule = {}
-      this.options[area].forEach((e, i) => {
+      this.options[area]?.forEach((e, i) => {
         rule[e] = i
       })
 
