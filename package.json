@@ -13,7 +13,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
-    "helper": "swiftc src/native/helper.swift -target arm64-apple-macosx14.0 -framework Foundation -o resources/arm_TaskbarHelper ; swiftc src/native/helper.swift -target x86_64-apple-macosx14.0 -framework Foundation -o resources/x86_TaskbarHelper ; lipo -create resources/x86_TaskbarHelper resources/arm_TaskbarHelper -output resources/TaskbarHelper; rm resources/x86_TaskbarHelper resources/arm_TaskbarHelper",
+    "helper": "swiftc src/native/Sources/native/helper.swift -target arm64-apple-macosx14.0 -framework Foundation -o resources/arm_TaskbarHelper ; swiftc src/native/helper.swift -target x86_64-apple-macosx14.0 -framework Foundation -o resources/x86_TaskbarHelper ; lipo -create resources/x86_TaskbarHelper resources/arm_TaskbarHelper -output resources/TaskbarHelper; rm resources/x86_TaskbarHelper resources/arm_TaskbarHelper",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:win": "npm run build && electron-builder --win --config",
