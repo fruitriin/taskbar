@@ -20,11 +20,6 @@ export default defineComponent({
 
     return false
   },
-  computed: {
-    Electron(){
-      return Electron
-    }
-  }
 })
 
 </script>

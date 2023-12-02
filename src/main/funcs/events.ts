@@ -80,7 +80,6 @@ export function setEventHandlers() {
   screen.on('display-added', (_, newDisplay) => {
     createWindow(newDisplay)
   })
-  // TODO 動作確認
   screen.on('display-removed', (_, oldDisplay) => {
     delete taskbars[oldDisplay.id]
   })
