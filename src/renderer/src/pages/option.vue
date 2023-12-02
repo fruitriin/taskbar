@@ -1,4 +1,8 @@
 <template>
+  <div v-if="hasError">
+    {{hasError}}
+
+  </div>
   <div class="option">
     <h1>Taskbar.fm 設定</h1>
     <div class="main-options">
@@ -82,10 +86,12 @@
 
       <div class="init field is-horizontal">
         <div class="field-label">
-          <label class="label">設定の初期化</label>
+          <label class="label">設定の初期化と終了</label>
         </div>
-        <div class="field-body">
-          <button class="button is-danger" @click="clearSetting">初期化</button>
+        <div class="field-body" style="gap: 16px;">
+          <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
+          <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
+          <button class="button ml-4" @click="Electron.send('exit')">終了</button>
         </div>
       </div>
     </div>
@@ -99,7 +105,6 @@
 import { Electron } from '../utils'
 import draggable from 'vuedraggable'
 
-type LayoutType = 'right' | 'left' | 'bottom'
 export default {
   components: {
     draggable
@@ -117,9 +122,9 @@ export default {
       filters: window.store.filters
     }
   },
-  methods: {
-    clearSetting() {
-      Electron.send('clearSetting')
+  computed: {
+    Electron() {
+      return Electron
     }
   },
   watch: {
@@ -129,7 +134,8 @@ export default {
         Electron.send('setOptions', value)
       }
     }
-  }
+  },
+
 }
 </script>
 <style>

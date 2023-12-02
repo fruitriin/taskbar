@@ -46,6 +46,13 @@ export function setEventHandlers() {
     app.relaunch()
     app.quit()
   })
+  ipcMain.on('restart', () => {
+    app.relaunch()
+    app.quit()
+  }),
+    ipcMain.on('exit', () => {
+      app.quit()
+    })
   // タスクを右クリックしたときのコンテキストメニュー
   ipcMain.on('contextTask', (_event, value: MacWindow) => {
     const menu = new Menu()

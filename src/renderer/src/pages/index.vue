@@ -68,6 +68,7 @@ export default defineComponent({
   components: {
     Debug
   },
+
   data() {
     return {
       icon,
