@@ -87,6 +87,7 @@ export function setEventHandlers() {
 
 function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
   const position = store.store.options[area].indexOf(kCGWindowOwnerName)
+  const oppositeArea = area === 'headers' ? 'footers' : 'headers';
   const labelName = {
     headers: '先頭',
     footers: '末尾'
@@ -96,6 +97,15 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
     click(_menuItem, _browserWindow) {
       if (position < 0) {
         store.set('options.' + area, [...store.store.options[area], kCGWindowOwnerName])
+
+        // 先頭に追加している状態で末尾に追加する場合は先頭から削除 (逆も同様)
+        const oppositePosition = store.store.options[oppositeArea].indexOf(kCGWindowOwnerName)
+        if (oppositePosition >= 0) {
+          const tmp = store.store.options[oppositeArea]
+          tmp.splice(oppositePosition, 1)
+          store.set('options.' + oppositeArea, tmp)
+        }
+
       } else {
         const tmp = store.store.options[area]
         tmp.splice(position, 1)
