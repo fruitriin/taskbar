@@ -87,7 +87,7 @@ export function setEventHandlers() {
 
 function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
   const position = store.store.options[area].indexOf(kCGWindowOwnerName)
-  const oppositeArea = area === 'headers' ? 'footers' : 'headers';
+  const oppositeArea = area === 'headers' ? 'footers' : 'headers'
   const oppositePosition = store.store.options[oppositeArea].indexOf(kCGWindowOwnerName)
   const labelName = {
     headers: '先頭',
