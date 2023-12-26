@@ -87,6 +87,8 @@ export function setEventHandlers() {
 
 function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
   const position = store.store.options[area].indexOf(kCGWindowOwnerName)
+  const oppositeArea = area === 'headers' ? 'footers' : 'headers'
+  const oppositePosition = store.store.options[oppositeArea].indexOf(kCGWindowOwnerName)
   const labelName = {
     headers: '先頭',
     footers: '末尾'
@@ -96,10 +98,10 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
     click(_menuItem, _browserWindow) {
       if (position < 0) {
         store.set('options.' + area, [...store.store.options[area], kCGWindowOwnerName])
+        // 先頭に追加している状態で末尾に追加する場合は先頭から削除 (逆も同様)
+        deleteFromAreaMenu(oppositeArea, oppositePosition)
       } else {
-        const tmp = store.store.options[area]
-        tmp.splice(position, 1)
-        store.set('options.' + area, tmp)
+        deleteFromAreaMenu(area, position)
       }
       updateOptions()
     },
@@ -110,4 +112,12 @@ function updateOptions() {
   for (const taskbarsKey in taskbars) {
     taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
   }
+}
+
+// 先頭または末尾から削除
+function deleteFromAreaMenu(area: 'headers' | 'footers', position: number) {
+  if (position < 0) return
+  const tmp = store.store.options[area]
+  tmp.splice(position, 1)
+  store.set('options.' + area, tmp)
 }
