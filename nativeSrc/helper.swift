@@ -81,7 +81,28 @@ func getWindowInfoListData() -> Data? {
 }
 
 
+class WindowObserver {
+    static let shared = WindowObserver()
 
+    private init() {}
+
+    func observeWindowChanges() {
+        let notificationCenter = NSWorkspace.shared.notificationCenter
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(windowDidChange(notification:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+
+    @objc func windowDidChange(notification: NSNotification) {
+        if let data = getWindowInfoListData() {
+            let stdOut = FileHandle.standardOutput
+            stdOut.write(data)
+        }
+    }
+}
 
 
 
@@ -98,10 +119,8 @@ case "grant":
     CGRequestScreenCaptureAccess()
 case "list":
 
-    if let data = getWindowInfoListData() {
-        let stdOut = FileHandle.standardOutput
-        stdOut.write(data)
-    }
+    WindowObserver.shared.observeWindowChanges()
+    RunLoop.main.run()
 default:
     print("default")
 }
