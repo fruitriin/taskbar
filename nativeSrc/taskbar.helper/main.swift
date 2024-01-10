@@ -91,6 +91,7 @@ class WindowObserver {
 
     private init() {}
 
+    // ウィンドウの変更を監視
     func observeWindowChanges() {
         let notificationCenter = NSWorkspace.shared.notificationCenter
         notificationCenter.addObserver(
@@ -122,10 +123,14 @@ case "grant":
     // スクリーンキャプチャのアクセス要求
     CGRequestScreenCaptureAccess()
 case "list":
+    if let data = getWindowInfoListData() {
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(data)
+    }
 
+    // ウィンドウの変更を監視
     WindowObserver.shared.observeWindowChanges()
     RunLoop.main.run()
 default:
     print("default")
 }
-

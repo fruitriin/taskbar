@@ -4,7 +4,6 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAllWindows } from './funcs/windows'
 import { setEventHandlers } from './funcs/events'
 import { getAndSubmitProcesses } from './funcs/helper'
-import { get } from 'http'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
