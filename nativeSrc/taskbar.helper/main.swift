@@ -114,12 +114,20 @@ class WindowObserver {
     }
 
     @objc func windowDidChange(notification: NSNotification) {
-        // 0.1秒待機
-        // アプリを起動した直後にウィンドウ情報を取得すると、ウィンドウ情報が取得できないため
-        usleep(100000)
-        if let data = getWindowInfoListData() {
-            let stdOut = FileHandle.standardOutput
-            stdOut.write(data)
+        // 非同期処理を開始
+        DispatchQueue.global(qos: .background).async {
+            // わずかに遅延させて非同期処理を実行
+            // これがないと開いたウィンドウの変更が反映されない
+            let delayTime = DispatchTime.now() + .milliseconds(100)
+
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: delayTime) {
+                DispatchQueue.main.async {
+                    if let data = getWindowInfoListData() {
+                        let stdOut = FileHandle.standardOutput
+                        stdOut.write(data)
+                    }
+                }
+            }
         }
     }
 }
