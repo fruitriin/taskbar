@@ -18,18 +18,28 @@ export function getAndSubmitProcesses(): void {
   let rawData = ''
   try {
     const taskbarHelper = spawn(binaryPath, ['list'])
-    taskbarHelper.stdout.on('data', (raw) => {
-      rawData += raw
-    })
-    taskbarHelper.stderr.on('data', (raw) => {
-      console.error(raw)
-    })
-    taskbarHelper.on('close', async (code) => {
-      if ((await code) === 0) {
-        const jsoned = JSON.parse(Buffer.from(rawData).toString('utf-8'))
+    taskbarHelper.stdout.on('data', (data) => {
+      // 画面の変更情報を受け取る
+      // ここでElectronのウィンドウや他のコンポーネントにデータを渡す
+      // dataの最後が]で終わっていないとJSON.parseでエラーになる
+      // ]で終わっていない場合は、次のデータを受け取るまで待つ
+      if (data.toString().endsWith(']')) {
+        rawData += data
+        // console.log(rawData)
+        const jsoned = JSON.parse(rawData.toString())
         applyProcessChange(jsoned)
         rawData = ''
+      } else {
+        rawData += data
       }
+    })
+
+    taskbarHelper.stderr.on('data', (data) => {
+      console.error(`Error: ${data}`)
+    })
+
+    taskbarHelper.on('close', (code) => {
+      console.log(`Swift process exited with code ${code}`)
     })
   } catch (e) {
     console.log(e)
