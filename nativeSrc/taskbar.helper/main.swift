@@ -94,15 +94,29 @@ class WindowObserver {
     // ウィンドウの変更を監視
     func observeWindowChanges() {
         let notificationCenter = NSWorkspace.shared.notificationCenter
+
+        // アクティブになるイベントの監視
         notificationCenter.addObserver(
             self,
             selector: #selector(windowDidChange(notification:)),
             name: NSWorkspace.didActivateApplicationNotification,
             object: nil
         )
+
+        // アプリケーションが起動されたイベントを監視
+        // これがないと新規で起動したアプリケーションのウィンドウ情報が取得できない
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(windowDidChange(notification:)),
+            name: NSWorkspace.didLaunchApplicationNotification,
+            object: nil
+        )
     }
 
     @objc func windowDidChange(notification: NSNotification) {
+        // 0.1秒待機
+        // アプリを起動した直後にウィンドウ情報を取得すると、ウィンドウ情報が取得できないため
+        usleep(100000)
         if let data = getWindowInfoListData() {
             let stdOut = FileHandle.standardOutput
             stdOut.write(data)
@@ -123,10 +137,6 @@ case "grant":
     // スクリーンキャプチャのアクセス要求
     CGRequestScreenCaptureAccess()
 case "list":
-    if let data = getWindowInfoListData() {
-        let stdOut = FileHandle.standardOutput
-        stdOut.write(data)
-    }
 
     // ウィンドウの変更を監視
     WindowObserver.shared.observeWindowChanges()
