@@ -104,7 +104,6 @@ class WindowObserver {
         )
 
         // アプリケーションが起動されたイベントを監視
-        // これがないと新規で起動したアプリケーションのウィンドウ情報が取得できない
         notificationCenter.addObserver(
             self,
             selector: #selector(windowDidChange(notification:)),
@@ -118,7 +117,7 @@ class WindowObserver {
         DispatchQueue.global(qos: .background).async {
             // わずかに遅延させて非同期処理を実行
             // これがないと開いたウィンドウの変更が反映されない
-            let delayTime = DispatchTime.now() + .milliseconds(100)
+            let delayTime = DispatchTime.now() + .milliseconds(500)
 
             DispatchQueue.global(qos: .background).asyncAfter(deadline: delayTime) {
                 DispatchQueue.main.async {

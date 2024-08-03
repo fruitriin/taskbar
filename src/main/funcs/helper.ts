@@ -22,7 +22,6 @@ export async function getAndSubmitProcesses(): Promise<void> {
     for await (const chunk of taskbarHelper.stdout) {
       rawData += chunk.toString()
       if (rawData.endsWith(']')) {
-        console.log('Received data:', rawData)
         try {
           const jsoned = JSON.parse(rawData)
           await applyProcessChange(jsoned)
