@@ -32,10 +32,8 @@ app.whenReady().then(() => {
   setEventHandlers()
 })
 
-// 1秒ごとにプロセスを取得する
-setInterval(() => {
-  getAndSubmitProcesses()
-}, 1000)
+// プロセスを取得するプロセスを起動
+getAndSubmitProcesses()
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

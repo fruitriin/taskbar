@@ -86,8 +86,50 @@ func getWindowInfoListData() -> Data? {
 }
 
 
+class WindowObserver {
+    static let shared = WindowObserver()
 
+    private init() {}
 
+    // ウィンドウの変更を監視
+    func observeWindowChanges() {
+        let notificationCenter = NSWorkspace.shared.notificationCenter
+
+        // アクティブになるイベントの監視
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(windowDidChange(notification:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+
+        // アプリケーションが起動されたイベントを監視
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(windowDidChange(notification:)),
+            name: NSWorkspace.didLaunchApplicationNotification,
+            object: nil
+        )
+    }
+
+    @objc func windowDidChange(notification: NSNotification) {
+        // 非同期処理を開始
+        DispatchQueue.global(qos: .background).async {
+            // わずかに遅延させて非同期処理を実行
+            // これがないと開いたウィンドウの変更が反映されない
+            let delayTime = DispatchTime.now() + .milliseconds(500)
+
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: delayTime) {
+                DispatchQueue.main.async {
+                    if let data = getWindowInfoListData() {
+                        let stdOut = FileHandle.standardOutput
+                        stdOut.write(data)
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 let arguments = CommandLine.arguments
@@ -103,11 +145,9 @@ case "grant":
     CGRequestScreenCaptureAccess()
 case "list":
 
-    if let data = getWindowInfoListData() {
-        let stdOut = FileHandle.standardOutput
-        stdOut.write(data)
-    }
+    // ウィンドウの変更を監視
+    WindowObserver.shared.observeWindowChanges()
+    RunLoop.main.run()
 default:
     print("default")
 }
-
