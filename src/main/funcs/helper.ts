@@ -14,35 +14,39 @@ if (app.isPackaged) {
 
 export const macWindowProcesses: MacWindow[] = []
 
-export function getAndSubmitProcesses(): void {
+export async function getAndSubmitProcesses(): Promise<void> {
   let rawData = ''
   try {
     const taskbarHelper = spawn(binaryPath, ['list'])
-    taskbarHelper.stdout.on('data', (data) => {
-      // 画面の変更情報を受け取る
-      // ここでElectronのウィンドウや他のコンポーネントにデータを渡す
-      // dataの最後が]で終わっていないとJSON.parseでエラーになる
-      // ]で終わっていない場合は、次のデータを受け取るまで待つ
-      if (data.toString().endsWith(']')) {
-        rawData += data
-        // console.log(rawData)
-        const jsoned = JSON.parse(rawData.toString())
-        applyProcessChange(jsoned)
-        rawData = ''
-      } else {
-        rawData += data
+
+    for await (const chunk of taskbarHelper.stdout) {
+      rawData += chunk.toString()
+      if (rawData.endsWith(']')) {
+        console.log('Received data:', rawData)
+        try {
+          const jsoned = JSON.parse(rawData)
+          await applyProcessChange(jsoned)
+          rawData = ''
+        } catch (parseError) {
+          console.error('Failed to parse JSON:', parseError)
+          rawData = '' // Reset rawData to avoid accumulating invalid data
+        }
       }
-    })
+    }
 
     taskbarHelper.stderr.on('data', (data) => {
-      console.error(`Error: ${data}`)
+      console.error(`TaskbarHelper error: ${data.toString()}`)
     })
 
-    taskbarHelper.on('close', (code) => {
-      console.log(`Swift process exited with code ${code}`)
+    await new Promise<void>((resolve) => {
+      taskbarHelper.on('close', (code) => {
+        console.log(`TaskbarHelper process exited with code ${code}`)
+        resolve()
+      })
     })
-  } catch (e) {
-    console.log(e)
+  } catch (error) {
+    console.error('Error in getAndSubmitProcesses:', error);
+    throw error // Re-throw the error for upper-level error handling
   }
 }
 
