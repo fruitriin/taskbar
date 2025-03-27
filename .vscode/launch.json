@@ -10,7 +10,9 @@
       "windows": {
         "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite.cmd"
       },
-      "runtimeArgs": ["--sourcemap"],
+      "runtimeArgs": [
+        "--sourcemap"
+      ],
       "env": {
         "REMOTE_DEBUGGING_PORT": "9222"
       }
@@ -25,6 +27,24 @@
       "presentation": {
         "hidden": true
       }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:taskbar}/nativeSrc",
+      "name": "Debug nativeSrc (nativeSrc)",
+      "program": "${workspaceFolder:taskbar}/nativeSrc/.build/debug/nativeSrc",
+      "preLaunchTask": "swift: Build Debug nativeSrc (nativeSrc)"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:taskbar}/nativeSrc",
+      "name": "Release nativeSrc (nativeSrc)",
+      "program": "${workspaceFolder:taskbar}/nativeSrc/.build/release/nativeSrc",
+      "preLaunchTask": "swift: Build Release nativeSrc (nativeSrc)"
     }
   ],
   "compounds": [
