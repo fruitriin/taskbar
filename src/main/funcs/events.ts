@@ -56,6 +56,9 @@ export function setEventHandlers(): void {
       app.quit()
     })
   // タスクを右クリックしたときのコンテキストメニュー
+  // index.vueの@click.right.preventでイベントが発火
+  // しかしクリック位置の情報が送られていないため、画面上部に表示される
+  // 修正するにはイベント発火時にマウス位置(event.x, event.y)をcontextTaskイベントに渡す必要がある
   ipcMain.on('contextTask', (_event, value: MacWindow) => {
     const menu = new Menu()
     menu.append(moveAreaMenu(value.kCGWindowOwnerName, 'headers'))
@@ -77,7 +80,40 @@ export function setEventHandlers(): void {
         }
       })
     )
-    menu.popup({})
+    // マウスの位置付近にメニューを表示するため、マウスの座標を取得
+    // マルチディスプレイ環境でも正しい位置に表示されるよう、screen.getCursorScreenPointを使用
+    // screen.getCursorScreenPointはプライマリディスプレイの左上を基準とした絶対座標を返す
+    // メニューを表示するウィンドウと同じディスプレイ上に表示されるようにする
+    // クリックされたタスクバーを特定
+    let clickedTaskbar: BrowserWindow | undefined
+    for (const taskbarId in taskbars) {
+      const taskbar = taskbars[taskbarId]
+      const bounds = taskbar.getBounds()
+      const cursorPos = screen.getCursorScreenPoint()
+
+      // タスクバーの範囲内にマウスカーソルがあるか確認
+      if (
+        cursorPos.x >= bounds.x &&
+        cursorPos.x <= bounds.x + bounds.width &&
+        cursorPos.y >= bounds.y &&
+        cursorPos.y <= bounds.y + bounds.height
+      ) {
+        clickedTaskbar = taskbar
+        break
+      }
+    }
+
+    const cursorPoint = screen.getCursorScreenPoint()
+    const display = screen.getDisplayNearestPoint(cursorPoint)
+    const mousePosition = {
+      x: cursorPoint.x + display.bounds.x,
+      y: cursorPoint.y - display.bounds.y
+    }
+    console.log(display.bounds, cursorPoint, clickedTaskbar)
+    menu.popup({
+      window: clickedTaskbar,
+      ...mousePosition
+    })
   })
   screen.on('display-added', (_, newDisplay) => {
     createWindow(newDisplay)
