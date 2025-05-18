@@ -88,7 +88,11 @@ end tell
 
 // ウィンドウを閉じるにする関数
 export function closeWindow(window: MacWindow): void {
-  const script = `tell application "System Events"
+  
+  let script = ''
+  if (window.kCGWindowOwnerName !== 'Finder') {
+    // 通常処理
+    script = `tell application "System Events"
     set targetProcess to first application process whose unix id is ${window.kCGWindowOwnerPID}
     set targetAppWindows to windows of targetProcess
 
@@ -104,8 +108,19 @@ export function closeWindow(window: MacWindow): void {
         end try
       end if
     end repeat
-end tell
-`
+end tell`
+  } else {
+    activateWindow(window)
+    // Finderを殺す処理
+    script = `
+tell application "Finder"
+  if (count of Finder windows) > 0 then
+    close front Finder window
+  end if
+end tell`
+  }
+
+
   exec(`osascript -e '${script}'`, (error, _stdout, _stderr) => {
     if (error) {
       console.error(`Error executing AppleScript: ${error}`)

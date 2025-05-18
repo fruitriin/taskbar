@@ -7,39 +7,71 @@
       <button v-if="!granted" class="button" @click="grant">タイトルを取得</button>
     </div>
     <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
-      <button
-        v-for="win in headerWindows"
-        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
-        class="button task"
-        @click="acticveWindow(win)"
-        @click.right.prevent="test(win)"
+      <draggable
+        v-model="headerWindows"
+        :group="{ name: 'tasks_header', pull: true, put: true }"
+        item-key="kCGWindowNumber"
+        ghost-class="ghost"
+        style="display: flex;"
+        @start="drag = true"
+        @end="drag = false"
       >
-        <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
-        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
-      </button>
-      <button
-        v-for="win in centerWindows"
-        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
-        class="button task"
-        @click="acticveWindow(win)"
-        @click.right.prevent="test(win)"
+        <template #item="{ element: win }">
+          <button
+            class="button task"
+            @click="acticveWindow(win)"
+            @click.right.prevent="test(win)"
+          >
+            <img class="icon" :src="win.appIcon" />
+            <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+            <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+          </button>
+        </template>
+      </draggable>
+
+      <draggable
+        v-model="centerWindows"
+        :group="{ name: 'tasks', pull: true, put: true }"
+        item-key="kCGWindowNumber"
+        ghost-class="ghost"
+        style="display: flex;"
+        @start="drag = true"
+        @end="drag = false"
       >
-        <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
-        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
-      </button>
-      <button
-        v-for="win in footerWindows"
-        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
-        class="button task"
-        @click="acticveWindow(win)"
-        @click.right.prevent="test(win)"
+        <template #item="{ element: win }">
+          <button
+            class="button task"
+            @click="acticveWindow(win)"
+            @click.right.prevent="test(win)"
+          >
+            <img class="icon" :src="win.appIcon" />
+            <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+            <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+          </button>
+        </template>
+      </draggable>
+
+      <draggable
+        style="display: flex"
+        v-model="footerWindows"
+        :group="{ name: 'tasks', pull: true, put: true }"
+        item-key="kCGWindowNumber"
+        ghost-class="ghost"
+        @start="drag = true"
+        @end="drag = false"
       >
-        <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
-        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
-      </button>
+        <template #item="{ element: win }">
+          <button
+            class="button task"
+            @click="acticveWindow(win)"
+            @click.right.prevent="test(win)"
+          >
+            <img class="icon" :src="win.appIcon" />
+            <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+            <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+          </button>
+        </template>
+      </draggable>
     </div>
   </div>
   <div>
@@ -58,7 +90,7 @@
 <script lang="ts">
 import icon from '../assets/icon.png'
 import { Electron } from '../utils'
-
+import draggable from 'vuedraggable'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
@@ -66,7 +98,8 @@ import { createNewSortInstance, sort } from 'fast-sort'
 
 export default defineComponent({
   components: {
-    Debug
+    Debug,
+    draggable
   },
 
   data() {
@@ -79,6 +112,7 @@ export default defineComponent({
       filters: window.store.filters,
       headers: window.store.options?.headers,
       footers: window.store.options?.footers,
+      drag: false,
       displayInfo: {} as {
         workArea:
           | {
@@ -221,9 +255,8 @@ export default defineComponent({
 .bottom {
   display: flex;
   justify-content: space-between;
-  width: fit-content;
+  width: 120px;
   .tasks {
-    width: 100%;
     display: grid;
   }
   .submenu {
@@ -241,6 +274,7 @@ export default defineComponent({
   .tasks {
     display: flex;
     flex-direction: column;
+   
     .task {
       justify-content: start;
     }
@@ -259,7 +293,13 @@ export default defineComponent({
   }
 }
 
+.ghost {
+  opacity: 0.5;
+  background: #c8ebfb;
+}
+
 .task {
+  cursor: move;
   max-width: 200px;
   overflow: hidden;
   white-space: initial;
@@ -272,7 +312,6 @@ export default defineComponent({
   font-size: 1rem;
   height: 2.5em;
   color: #fff;
-  cursor: pointer;
   justify-content: start;
 
   padding: calc(0.5em - 1px) 1em;
@@ -293,7 +332,7 @@ export default defineComponent({
 
   .name {
     max-width: fit-content;
-    display: -webkit-box;
+    display: flex;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
     overflow: hidden;
