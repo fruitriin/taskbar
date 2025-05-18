@@ -6,7 +6,7 @@ import { Options, store } from './store'
 import { Menu, MenuItem } from 'electron'
 import { MacWindow } from '../type'
 
-export function setEventHandlers() {
+export function setEventHandlers(): void {
   ipcMain.on('activeWindow', (_event, windowId) => {
     activateWindow(windowId)
   })
@@ -26,13 +26,15 @@ export function setEventHandlers() {
 
     store.set('options', value)
     for (const displayId in taskbars) {
-      taskbars[displayId].webContents.send('updateOptions', value)
+      if (!taskbars[displayId].isDestroyed()) {
+        taskbars[displayId].webContents.send('updateOptions', value)
 
-      // メインプロセスに作用するものを別途処理
-      if (layout != value.layout) {
-        const targetDisplay = displays.find((display) => display.id.toString() === displayId)
-        if (targetDisplay)
-          taskbars[displayId].setBounds(windowPosition(targetDisplay, value.layout))
+        // メインプロセスに作用するものを別途処理
+        if (layout != value.layout) {
+          const targetDisplay = displays.find((display) => display.id.toString() === displayId)
+          if (targetDisplay)
+            taskbars[displayId].setBounds(windowPosition(targetDisplay, value.layout))
+        }
       }
     }
   })
@@ -81,7 +83,9 @@ export function setEventHandlers() {
     createWindow(newDisplay)
   })
   screen.on('display-removed', (_, oldDisplay) => {
-    delete taskbars[oldDisplay.id]
+    if (taskbars[oldDisplay.id]) {
+      taskbars[oldDisplay.id].close()
+    }
   })
 }
 
@@ -110,7 +114,9 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
 }
 function updateOptions() {
   for (const taskbarsKey in taskbars) {
-    taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
+    if (!taskbars[taskbarsKey].isDestroyed()) {
+      taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
+    }
   }
 }
 

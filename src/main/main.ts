@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
-import { createAllWindows } from './funcs/windows'
+import { createAllWindows, initializeDisplayEvents } from './funcs/windows'
 import { setEventHandlers } from './funcs/events'
 import { getAndSubmitProcesses } from './funcs/helper'
 
@@ -20,6 +20,10 @@ app.whenReady().then(() => {
   })
 
   app.setAccessibilitySupportEnabled(true)
+
+  // ディスプレイイベントの初期化
+  initializeDisplayEvents()
+  // ウィンドウの作成
   createAllWindows()
 
   app.on('activate', function () {

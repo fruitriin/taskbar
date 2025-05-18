@@ -43,13 +43,16 @@ export function grantPermission(): void {
 import { diff } from 'just-diff'
 import { diffApply } from 'just-diff-apply'
 
-function applyProcessChange(newProcesses: typeof macWindowProcesses) {
+//  なんかごきげん斜め ウィンドウの増減で動かなくなる
+function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
   const result = diff(macWindowProcesses, filterProcesses(newProcesses))
 
   if (result.length > 0) {
     diffApply(macWindowProcesses, result)
     for (const taskbarKey in taskbars) {
-      taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
+      if (!taskbars[taskbarKey].isDestroyed()) {
+        taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
+      }
     }
   }
 }
@@ -116,7 +119,7 @@ end tell
 /**
  * 高さ・幅が低すぎるものと、store.filters から条件に一致するものを除外する
  */
-function filterProcesses(windows: MacWindow[]) {
+function filterProcesses(windows: MacWindow[]): MacWindow[] {
   return windows.filter((win) => {
     if (win.kCGWindowBounds?.Height < 40) return false
     if (win.kCGWindowBounds?.Width < 40) return false

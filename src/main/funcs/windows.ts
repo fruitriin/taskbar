@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { BrowserWindow, ipcMain, screen, Display } from 'electron'
+import { BrowserWindow, ipcMain, screen, Display, app } from 'electron'
 import { store } from './store'
 
 type LayoutType = 'right' | 'left' | 'bottom'
@@ -10,14 +10,40 @@ type displayId = Display['id']
 export const taskbars: Record<displayId, Taskbar> = {}
 export type Taskbars = typeof taskbars
 
-export function createAllWindows() {
+export function initializeDisplayEvents(): void {
+  // display-removedイベントの設定
+  screen.on('display-removed', (_, oldDisplay) => {
+    if (taskbars[oldDisplay.id]) {
+      if (!taskbars[oldDisplay.id].isDestroyed()) {
+        taskbars[oldDisplay.id].close()
+      }
+      delete taskbars[oldDisplay.id]
+    }
+  })
+
+  // display-addedイベントの設定
+  screen.on('display-added', (_, newDisplay) => {
+    createWindow(newDisplay)
+  })
+
+  // display-metrics-changedイベントの設定
+  screen.on('display-metrics-changed', (_, display) => {
+    if (taskbars[display.id] && !taskbars[display.id].isDestroyed()) {
+      // ウィンドウの位置とサイズを更新
+      const newBounds = windowPosition(display, store.store.options.layout as LayoutType)
+      taskbars[display.id].setBounds(newBounds)
+    }
+  })
+}
+
+export function createAllWindows(): void {
   const allDisplays = screen.getAllDisplays()
   allDisplays.forEach((display) => {
     createWindow(display)
   })
 }
 
-export function createWindow(display: Display) {
+export function createWindow(display: Display): void {
   const taskbarWindow = new BrowserWindow({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -35,6 +61,17 @@ export function createWindow(display: Display) {
     ...windowPosition(display, store.store.options.layout as LayoutType)
   })
 
+  // ウィンドウを閉じるときのイベントを設定
+  taskbarWindow.on('close', () => {
+    taskbarWindow.destroy()
+    // ウィンドウが閉じられたらtaskbarsから削除
+    delete taskbars[display.id]
+  })
+
+  // ウィンドウを閉じるサンプル
+  // taskbarWindow.close() // 通常の閉じる処理
+  // taskbarWindow.destroy() // 強制的に閉じる
+
   // 準備ができたら表示
   taskbarWindow.on('ready-to-show', () => {
     taskbarWindow.show()
@@ -51,12 +88,22 @@ export function createWindow(display: Display) {
   }
 
   taskbars[display.id] = taskbarWindow
-  ipcMain.on('windowReady', () => {
-    taskbarWindow.webContents.send('displayInfo', {
-      label: display.label,
-      id: display.id,
-      workArea: display.workArea
-    })
+
+  // windowReadyイベントのリスナーを設定
+  const windowReadyListener = (): void => {
+    if (!taskbarWindow.isDestroyed()) {
+      taskbarWindow.webContents.send('displayInfo', {
+        label: display.label,
+        id: display.id,
+        workArea: display.workArea
+      })
+    }
+  }
+  ipcMain.on('windowReady', windowReadyListener)
+
+  // ウィンドウが閉じられたときにイベントリスナーを削除
+  taskbarWindow.on('closed', (): void => {
+    ipcMain.removeListener('windowReady', windowReadyListener)
   })
 }
 
