@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { BrowserWindow, ipcMain, screen, Display, app } from 'electron'
+import { BrowserWindow, ipcMain, screen, Display } from 'electron'
 import { store } from './store'
 
 type LayoutType = 'right' | 'left' | 'bottom'
@@ -11,29 +11,23 @@ export const taskbars: Record<displayId, Taskbar> = {}
 export type Taskbars = typeof taskbars
 
 export function initializeDisplayEvents(): void {
-  // display-removedイベントの設定
-  screen.on('display-removed', (_, oldDisplay) => {
-    if (taskbars[oldDisplay.id]) {
-      if (!taskbars[oldDisplay.id].isDestroyed()) {
-        taskbars[oldDisplay.id].close()
+  // ディスプレイ構成が変わったら全部作り直し
+  const recreateAllWindows = (): void => {
+    // 既存のウィンドウを全て閉じる
+    for (const id in taskbars) {
+      if (!taskbars[id].isDestroyed()) {
+        taskbars[id].close()
       }
-      delete taskbars[oldDisplay.id]
+      delete taskbars[id]
     }
-  })
+    // 新しくウィンドウを作り直す
+    createAllWindows()
+  }
 
-  // display-addedイベントの設定
-  screen.on('display-added', (_, newDisplay) => {
-    createWindow(newDisplay)
-  })
-
-  // display-metrics-changedイベントの設定
-  screen.on('display-metrics-changed', (_, display) => {
-    if (taskbars[display.id] && !taskbars[display.id].isDestroyed()) {
-      // ウィンドウの位置とサイズを更新
-      const newBounds = windowPosition(display, store.store.options.layout as LayoutType)
-      taskbars[display.id].setBounds(newBounds)
-    }
-  })
+  // 各種ディスプレイイベントで全ウィンドウを作り直し
+  screen.on('display-removed', recreateAllWindows)
+  screen.on('display-added', recreateAllWindows)
+  screen.on('display-metrics-changed', recreateAllWindows)
 }
 
 export function createAllWindows(): void {
@@ -108,7 +102,7 @@ export function createWindow(display: Display): void {
 }
 
 export let optionWindow: BrowserWindow
-export function createOptionWindow() {
+export function createOptionWindow(): void {
   // すでにウィンドウを開いているならそれをアクティブにする
   if (optionWindow && !optionWindow.isDestroyed()) {
     optionWindow.show()
