@@ -66,7 +66,7 @@ export function setEventHandlers(): void {
     menu.append(
       new MenuItem({
         label: '閉じる',
-        click() {
+        click(): void {
           activateWindow(value)
           closeWindow(value)
         }
@@ -75,7 +75,7 @@ export function setEventHandlers(): void {
     menu.append(
       new MenuItem({
         label: '強制終了',
-        click() {
+        click(): void {
           process.kill(value.kCGWindowOwnerPID)
         }
       })
@@ -125,7 +125,7 @@ export function setEventHandlers(): void {
   })
 }
 
-function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
+function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers'): MenuItem {
   const position = store.store.options[area].indexOf(kCGWindowOwnerName)
   const oppositeArea = area === 'headers' ? 'footers' : 'headers'
   const oppositePosition = store.store.options[oppositeArea].indexOf(kCGWindowOwnerName)
@@ -135,7 +135,7 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
   } as const
 
   return new MenuItem({
-    click(_menuItem, _browserWindow) {
+    click(_menuItem, _browserWindow): void {
       if (position < 0) {
         store.set('options.' + area, [...store.store.options[area], kCGWindowOwnerName])
         // 先頭に追加している状態で末尾に追加する場合は先頭から削除 (逆も同様)
@@ -148,7 +148,7 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers') {
     label: position < 0 ? `${labelName[area]}へ追加` : `${labelName[area]}から削除`
   })
 }
-function updateOptions() {
+function updateOptions(): void {
   for (const taskbarsKey in taskbars) {
     if (!taskbars[taskbarsKey].isDestroyed()) {
       taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
@@ -157,7 +157,7 @@ function updateOptions() {
 }
 
 // 先頭または末尾から削除
-function deleteFromAreaMenu(area: 'headers' | 'footers', position: number) {
+function deleteFromAreaMenu(area: 'headers' | 'footers', position: number): void {
   if (position < 0) return
   const tmp = store.store.options[area]
   tmp.splice(position, 1)
