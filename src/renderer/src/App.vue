@@ -1,33 +1,30 @@
 <script lang="ts">
-
-import { defineComponent } from "vue";
-import { Electron } from "./utils";
+import { defineComponent } from 'vue'
+import { Electron } from './utils'
 
 export default defineComponent({
+  data() {
+    return {
+      hasError: false
+    }
+  },
   computed: {
     Electron() {
       return Electron
     }
   },
-  data(){
-    return {
-      hasError: false,
-
-    }
-  },
-  errorCaptured(e){
+  errorCaptured(e) {
     this.hasError = e
 
     return false
-  },
+  }
 })
-
 </script>
 
 <template>
   <div v-if="hasError">
     <button class="is-primary button" @click="Electron.send('clearSetting')">設定を消す</button>
-    Err: {{hasError}}
+    Err: {{ hasError }}
   </div>
   <router-view v-else />
 </template>
