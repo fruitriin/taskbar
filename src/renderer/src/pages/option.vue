@@ -34,14 +34,15 @@
           <label class="label">並べ替えルール</label>
         </div>
         <div class="field-body" style="display: block">
-          <div class="sort-rule" v-for="rule in sortRule" :key="rule.name">
+          <div v-for="rule in sortRule" :key="rule.name" class="sort-rule">
             <div class="field is-normal">
               <label class="label">{{ rule.name }}</label>
             </div>
             <div class="field-body">
               <draggable
-                tag="transition-group"
+                key="index"
                 v-model="options[rule.name]"
+                tag="transition-group"
                 :component-data="{
                   tag: 'ul',
                   type: 'transition-group',
@@ -53,7 +54,6 @@
                 ghost-class=".ghost"
                 @start="drag = true"
                 @end="drag = false"
-                key="index"
               >
                 <template #item="{ element }">
                   <li :key="element" class="button" style="cursor: pointer">
@@ -71,33 +71,40 @@
         </div>
         <div class="field-body">
           <div>
-            <div class="filter-item" v-for="(filterElements, i) in filters" :key="i" style=" align-items: center; margin-bottom: 8px; border: 2px solid gray;">
-              <div style="display: flex;">
-              <div class="filter-content" v-for="(filter, k) in filterElements" :key="k" style="margin-right: 8px;">
-                {{ filter.property }} - {{ filter.is }}
+            <div
+              v-for="(filterElements, i) in filters"
+              :key="i"
+              class="filter-item"
+              style="align-items: center; margin-bottom: 8px; border: 2px solid gray"
+            >
+              <div style="display: flex">
+                <div
+                  v-for="(filter, k) in filterElements"
+                  :key="k"
+                  class="filter-content"
+                  style="margin-right: 8px"
+                >
+                  {{ filter.property }} - {{ filter.is }}
+                </div>
+                <div class="filter-actions">
+                  <button class="button is-small is-danger" @click="removeFilter(i)">
+                    <span class="icon is-small"> ✗ </span>
+                  </button>
+                </div>
               </div>
-              <div class="filter-actions">
-                <button class="button is-small is-danger" @click="removeFilter(i)">
-                  <span class="icon is-small">
-                    ✗
-                  </span>
-                </button>
-              </div>
-            </div>
               <AddFilter :filter-index="i" @add-filter="handleAddFilter" />
             </div>
-            
+
             <AddFilter @add-filter="handleAddFilter" />
           </div>
         </div>
       </div>
-      
 
       <div class="init field is-horizontal">
         <div class="field-label">
           <label class="label">設定の初期化と終了</label>
         </div>
-        <div class="field-body" style="gap: 16px;">
+        <div class="field-body" style="gap: 16px">
           <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
           <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
           <button class="button ml-4" @click="Electron.send('exit')">終了</button>
@@ -121,11 +128,11 @@ export default {
     AddFilter
   },
   data(): {
-    drag: boolean;
-    options: any;
-    sortRule: Array<{name: string; label: string}>;
-    filters: Array<Array<{property: string; is: string}>>;
-    newFilter: {property: string; is: string};
+    drag: boolean
+    options: any
+    sortRule: Array<{ name: string; label: string }>
+    filters: Array<Array<{ property: string; is: string }>>
+    newFilter: { property: string; is: string }
   } {
     return {
       drag: false,
@@ -163,7 +170,10 @@ export default {
       this.filters = newFilters
       Electron.send('setFilters', this.filters)
     },
-    handleAddFilter(data: {filter: {property: string; is: string}, filterIndex?: number}): void {
+    handleAddFilter(data: {
+      filter: { property: string; is: string }
+      filterIndex?: number
+    }): void {
       const newFilters = [...this.filters]
       if (data.filterIndex !== undefined) {
         // 既存のフィルターグループにルールを追加
@@ -175,7 +185,7 @@ export default {
       this.filters = newFilters
       Electron.send('setFilters', this.filters)
     }
-  },
+  }
 }
 </script>
 <style>
@@ -197,6 +207,7 @@ export default {
 .sort-rule li {
   margin-left: 12px;
 }
+
 .sort-rule li:first-of-type {
   margin-left: 0;
 }
