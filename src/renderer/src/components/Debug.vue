@@ -1,6 +1,6 @@
 <template>
   <table>
-    <tr>
+    <thead>
       <td>WindowOwner</td>
       <td>OwnerPID</td>
       <td>WindowNumber</td>
@@ -9,17 +9,19 @@
       <td>WindowOnScreen</td>
       <td>kCGWindowSharingState</td>
       <td>WindowBounds</td>
-    </tr>
-    <tr v-for="win in windows">
-      <td>{{ win.kCGWindowOwnerName }}</td>
-      <td>{{ win.kCGWindowOwnerPID }}</td>
-      <td>{{ win.kCGWindowNumber }}</td>
-      <td>{{ win.kCGWindowLayer }}</td>
-      <td>{{ win.kCGWindowName }}</td>
-      <td>{{ win.kCGWindowIsOnscreen }}</td>
-      <td>{{ win.kCGWindowSharingState }}</td>
-      <td>{{ win.kCGWindowBounds }}</td>
-    </tr>
+    </thead>
+    <tbody>
+      <tr v-for="win in windows" :key="win.kCGWindowOwnerName">
+        <td>{{ win.kCGWindowOwnerName }}</td>
+        <td>{{ win.kCGWindowOwnerPID }}</td>
+        <td>{{ win.kCGWindowNumber }}</td>
+        <td>{{ win.kCGWindowLayer }}</td>
+        <td>{{ win.kCGWindowName }}</td>
+        <td>{{ win.kCGWindowIsOnscreen }}</td>
+        <td>{{ win.kCGWindowSharingState }}</td>
+        <td>{{ win.kCGWindowBounds }}</td>
+      </tr>
+    </tbody>
   </table>
 </template>
 
@@ -31,7 +33,7 @@ export default {
   props: {
     windows: {
       type: Array as PropType<MacWindow[]>,
-      default: () => {
+      default: (): MacWindow[] => {
         return []
       }
     }
