@@ -2,6 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { MacWindow } from '@/type'
+import fs from 'fs'
 
 let binaryPath
 if (app.isPackaged) {
@@ -44,7 +45,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
       })
     })
   } catch (error) {
-    console.error('Error in getAndSubmitProcesses:', error);
+    console.error('Error in getAndSubmitProcesses:', error)
     throw error // Re-throw the error for upper-level error handling
   }
 }
@@ -62,6 +63,22 @@ function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
 
   if (result.length > 0) {
     diffApply(macWindowProcesses, result)
+
+    // appIconがなければicon_cacheからbase64をセット
+    for (const proc of macWindowProcesses) {
+      if (!proc.appIcon) {
+        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/\s+/g, '')
+        const winName = (proc.kCGWindowName || 'unknown').replace(/\//g, '_').replace(/\s+/g, '')
+        const fileName = `${owner}_${winName}.png`
+        const filePath = path.join(process.cwd(), 'icon_cache', fileName)
+        console.log(filePath)
+        if (fs.existsSync(filePath)) {
+          const data = fs.readFileSync(filePath)
+          proc.appIcon = `data:image/png;base64,${data.toString('base64')}`
+        }
+      }
+    }
+
     for (const taskbarKey in taskbars) {
       if (!taskbars[taskbarKey].isDestroyed()) {
         taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
@@ -101,7 +118,6 @@ end tell
 
 // ウィンドウを閉じるにする関数
 export function closeWindow(window: MacWindow): void {
-  
   let script = ''
   if (window.kCGWindowOwnerName !== 'Finder') {
     // 通常処理
@@ -132,7 +148,6 @@ tell application "Finder"
   end if
 end tell`
   }
-
 
   exec(`osascript -e '${script}'`, (error, _stdout, _stderr) => {
     if (error) {
