@@ -10,6 +10,8 @@ import ApplicationServices
 import Cocoa
 import CoreGraphics
 
+// MARK: - Extensions
+
 extension NSBitmapImageRep {
     func png() -> Data? {
         return representation(using: .png, properties: [:])
@@ -29,22 +31,24 @@ extension NSImage {
 
     func resized(to size: Int) -> NSImage {
         let newSize = CGSize(width: size, height: size)
-
         let image = NSImage(size: newSize)
+        
         image.lockFocus()
         NSGraphicsContext.current?.imageInterpolation = .high
-
+        
         draw(
             in: CGRect(origin: .zero, size: newSize),
             from: .zero,
             operation: .copy,
             fraction: 1
         )
-
+        
         image.unlockFocus()
         return image
     }
 }
+
+// MARK: - Icon Management
 
 func getIcon(pid: Int, size: Int) -> Data? {
     return NSRunningApplication(processIdentifier: pid_t(pid))?.icon?.resized(to: size).png()
@@ -54,11 +58,16 @@ func stringify(data: Data) -> String {
     return "data:image/png;base64,\(data.base64EncodedString())"
 }
 
+// MARK: - Window Information
+
+// グローバルなウィンドウリストプロバイダー（テスト用に差し替え可能）
+var windowListProvider: () -> [[String: AnyObject]] = {
+    CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
+}
+
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
 func getWindowInfoListData() -> Data? {
-//  let option: CGWindowListOption = CGWindowListOption(arrayLiteral: .excludeDesktopElements, .optionOnScreenOnly)
-    let windowsListInfo = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
-
+    let windowsListInfo = windowListProvider()
     var windowInfoList: [[String: Any]] = []
 
     for windowInfo in windowsListInfo {
@@ -68,9 +77,11 @@ func getWindowInfoListData() -> Data? {
             formattedWindowInfo[key] = value
         }
 
-        let pid = windowInfo["kCGWindowOwnerPID"] as! Int
-        if  let icon = getIcon(pid: pid, size: 32) {
-            formattedWindowInfo["appIcon"] = stringify(data: icon)
+        // アプリケーションアイコンを追加
+        if let pid = windowInfo["kCGWindowOwnerPID"] as? Int {
+            if let icon = getIcon(pid: pid, size: 32) {
+                formattedWindowInfo["appIcon"] = stringify(data: icon)
+            }
         }
 
         windowInfoList.append(formattedWindowInfo)
@@ -85,10 +96,10 @@ func getWindowInfoListData() -> Data? {
     }
 }
 
+// MARK: - Window Observer
 
 class WindowObserver {
     static let shared = WindowObserver()
-
     private init() {}
 
     // ウィンドウの変更を監視
@@ -108,6 +119,14 @@ class WindowObserver {
             self,
             selector: #selector(windowDidChange(notification:)),
             name: NSWorkspace.didLaunchApplicationNotification,
+            object: nil
+        )
+        
+        // アプリケーションが終了されたイベントを監視
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(windowDidChange(notification:)),
+            name: NSWorkspace.didTerminateApplicationNotification,
             object: nil
         )
     }
@@ -131,23 +150,41 @@ class WindowObserver {
     }
 }
 
+// MARK: - Main Entry Point
 
 let arguments = CommandLine.arguments
 guard arguments.count > 1 else {
-    print("引数が必要です")
-    exit(0)
+    print("使用方法:")
+    print("  grant  - スクリーンキャプチャのアクセス権限を要求")
+    print("  debug  - 現在のウィンドウ情報をデバッグ出力")
+    print("  list   - ウィンドウ変更を監視してリアルタイム出力")
+    exit(1)
 }
+
 // 第1引数の値によって処理を分岐
 let option = arguments[1]
 switch option {
 case "grant":
     // スクリーンキャプチャのアクセス要求
     CGRequestScreenCaptureAccess()
+    print("スクリーンキャプチャのアクセス権限を要求しました")
+    
+case "debug":
+    // デバッグ用：現在のウィンドウ情報を出力
+    if let data = getWindowInfoListData() {
+        print(String(data: data, encoding: .utf8) ?? "データの変換に失敗しました")
+    } else {
+        print("ウィンドウ情報の取得に失敗しました")
+    }
+    
 case "list":
-
     // ウィンドウの変更を監視
+    print("ウィンドウ変更の監視を開始しました...")
     WindowObserver.shared.observeWindowChanges()
     RunLoop.main.run()
+    
 default:
-    print("default")
+    print("不明なオプション: \(option)")
+    print("使用可能なオプション: grant, debug, list")
+    exit(1)
 }
