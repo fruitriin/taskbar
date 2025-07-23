@@ -5,6 +5,9 @@ import { app, ipcMain, screen } from 'electron'
 import { Options, store } from './store'
 import { Menu, MenuItem } from 'electron'
 import { MacWindow } from '../type'
+import fs from 'fs'
+import path from 'path'
+import { applyProcessChange } from './helper'
 
 export function setEventHandlers(): void {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -13,11 +16,15 @@ export function setEventHandlers(): void {
   ipcMain.on('openOption', () => {
     createOptionWindow()
   })
-  // ウィンドウの準備ができたらプロセスリストを破棄
-  // ホットリロードフロントのdataが破棄されても
-  // nodeプロセスがそのままなので差分なしになるのを防ぐ
+
   ipcMain.on('windowReady', () => {
+    // ウィンドウの準備ができたらプロセスリストを破棄
+    // ホットリロードフロントのdataが破棄されても
+    // nodeプロセスがそのままなので差分なしになるのを防ぐ
     macWindowProcesses.splice(0, macWindowProcesses.length)
+
+    // iconの変化に追従
+    watchIconsJson()
   })
 
   ipcMain.on('setOptions', (_event, value: Options) => {
@@ -162,4 +169,32 @@ function deleteFromAreaMenu(area: 'headers' | 'footers', position: number): void
   const tmp = store.store.options[area]
   tmp.splice(position, 1)
   store.set('options.' + area, tmp)
+}
+
+// icons.json監視用関数
+export function watchIconsJson(): void {
+  const iconJsonPath = path.join(process.cwd(), 'icon_cache', 'icons.json')
+  fs.watch(iconJsonPath, (eventType) => {
+    if (eventType === 'change') {
+      // icons.jsonを再読込
+      let icons: Record<string, string> = {}
+      try {
+        const raw = fs.readFileSync(iconJsonPath, 'utf-8')
+        icons = JSON.parse(raw)
+      } catch (e) {
+        icons = {}
+      }
+      // appIconが未設定またはicons.jsonの値と異なるウィンドウを抜き出す
+      const needsUpdate = macWindowProcesses.filter((proc) => {
+        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+        const winName = (proc.kCGWindowName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+        const key = `${owner}_${winName}`
+        const iconBase64 = icons[key] ? `data:image/png;base64,${icons[key]}` : undefined
+        return proc.appIcon !== iconBase64
+      })
+      if (needsUpdate.length > 0) {
+        applyProcessChange(needsUpdate)
+      }
+    }
+  })
 }

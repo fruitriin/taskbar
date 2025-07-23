@@ -3,6 +3,23 @@ import path from 'path'
 const { spawn, exec } = require('child_process')
 import { MacWindow } from '@/type'
 import fs from 'fs'
+let iconCache: Record<string, string>
+function loadIconCache(): Record<string, string> {
+  if (!iconCache) {
+    const iconJsonPath = path.join(process.cwd(), 'icon_cache', 'icons.json')
+    if (fs.existsSync(iconJsonPath)) {
+      try {
+        const raw = fs.readFileSync(iconJsonPath, 'utf-8')
+        iconCache = JSON.parse(raw)
+      } catch (e) {
+        iconCache = {}
+      }
+    } else {
+      iconCache = {}
+    }
+  }
+  return iconCache
+}
 
 let binaryPath
 if (app.isPackaged) {
@@ -58,23 +75,21 @@ import { diff } from 'just-diff'
 import { diffApply } from 'just-diff-apply'
 
 //  なんかごきげん斜め ウィンドウの増減で動かなくなる
-function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
+export function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
   const result = diff(macWindowProcesses, filterProcesses(newProcesses))
 
   if (result.length > 0) {
     diffApply(macWindowProcesses, result)
 
-    // appIconがなければicon_cacheからbase64をセット
+    // icon_cache/icons.jsonからbase64をセット
+    const icons = loadIconCache()
     for (const proc of macWindowProcesses) {
       if (!proc.appIcon) {
-        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/\s+/g, '')
-        const winName = (proc.kCGWindowName || 'unknown').replace(/\//g, '_').replace(/\s+/g, '')
-        const fileName = `${owner}_${winName}.png`
-        const filePath = path.join(process.cwd(), 'icon_cache', fileName)
-        console.log(filePath)
-        if (fs.existsSync(filePath)) {
-          const data = fs.readFileSync(filePath)
-          proc.appIcon = `data:image/png;base64,${data.toString('base64')}`
+        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+        const winName = (proc.kCGWindowName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+        const key = `${owner}_${winName}`
+        if (icons[key]) {
+          proc.appIcon = `data:image/png;base64,${icons[key]}`
         }
       }
     }
@@ -162,7 +177,7 @@ end tell`
 /**
  * 高さ・幅が低すぎるものと、store.filters から条件に一致するものを除外する
  */
-function filterProcesses(windows: MacWindow[]): MacWindow[] {
+export function filterProcesses(windows: MacWindow[]): MacWindow[] {
   return windows.filter((win) => {
     if (win.kCGWindowBounds?.Height < 40) return false
     if (win.kCGWindowBounds?.Width < 40) return false
