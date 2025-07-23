@@ -50,8 +50,28 @@ extension NSImage {
 
 // MARK: - Icon Management
 
-func getIcon(pid: Int, size: Int) -> Data? {
-    return NSRunningApplication(processIdentifier: pid_t(pid))?.icon?.resized(to: size).png()
+func getIcon(pid: Int, owner: String, windowName: String, size: Int) -> Data? {
+    guard let iconImage = NSRunningApplication(processIdentifier: pid_t(pid))?.icon?.resized(to: size),
+          let iconData = iconImage.png() else {
+        return nil
+    }
+
+    // アイコンキャッシュディレクトリの作成
+    let fileManager = FileManager.default
+    let iconCacheDir = fileManager.currentDirectoryPath + "/icon_cache"
+    if !fileManager.fileExists(atPath: iconCacheDir) {
+        try? fileManager.createDirectory(atPath: iconCacheDir, withIntermediateDirectories: true, attributes: nil)
+    }
+
+    // ファイル名生成 半角スペースは削除する
+    let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
+    let safeWinName = windowName.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
+    let fileName = "\(safeOwner)_\(safeWinName).png"
+    let filePath = iconCacheDir + "/" + fileName
+    // PNGデータとして保存
+    try? iconData.write(to: URL(fileURLWithPath: filePath))
+
+    return iconData
 }
 
 func stringify(data: Data) -> String {
@@ -77,13 +97,13 @@ func getWindowInfoListData() -> Data? {
             formattedWindowInfo[key] = value
         }
 
-        // アプリケーションアイコンを追加
-        if let pid = windowInfo["kCGWindowOwnerPID"] as? Int {
-            if let icon = getIcon(pid: pid, size: 32) {
-                formattedWindowInfo["appIcon"] = stringify(data: icon)
-            }
+        // アイコンの取得
+        if let pid = formattedWindowInfo["kCGWindowOwnerPID"] as? Int,
+           let owner = formattedWindowInfo["kCGWindowOwnerName"] as? String,
+           let windowName = formattedWindowInfo["kCGWindowName"] as? String,
+           let iconData = getIcon(pid: pid, owner: owner, windowName: windowName, size: 32) {
+            formattedWindowInfo["icon"] = stringify(data: iconData)
         }
-
         windowInfoList.append(formattedWindowInfo)
     }
 
