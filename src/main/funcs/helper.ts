@@ -14,25 +14,38 @@ if (app.isPackaged) {
 
 export const macWindowProcesses: MacWindow[] = []
 
-export function getAndSubmitProcesses(): void {
+export async function getAndSubmitProcesses(): Promise<void> {
   let rawData = ''
   try {
     const taskbarHelper = spawn(binaryPath, ['list'])
-    taskbarHelper.stdout.on('data', (raw) => {
-      rawData += raw
-    })
-    taskbarHelper.stderr.on('data', (raw) => {
-      console.error(raw)
-    })
-    taskbarHelper.on('close', async (code) => {
-      if ((await code) === 0) {
-        const jsoned = JSON.parse(Buffer.from(rawData).toString('utf-8'))
-        applyProcessChange(jsoned)
-        rawData = ''
+
+    for await (const chunk of taskbarHelper.stdout) {
+      rawData += chunk.toString()
+      if (rawData.endsWith(']')) {
+        try {
+          const jsoned = JSON.parse(rawData)
+          await applyProcessChange(jsoned)
+          rawData = ''
+        } catch (parseError) {
+          console.error('Failed to parse JSON:', parseError)
+          rawData = '' // Reset rawData to avoid accumulating invalid data
+        }
       }
+    }
+
+    taskbarHelper.stderr.on('data', (data) => {
+      console.error(`TaskbarHelper error: ${data.toString()}`)
     })
-  } catch (e) {
-    console.log(e)
+
+    await new Promise<void>((resolve) => {
+      taskbarHelper.on('close', (code) => {
+        console.log(`TaskbarHelper process exited with code ${code}`)
+        resolve()
+      })
+    })
+  } catch (error) {
+    console.error('Error in getAndSubmitProcesses:', error);
+    throw error // Re-throw the error for upper-level error handling
   }
 }
 
