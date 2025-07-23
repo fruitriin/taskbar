@@ -84,6 +84,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "dev": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & electron-vite dev",
     "helper": "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace",
+    "swiftbuild": "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build",
     "build": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:mac": "npm run build && electron-builder --mac --universal",

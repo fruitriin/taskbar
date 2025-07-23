@@ -86,10 +86,8 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
     for (const proc of macWindowProcesses) {
       if (!proc.appIcon) {
         const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-        const winName = (proc.kCGWindowName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-        const key = `${owner}_${winName}`
-        if (icons[key]) {
-          proc.appIcon = `data:image/png;base64,${icons[key]}`
+        if (icons[owner]) {
+          proc.appIcon = `data:image/png;base64,${icons[owner]}`
         }
       }
     }
