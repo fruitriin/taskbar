@@ -15,7 +15,9 @@
         @click.right.prevent="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-if="win.kCGWindowName" class="name">
+          {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
+        </div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
       <button
@@ -26,7 +28,9 @@
         @click.right.prevent="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-if="win.kCGWindowName" class="name">
+          {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
+        </div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
       <button
@@ -37,7 +41,9 @@
         @click.right.prevent="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">{{ win.kCGWindowName }}</div>
+        <div v-if="win.kCGWindowName" class="name">
+          {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
+        </div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
     </div>
