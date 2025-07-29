@@ -3,22 +3,14 @@ import path from 'path'
 const { spawn, exec } = require('child_process')
 import { MacWindow } from '@/type'
 import fs from 'fs'
-let iconCache: Record<string, string>
+import { iconCache } from './icon-cache'
+
+let cachedIcons: Record<string, string>
 function loadIconCache(): Record<string, string> {
-  if (!iconCache) {
-    const iconJsonPath = path.join(process.cwd(), 'icon_cache', 'icons.json')
-    if (fs.existsSync(iconJsonPath)) {
-      try {
-        const raw = fs.readFileSync(iconJsonPath, 'utf-8')
-        iconCache = JSON.parse(raw)
-      } catch (e) {
-        iconCache = {}
-      }
-    } else {
-      iconCache = {}
-    }
+  if (!cachedIcons) {
+    cachedIcons = iconCache.loadIcons()
   }
-  return iconCache
+  return cachedIcons
 }
 
 let binaryPath
@@ -35,7 +27,12 @@ export const macWindowProcesses: MacWindow[] = []
 export async function getAndSubmitProcesses(): Promise<void> {
   let rawData = ''
   try {
-    const taskbarHelper = spawn(binaryPath, ['list'])
+    const taskbarHelper = spawn(binaryPath, ['list'], {
+      env: {
+        ...process.env,
+        ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
+      }
+    })
 
     for await (const chunk of taskbarHelper.stdout) {
       rawData += chunk.toString()
@@ -68,7 +65,12 @@ export async function getAndSubmitProcesses(): Promise<void> {
 }
 
 export function grantPermission(): void {
-  spawn(binaryPath, ['grant'])
+  spawn(binaryPath, ['grant'], {
+    env: {
+      ...process.env,
+      ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
+    }
+  })
 }
 
 import { diff } from 'just-diff'
@@ -82,6 +84,8 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
     diffApply(macWindowProcesses, result)
 
     // icon_cache/icons.jsonからbase64をセット
+    // キャッシュをクリアして最新のアイコンを読み込み
+    cachedIcons = undefined
     const icons = loadIconCache()
     for (const proc of macWindowProcesses) {
       if (!proc.appIcon) {

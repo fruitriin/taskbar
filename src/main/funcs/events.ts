@@ -8,6 +8,7 @@ import { MacWindow } from '../type'
 import fs from 'fs'
 import path from 'path'
 import { applyProcessChange } from './helper'
+import { iconCache } from './icon-cache'
 
 export function setEventHandlers(): void {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -173,17 +174,10 @@ function deleteFromAreaMenu(area: 'headers' | 'footers', position: number): void
 
 // icons.json監視用関数
 export function watchIconsJson(): void {
-  const iconJsonPath = path.join(process.cwd(), 'icon_cache', 'icons.json')
-  fs.watch(iconJsonPath, (eventType) => {
+  iconCache.watchIcons((eventType) => {
     if (eventType === 'change') {
       // icons.jsonを再読込
-      let icons: Record<string, string> = {}
-      try {
-        const raw = fs.readFileSync(iconJsonPath, 'utf-8')
-        icons = JSON.parse(raw)
-      } catch (e) {
-        icons = {}
-      }
+      const icons = iconCache.loadIcons()
       // appIconが未設定またはicons.jsonの値と異なるウィンドウを抜き出す
       const needsUpdate = macWindowProcesses.filter((proc) => {
         const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')

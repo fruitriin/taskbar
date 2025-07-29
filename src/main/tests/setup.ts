@@ -33,7 +33,11 @@ vi.mock('electron', () => ({
   app: {
     quit: vi.fn(),
     relaunch: vi.fn(),
-    isPackaged: false
+    isPackaged: false,
+    getPath: vi.fn((name: string) => {
+      if (name === 'userData') return '/mock/userData'
+      return '/mock/path'
+    })
   },
   Menu: vi.fn(() => ({
     append: vi.fn()
@@ -59,8 +63,18 @@ vi.mock('child_process', () => ({
 
 // ファイルシステムのモック
 vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    watch: vi.fn()
+  },
   existsSync: vi.fn(),
-  readFileSync: vi.fn()
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+  watch: vi.fn()
 }))
 
 // electron-storeのモック
