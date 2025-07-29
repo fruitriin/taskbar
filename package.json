@@ -5,6 +5,24 @@
   "main": "./out/main/index.js",
   "author": "FruitRiin",
   "homepage": "https://www.electronjs.org",
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
+    "typecheck:node": "# tsc --noEmit -p src/main/tsconfig.node.json --composite false",
+    "typecheck:web": "# vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "dev": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & electron-vite dev",
+    "helper": "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace",
+    "swiftbuild": "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build",
+    "build": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && electron-vite build",
+    "postinstall": "electron-builder install-app-deps",
+    "build:mac": "npm run build && electron-builder --mac --universal",
+    "afterSign": "scripts/notarize.js",
+    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app",
+    "test": "vitest --config src/main/vitest.config.ts",
+    "test:ui": "vitest --config src/main/vitest.config.ts --ui",
+    "test:coverage": "vitest --config src/main/vitest.config.ts --coverage"
+  },
   "prettier": {
     "singleQuote": true,
     "semi": false,
@@ -76,21 +94,6 @@
       }
     ]
   },
-  "scripts": {
-    "format": "prettier --write .",
-    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
-    "typecheck:node": "# tsc --noEmit -p src/main/tsconfig.node.json --composite false",
-    "typecheck:web": "# vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "dev": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & electron-vite dev",
-    "helper": "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace",
-    "swiftbuild": "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build",
-    "build": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps",
-    "build:mac": "npm run build && electron-builder --mac --universal",
-    "afterSign": "scripts/notarize.js",
-    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
-  },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.1",
@@ -103,6 +106,7 @@
     "less": "^4.2.0",
     "pinia": "^2.1.7",
     "sass": "^1.69.5",
+    "vitest": "^3.2.4",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
