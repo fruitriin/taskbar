@@ -18,10 +18,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:mac": "npm run build && electron-builder --mac --universal",
     "afterSign": "scripts/notarize.js",
-    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app",
-    "test": "vitest --config src/main/vitest.config.ts",
-    "test:ui": "vitest --config src/main/vitest.config.ts --ui",
-    "test:coverage": "vitest --config src/main/vitest.config.ts --coverage"
+    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
   },
   "prettier": {
     "singleQuote": true,

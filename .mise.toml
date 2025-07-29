@@ -42,14 +42,36 @@ run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.f
 description = "アプリをApplicationsフォルダにインストール"
 
 [tasks.test]
-run = "bun vitest --config src/main/vitest.config.mjs"
-description = "Vitestでテストを実行"
+run = "npm test"
+dir = "src/main"
+description = "メインプロセスのテストを実行"
+
+[tasks."test:renderer"]
+run = "npm test"
+dir = "src/renderer"
+description = "レンダラープロセスのテストを実行"
+
+[tasks."test:all"]
+run = ["mise run test", "mise run test:renderer"]
+description = "すべてのテストを実行"
 
 [tasks."test:ui"]
-run = "bun vitest --config src/main/vitest.config.ts --ui"
-description = "VitestでテストをUI付きで実行"
+run = "npm run test:ui"
+dir = "src/main"
+description = "メインプロセスのテストをUI付きで実行"
+
+[tasks."test:ui:renderer"]
+run = "npm run test:ui"
+dir = "src/renderer"
+description = "レンダラープロセスのテストをUI付きで実行"
 
 [tasks."test:coverage"]
-run = "bun vitest --config src/main/vitest.config.ts --coverage"
-description = "Vitestでテストをカバレッジ付きで実行"
+run = "npm run test:coverage"
+dir = "src/main"
+description = "メインプロセスのテストをカバレッジ付きで実行"
+
+[tasks."test:coverage:renderer"]
+run = "npm run test:coverage"
+dir = "src/renderer"
+description = "レンダラープロセスのテストをカバレッジ付きで実行"
 
