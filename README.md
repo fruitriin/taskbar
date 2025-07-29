@@ -22,6 +22,53 @@ A. Dockの場所を移動しましょう（横とか）
 
 タスクバーくんは強い！
 
-## 設計メモ
+## 開発者向け情報
+
+### ディレクトリ構成
+
+- .github
+- .vscode
+- build：electron-viteのやつにアイコンさしかえただけ
+- dist(ignored)：dmgなどになったあと
+- out(ignored)：アプリをビルドしたあと
+- resources：ロゴと、同梱する TaskbarHelper（後述）
+- src：基本的にここにすべてのソースが入っている
+   - main：Electronのメインプロセス。 nodeで動く
+   - native： TaskbarHelperを作るためのコード
+   - renderer： UIを構築する部分。Vue
+
+### 開発方法
+
+```bash
+npm run helper    # TaskbarHelperをビルドする
+npm run dev       # 開発環境が立ち上がる
+npm run build:mac # mac用のバイナリができる
+npm run install-app # /Applications ディレクトリに放り込む
+```
+
+build:win と build:linuxはあるけどTaskbarHelper相当のものがないので実質ビルドできない
+
+### 利用可能なスクリプト
+
+- `format`: prettier --write .
+- `lint`: eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix
+- `typecheck:node`: tsc --noEmit -p src/main/tsconfig.node.json --composite false
+- `typecheck:web`: vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false
+- `typecheck`: npm run typecheck:node && npm run typecheck:web
+- `start`: electron-vite preview
+- `dev`: electron-vite dev
+- `helper`: swiftc src/native/helper.swift -o resources/TaskbarHelper
+- `build`: npm run typecheck && electron-vite build
+- `postinstall`: electron-builder install-app-deps
+- `build:win`: npm run build && electron-builder --win --config
+- `build:mac`: npm run build && electron-builder --mac
+- `build:linux`: npm run build && electron-builder --linux --config
+- `afterSign`: scripts/notarize.js
+- `install-app`: rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-arm64/taskbar.fm.app /Applications/taskbar.fm.app
+
+### 設計メモ
 eslint.rc .prettier.rc -> package.json の中
+
+### 検討済み項目
+- vitestをプロジェクトグローバルに追加することに失敗
 
