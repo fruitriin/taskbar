@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 import { createAllWindows, initializeDisplayEvents } from './funcs/windows'
@@ -32,13 +32,18 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createAllWindows()
   })
 
+  powerMonitor.on('resume', () => {
+    setTimeout(() => {
+      initializeDisplayEvents()
+    }, 5000)
+  })
+
   // イベントハンドラーを設定する
   setEventHandlers()
 })
 
 // プロセスを取得するプロセスを起動
 getAndSubmitProcesses()
-
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.

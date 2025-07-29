@@ -14,11 +14,10 @@ export function initializeDisplayEvents(): void {
   // ディスプレイ構成が変わったら全部作り直し
   const recreateAllWindows = (): void => {
     // 既存のウィンドウを全て閉じる
-    for (const id in taskbars) {
-      if (!taskbars[id].isDestroyed()) {
-        taskbars[id].close()
-      }
-      delete taskbars[id]
+
+    for (const key in taskbars) {
+      taskbars[key].destroy()
+      delete taskbars[key]
     }
     // 新しくウィンドウを作り直す
     createAllWindows()
