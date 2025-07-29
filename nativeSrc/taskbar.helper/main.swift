@@ -95,7 +95,8 @@ func getWindowInfoListData() -> Data? {
 
     // アイコンキャッシュディレクトリの作成
     let fileManager = FileManager.default
-    let iconCacheDir = fileManager.currentDirectoryPath + "/icon_cache"
+    // 環境変数からキャッシュディレクトリパスを取得、無ければフォールバック
+    let iconCacheDir = ProcessInfo.processInfo.environment["ICON_CACHE_DIR"] ?? (fileManager.currentDirectoryPath + "/icon_cache")
     if !fileManager.fileExists(atPath: iconCacheDir) {
         try? fileManager.createDirectory(atPath: iconCacheDir, withIntermediateDirectories: true, attributes: nil)
     }
