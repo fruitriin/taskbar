@@ -1,5 +1,12 @@
 import { vi } from 'vitest'
 
+// @electron-toolkit/utilsのモック
+vi.mock('@electron-toolkit/utils', () => ({
+  is: {
+    dev: false
+  }
+}))
+
 // Electron APIのモック
 vi.mock('electron', () => ({
   BrowserWindow: vi.fn(() => ({
@@ -65,7 +72,14 @@ vi.mock('electron-store', () => ({
     store: {
       options: {
         layout: 'bottom'
-      }
+      },
+      filters: [
+        [{ property: 'kCGWindowOwnerName', is: 'Dock' }],
+        [{ property: 'kCGWindowOwnerName', is: 'Finder' }],
+        [{ property: 'kCGWindowOwnerName', is: 'taskbar.fm' }],
+        [{ property: 'kCGWindowName', is: 'taskbar.fm' }],
+        [{ property: 'kCGWindowOwnerName', is: 'Spotlight' }]
+      ]
     }
   }))
 }))
