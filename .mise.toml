@@ -1,0 +1,55 @@
+[tools]
+node = "20.10.0"
+bun = "latest"
+
+[env]
+NODE_ENV = "development"
+
+[tasks.format]
+run = "bun prettier --write ."
+description = "Prettierでコードをフォーマット"
+
+[tasks.lint]
+run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue --fix"
+description = "ESLintでコードをリント・修正"
+
+[tasks.typecheck]
+run = ["npm run typecheck:node", "npm run typecheck:web"]
+description = "TypeScriptの型チェックを実行"
+
+[tasks.dev]
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
+description = "開発サーバーを起動"
+
+[tasks.helper]
+run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
+description = "Xcodeヘルパープロジェクトを開く"
+
+[tasks.swiftbuild]
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build"
+description = "Swiftヘルパーをビルド"
+
+[tasks.build]
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && npx electron-vite build"
+description = "アプリケーションをビルド"
+
+[tasks."build:mac"]
+run = "mise run build && electron-builder --mac --universal"
+description = "macOSユニバーサルバイナリをビルド"
+
+[tasks."install-app"]
+run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
+description = "アプリをApplicationsフォルダにインストール"
+
+[tasks.test]
+run = "bun vitest --config src/main/vitest.config.mjs"
+description = "Vitestでテストを実行"
+
+[tasks."test:ui"]
+run = "bun vitest --config src/main/vitest.config.ts --ui"
+description = "VitestでテストをUI付きで実行"
+
+[tasks."test:coverage"]
+run = "bun vitest --config src/main/vitest.config.ts --coverage"
+description = "Vitestでテストをカバレッジ付きで実行"
+
