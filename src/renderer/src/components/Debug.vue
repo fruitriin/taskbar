@@ -1,14 +1,16 @@
 <template>
   <table>
     <thead>
-      <td>WindowOwner</td>
-      <td>OwnerPID</td>
-      <td>WindowNumber</td>
-      <td>WindowLayer</td>
-      <td>WindowName</td>
-      <td>WindowOnScreen</td>
-      <td>kCGWindowSharingState</td>
-      <td>WindowBounds</td>
+      <tr>
+        <th>WindowOwner</th>
+        <th>OwnerPID</th>
+        <th>WindowNumber</th>
+        <th>WindowLayer</th>
+        <th>WindowName</th>
+        <th>WindowOnScreen</th>
+        <th>kCGWindowSharingState</th>
+        <th>WindowBounds</th>
+      </tr>
     </thead>
     <tbody>
       <tr v-for="win in windows" :key="win.kCGWindowOwnerName">

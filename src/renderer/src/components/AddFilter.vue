@@ -98,8 +98,5 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-@import 'bulma/sass/utilities/_all'
-@import 'bulma/sass/form/_all'
-@import 'bulma/sass/components/_all'
-@import "bulma/sass/elements/_all"
+@import 'bulma/css/bulma.css'
 </style>

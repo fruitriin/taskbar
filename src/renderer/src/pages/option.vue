@@ -239,9 +239,5 @@ export default {
 </style>
 
 <style lang="sass" scoped>
-/*! bulma.io v0.9.4 | MIT License | github.com/jgthms/bulma */
-@import 'bulma/sass/utilities/_all'
-@import 'bulma/sass/form/_all'
-@import 'bulma/sass/components/_all'
-@import "bulma/sass/elements/_all"
+@import 'bulma/css/bulma.css'
 </style>
