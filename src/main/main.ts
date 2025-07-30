@@ -3,7 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 
 import { createAllWindows, initializeDisplayEvents } from '@/funcs/windows'
 import { setEventHandlers } from '@/funcs/events'
-import { getAndSubmitProcesses } from '@/funcs/helper'
+import { getAndSubmitProcesses, restartHelperAfterSleep } from '@/funcs/helper'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -35,6 +35,7 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => {
     setTimeout(() => {
       initializeDisplayEvents()
+      restartHelperAfterSleep()
     }, 5000)
   })
 
