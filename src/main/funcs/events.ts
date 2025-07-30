@@ -4,7 +4,6 @@ import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from
 import { app, ipcMain, screen } from 'electron'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
-import { MacWindow } from '@/type'
 import { applyProcessChange } from '@/funcs/helper'
 import { iconCache } from '@/funcs/icon-cache'
 
