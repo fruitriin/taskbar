@@ -6,7 +6,7 @@ bun = "latest"
 NODE_ENV = "development"
 
 [tasks.format]
-run = "bun prettier --write ."
+run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 description = "Prettierでコードをフォーマット"
 
 [tasks.lint]
