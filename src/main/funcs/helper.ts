@@ -24,8 +24,7 @@ if (app.isPackaged) {
 let isHelperRunning = false
 let helperRestartTimeout: NodeJS.Timeout | null = null
 
-export const macWindowProcesses: MacWind
-ow[] = []
+export const macWindowProcesses: MacWindow[] = []
 
 export async function getAndSubmitProcesses(): Promise<void> {
   if (isHelperRunning) {
@@ -37,7 +36,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
   try {
     isHelperRunning = true
     console.log('Starting TaskbarHelper process')
-    
+
     const taskbarHelper = spawn(binaryPath, ['list'], {
       env: {
         ...process.env,
@@ -67,24 +66,24 @@ export async function getAndSubmitProcesses(): Promise<void> {
       taskbarHelper.on('close', (code) => {
         console.log(`TaskbarHelper process exited with code ${code}`)
         isHelperRunning = false
-        
+
         // プロセスが予期せず終了した場合は3秒後に再起動
         if (code !== 0) {
           console.log('TaskbarHelper crashed, scheduling restart in 3 seconds')
           scheduleHelperRestart()
         }
-        
+
         resolve()
       })
     })
   } catch (error) {
     console.error('Error in getAndSubmitProcesses:', error)
     isHelperRunning = false
-    
+
     // エラーが発生した場合も再起動をスケジュール
     console.log('TaskbarHelper error occurred, scheduling restart in 5 seconds')
     scheduleHelperRestart(5000)
-    
+
     throw error // Re-throw the error for upper-level error handling
   }
 }
@@ -95,7 +94,7 @@ function scheduleHelperRestart(delay: number = 3000): void {
   if (helperRestartTimeout) {
     clearTimeout(helperRestartTimeout)
   }
-  
+
   helperRestartTimeout = setTimeout(() => {
     console.log('Restarting TaskbarHelper...')
     getAndSubmitProcesses().catch((error) => {
@@ -109,16 +108,16 @@ function scheduleHelperRestart(delay: number = 3000): void {
 // スリープ復帰時にtaskbar-helperを再起動する関数
 export function restartHelperAfterSleep(): void {
   console.log('System resumed from sleep, restarting TaskbarHelper')
-  
+
   // 現在のプロセスを強制終了
   isHelperRunning = false
-  
+
   // 既存のタイムアウトをクリア
   if (helperRestartTimeout) {
     clearTimeout(helperRestartTimeout)
     helperRestartTimeout = null
   }
-  
+
   // 少し待ってから再起動
   scheduleHelperRestart(2000)
 }
