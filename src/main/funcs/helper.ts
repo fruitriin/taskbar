@@ -2,8 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { MacWindow } from '@/type'
-import fs from 'fs'
-import { iconCache } from './icon-cache'
+import { iconCache } from '@/funcs/icon-cache'
 
 let cachedIcons: Record<string, string>
 function loadIconCache(): Record<string, string> {

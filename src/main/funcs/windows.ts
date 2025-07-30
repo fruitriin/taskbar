@@ -1,7 +1,7 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { BrowserWindow, ipcMain, screen, Display } from 'electron'
-import { store } from './store'
+import { store } from '@/funcs/store'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
@@ -33,6 +33,12 @@ export function createAllWindows(): void {
   const allDisplays = screen.getAllDisplays()
   allDisplays.forEach((display) => {
     createWindow(display)
+  })
+  console.log('[NEW]', {
+    displays: allDisplays.map((d) => {
+      return { id: d.id, label: d.label }
+    }),
+    taskbars: taskbars
   })
 }
 

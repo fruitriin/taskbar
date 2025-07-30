@@ -1,14 +1,12 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, createWindow, taskbars, windowPosition } from './windows'
-import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from './helper'
+import { createOptionWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
+import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from '@/funcs/helper'
 import { app, ipcMain, screen } from 'electron'
-import { Options, store } from './store'
+import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
-import { MacWindow } from '../type'
-import fs from 'fs'
-import path from 'path'
-import { applyProcessChange } from './helper'
-import { iconCache } from './icon-cache'
+import { MacWindow } from '@/type'
+import { applyProcessChange } from '@/funcs/helper'
+import { iconCache } from '@/funcs/icon-cache'
 
 export function setEventHandlers(): void {
   ipcMain.on('activeWindow', (_event, windowId) => {
