@@ -68,7 +68,7 @@ import { Electron } from '../utils'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
-import { createNewSortInstance, sort } from 'fast-sort'
+import { createNewSortInstance } from 'fast-sort'
 
 export default defineComponent({
   components: {
@@ -159,7 +159,7 @@ export default defineComponent({
     })
   },
   methods: {
-    sort(arr: MacWindow[], area: 'headers' | 'footers') {
+    sort(arr: MacWindow[], area: 'headers' | 'footers'): MacWindow[] {
       const orderRule = {
         Headers: 'desc',
         Footers: 'asc'
@@ -177,19 +177,21 @@ export default defineComponent({
       })
 
       return ruleSorter(arr).by([
-        { asc: (u) => u.kCGWindowOwnerName },
-        order === 'asc' ? { asc: (u) => u.kCGWindowBounds.X } : { desc: (u) => u.kCGWindowBounds.X }
+        { asc: (u): string => u.kCGWindowOwnerName },
+        order === 'asc'
+          ? { asc: (u): number => u.kCGWindowBounds.X }
+          : { desc: (u): number => u.kCGWindowBounds.X }
       ])
     },
-    test(ev) {
+    test(ev): void {
       Electron.send('contextTask', ev)
       console.log('test')
     },
-    grant() {
+    grant(): void {
       Electron.send('grantPermission')
       this.granted = true
     },
-    openOption() {
+    openOption(): void {
       Electron.send('openOption')
     },
     async acticveWindow(win: MacWindow) {

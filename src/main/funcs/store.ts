@@ -3,7 +3,7 @@ import ElectronStore from 'electron-store'
 type LayoutType = 'right' | 'left' | 'bottom'
 export const store = new ElectronStore({
   migrations: {
-    '>=1.6.2': (store) => {
+    '>=1.6.2': (store): void => {
       store.set('headers', [])
       store.set('footers', [])
     }

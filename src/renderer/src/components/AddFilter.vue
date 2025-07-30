@@ -52,6 +52,7 @@ export default {
       default: undefined
     }
   },
+  emits: ['add-filter'],
   data(): { filter: Filter } {
     return {
       filter: {
