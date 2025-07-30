@@ -1,10 +1,7 @@
 declare global {
   interface Array<T> {
     columns<K extends keyof T>(columnKey: K): Array<T[K]>
-    columns<K extends keyof T, I extends keyof T>(
-      columnKey: K,
-      indexKey: I
-    ): Record<string, object>
+    columns<K extends keyof T, I extends keyof T>(columnKey: K, indexKey: I): Record<string, object>
   }
 }
 

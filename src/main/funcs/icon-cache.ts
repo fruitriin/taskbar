@@ -10,7 +10,7 @@ class IconCacheStore {
     // Electronの標準userData pathを使用
     this.iconCacheDir = path.join(app.getPath('userData'), 'icon_cache')
     this.iconJsonPath = path.join(this.iconCacheDir, 'icons.json')
-    
+
     // ディレクトリが存在しない場合は作成
     this.ensureCacheDir()
   }

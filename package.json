@@ -6,19 +6,7 @@
   "author": "FruitRiin",
   "homepage": "https://www.electronjs.org",
   "scripts": {
-    "format": "prettier --write .",
-    "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
-    "typecheck:node": "# tsc --noEmit -p src/main/tsconfig.node.json --composite false",
-    "typecheck:web": "# vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "dev": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & electron-vite dev",
-    "helper": "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace",
-    "swiftbuild": "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build",
-    "build": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps",
-    "build:mac": "npm run build && electron-builder --mac --universal",
-    "afterSign": "scripts/notarize.js",
-    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
+    "moved": "mise run"
   },
   "prettier": {
     "singleQuote": true,

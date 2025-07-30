@@ -40,18 +40,18 @@ describe('store', () => {
   it('設定の読み書きが正しく動作する', () => {
     const mockGet = vi.fn().mockReturnValue('right')
     const mockSet = vi.fn()
-    
+
     // モックを再設定
     vi.mocked(store.get).mockImplementation(mockGet)
     vi.mocked(store.set).mockImplementation(mockSet)
-    
+
     // 読み取りテスト
     const layout = store.get('options.layout')
     expect(layout).toBe('right')
     expect(mockGet).toHaveBeenCalledWith('options.layout')
-    
+
     // 書き込みテスト
     store.set('options.layout', 'left')
     expect(mockSet).toHaveBeenCalledWith('options.layout', 'left')
   })
-}) 
+})

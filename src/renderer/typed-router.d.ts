@@ -39,11 +39,16 @@ import type {
 
 declare module 'vue-router/auto/routes' {
   export interface RouteNamedMap {
-    '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
-    '/option': RouteRecordInfo<'/option', '/option', Record<never, never>, Record<never, never>>,
+    '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>
+    '/option': RouteRecordInfo<'/option', '/option', Record<never, never>, Record<never, never>>
   }
-  
-  export const routes: RouteRecordInfo<keyof RouteNamedMap, string, Record<string, any>, Record<string, any>>[]
+
+  export const routes: RouteRecordInfo<
+    keyof RouteNamedMap,
+    string,
+    Record<string, any>,
+    Record<string, any>
+  >[]
 }
 
 declare module 'vue-router/auto' {
@@ -52,31 +57,36 @@ declare module 'vue-router/auto' {
   import type { App } from 'vue'
 
   export type RouterTyped = _RouterTyped<RouteNamedMap>
-  
+
   export function createRouter(options: RouterOptions): Router & { install(app: App): void }
 
   /**
    * Type safe version of `RouteLocationNormalized` (the type of `to` and `from` in navigation guards).
    * Allows passing the name of the route to be passed as a generic.
    */
-  export type RouteLocationNormalized<Name extends keyof RouteNamedMap = keyof RouteNamedMap> = RouteLocationNormalizedTypedList<RouteNamedMap>[Name]
+  export type RouteLocationNormalized<Name extends keyof RouteNamedMap = keyof RouteNamedMap> =
+    RouteLocationNormalizedTypedList<RouteNamedMap>[Name]
 
   /**
    * Type safe version of `RouteLocationNormalizedLoaded` (the return type of `useRoute()`).
    * Allows passing the name of the route to be passed as a generic.
    */
-  export type RouteLocationNormalizedLoaded<Name extends keyof RouteNamedMap = keyof RouteNamedMap> = RouteLocationNormalizedLoadedTypedList<RouteNamedMap>[Name]
+  export type RouteLocationNormalizedLoaded<
+    Name extends keyof RouteNamedMap = keyof RouteNamedMap
+  > = RouteLocationNormalizedLoadedTypedList<RouteNamedMap>[Name]
 
   /**
    * Type safe version of `RouteLocationResolved` (the returned route of `router.resolve()`).
    * Allows passing the name of the route to be passed as a generic.
    */
-  export type RouteLocationResolved<Name extends keyof RouteNamedMap = keyof RouteNamedMap> = RouteLocationResolvedTypedList<RouteNamedMap>[Name]
+  export type RouteLocationResolved<Name extends keyof RouteNamedMap = keyof RouteNamedMap> =
+    RouteLocationResolvedTypedList<RouteNamedMap>[Name]
 
   /**
    * Type safe version of `RouteLocation` . Allows passing the name of the route to be passed as a generic.
    */
-  export type RouteLocation<Name extends keyof RouteNamedMap = keyof RouteNamedMap> = RouteLocationTypedList<RouteNamedMap>[Name]
+  export type RouteLocation<Name extends keyof RouteNamedMap = keyof RouteNamedMap> =
+    RouteLocationTypedList<RouteNamedMap>[Name]
 
   /**
    * Type safe version of `RouteLocationRaw` . Allows passing the name of the route to be passed as a generic.
@@ -96,7 +106,9 @@ declare module 'vue-router/auto' {
   export type RouteParamsRaw<Name extends keyof RouteNamedMap> = RouteNamedMap[Name]['paramsRaw']
 
   export function useRouter(): RouterTyped
-  export function useRoute<Name extends keyof RouteNamedMap = keyof RouteNamedMap>(name?: Name): RouteLocationNormalizedLoadedTypedList<RouteNamedMap>[Name]
+  export function useRoute<Name extends keyof RouteNamedMap = keyof RouteNamedMap>(
+    name?: Name
+  ): RouteLocationNormalizedLoadedTypedList<RouteNamedMap>[Name]
 
   export const useLink: UseLinkFnTyped<RouteNamedMap>
 
@@ -111,25 +123,22 @@ declare module 'vue-router/auto' {
   export function defineLoader<
     P extends Promise<any>,
     Name extends keyof RouteNamedMap = keyof RouteNamedMap,
-    isLazy extends boolean = false,
+    isLazy extends boolean = false
   >(
     name: Name,
     loader: (route: RouteLocationNormalizedLoaded<Name>) => P,
-    options?: _DefineLoaderOptions<isLazy>,
+    options?: _DefineLoaderOptions<isLazy>
   ): _DataLoader<Awaited<P>, isLazy>
-  export function defineLoader<
-    P extends Promise<any>,
-    isLazy extends boolean = false,
-  >(
+  export function defineLoader<P extends Promise<any>, isLazy extends boolean = false>(
     loader: (route: RouteLocationNormalizedLoaded) => P,
-    options?: _DefineLoaderOptions<isLazy>,
+    options?: _DefineLoaderOptions<isLazy>
   ): _DataLoader<Awaited<P>, isLazy>
 
   export {
     _definePage as definePage,
     _HasDataLoaderMeta as HasDataLoaderMeta,
     _setupDataFetchingGuard as setupDataFetchingGuard,
-    _stopDataFetchingScope as stopDataFetchingScope,
+    _stopDataFetchingScope as stopDataFetchingScope
   } from 'unplugin-vue-router/runtime'
 }
 

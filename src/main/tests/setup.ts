@@ -105,4 +105,4 @@ vi.mock('just-diff', () => ({
 
 vi.mock('just-diff-apply', () => ({
   diffApply: vi.fn()
-})) 
+}))

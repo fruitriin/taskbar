@@ -49,17 +49,17 @@ describe('Array.prototype.columns', () => {
     it('複雑な値でインデックス化されたオブジェクトを作成できる', () => {
       const indexed = testData.columns('age', 'name')
       expect(indexed).toEqual({
-        'Alice': 25,
-        'Bob': 30,
-        'Charlie': 35
+        Alice: 25,
+        Bob: 30,
+        Charlie: 35
       })
     })
 
     it('真偽値のインデックスキーを処理できる', () => {
       const indexed = testData.columns('name', 'active')
       expect(indexed).toEqual({
-        'true': 'Charlie', // 最後のtrue値で上書き
-        'false': 'Bob'
+        true: 'Charlie', // 最後のtrue値で上書き
+        false: 'Bob'
       })
     })
 
@@ -97,8 +97,8 @@ describe('Array.prototype.columns', () => {
       ]
       const indexed = dataWithDuplicates.columns('name', 'group')
       expect(indexed).toEqual({
-        'A': 'Bob', // BobがAliceを上書き
-        'B': 'Charlie'
+        A: 'Bob', // BobがAliceを上書き
+        B: 'Charlie'
       })
     })
   })
