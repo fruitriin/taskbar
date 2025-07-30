@@ -34,7 +34,7 @@ run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.he
 description = "アプリケーションをビルド"
 
 [tasks."build:mac"]
-run = "mise run build && electron-builder --mac --universal"
+run = "mise run build && npx electron-builder --mac --universal"
 description = "macOSユニバーサルバイナリをビルド"
 
 [tasks."install-app"]
