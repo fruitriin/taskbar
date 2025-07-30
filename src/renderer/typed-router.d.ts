@@ -42,12 +42,18 @@ declare module 'vue-router/auto/routes' {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/option': RouteRecordInfo<'/option', '/option', Record<never, never>, Record<never, never>>,
   }
+  
+  export const routes: RouteRecordInfo<keyof RouteNamedMap, string, Record<string, any>, Record<string, any>>[]
 }
 
 declare module 'vue-router/auto' {
   import type { RouteNamedMap } from 'vue-router/auto/routes'
+  import type { Router, RouterOptions } from 'vue-router'
+  import type { App } from 'vue'
 
   export type RouterTyped = _RouterTyped<RouteNamedMap>
+  
+  export function createRouter(options: RouterOptions): Router & { install(app: App): void }
 
   /**
    * Type safe version of `RouteLocationNormalized` (the type of `to` and `from` in navigation guards).
