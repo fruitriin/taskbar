@@ -1,7 +1,7 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
 import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from '@/funcs/helper'
-import { app, ipcMain, screen } from 'electron'
+import { app, ipcMain, screen, BrowserWindow } from 'electron'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
 import { applyProcessChange } from '@/funcs/helper'
