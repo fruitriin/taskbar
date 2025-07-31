@@ -10,12 +10,20 @@ run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 description = "Prettierでコードをフォーマット"
 
 [tasks.lint]
-run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue --fix"
-description = "ESLintでコードをリント・修正"
+run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue"
+description = "ESLintでコードをリント"
 
 [tasks.typecheck]
-run = ["npm run typecheck:node", "npm run typecheck:web"]
+run = ["mise typecheck:node", "mise typecheck:web"]
 description = "TypeScriptの型チェックを実行"
+
+[tasks."typecheck:node"]
+run = "npx tsc --noEmit -p src/main/tsconfig.node.json --composite false"
+description = "メインプロセスの型チェックを実行"
+
+[tasks."typecheck:web"]
+run = "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false"
+description = "レンダラープロセスの型チェックを実行"
 
 [tasks.dev]
 run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
@@ -42,12 +50,12 @@ run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.f
 description = "アプリをApplicationsフォルダにインストール"
 
 [tasks.test]
-run = "npm test"
+run = "bun test"
 dir = "src/main"
 description = "メインプロセスのテストを実行"
 
 [tasks."test:renderer"]
-run = "npm test"
+run = "bun test"
 dir = "src/renderer"
 description = "レンダラープロセスのテストを実行"
 

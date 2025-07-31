@@ -143,7 +143,7 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
 
     // icon_cache/icons.jsonからbase64をセット
     // キャッシュをクリアして最新のアイコンを読み込み
-    cachedIcons = undefined
+    cachedIcons = {}
     const icons = loadIconCache()
     for (const proc of macWindowProcesses) {
       if (!proc.appIcon) {

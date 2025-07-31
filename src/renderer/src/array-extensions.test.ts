@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import './array-extensions'
 
 describe('Array.prototype.columns', () => {
