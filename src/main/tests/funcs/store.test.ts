@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { store } from '@/main/funcs/store'
+import { store } from '@/funcs/store'
 
 // electron-storeのモックを個別に設定
 vi.mock('electron-store', () => ({

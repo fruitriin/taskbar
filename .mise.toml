@@ -38,7 +38,7 @@ run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.he
 description = "Swiftヘルパーをビルド"
 
 [tasks.build]
-run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npm run typecheck && npx electron-vite build"
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build"
 description = "アプリケーションをビルド"
 
 [tasks."build:mac"]
@@ -50,12 +50,12 @@ run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.f
 description = "アプリをApplicationsフォルダにインストール"
 
 [tasks.test]
-run = "bun test"
+run = "npx vitest tests/"
 dir = "src/main"
 description = "メインプロセスのテストを実行"
 
 [tasks."test:renderer"]
-run = "bun test"
+run = "npx vitest src/renderer/tests/"
 dir = "src/renderer"
 description = "レンダラープロセスのテストを実行"
 

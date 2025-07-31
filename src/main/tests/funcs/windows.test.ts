@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { windowPosition } from '@/main/funcs/windows'
+import { windowPosition } from '@/funcs/windows'
 
 describe('windows', () => {
   describe('windowPosition', () => {

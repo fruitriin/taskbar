@@ -1,13 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { filterProcesses } from '@/main/funcs/helper'
+import { filterProcesses } from '@/funcs/helper'
 
 // MacWindowの型定義をモック
-const mockMacWindow = {
-  kCGWindowOwnerName: 'TestApp',
+const mockMacWindow: MacWindow = {
+  kCGWindowLayer: 0,
   kCGWindowName: 'TestWindow',
+  kCGWindowMemoryUsage: 1024,
+  kCGWindowIsOnscreen: 1,
+  kCGWindowSharingState: 1,
   kCGWindowOwnerPID: 12345,
-  kCGWindowIsOnscreen: true,
-  appIcon: null
+  kCGWindowOwnerName: 'TestApp',
+  kCGWindowNumber: 123,
+  kCGWindowStoreType: 2,
+  kCGWindowBounds: {
+    X: 100,
+    Height: 600,
+    Y: 50,
+    Width: 800
+  },
+  appIcon: ''
 }
 
 describe('helper', () => {

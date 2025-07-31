@@ -7,8 +7,7 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/main/*": ["./*"]
+      "@/*": ["./*"]
     }
   }
 }
