@@ -3,15 +3,13 @@ import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
 
+// ここでいうキャッシュはswiftからみた場合なのでTypeScript的には頭の良い実装は特にないかも
 let cachedIcons: Record<string, string>
 function loadIconCache(): Record<string, string> {
-  if (!cachedIcons) {
-    cachedIcons = iconCache.loadIcons()
-  }
-  return cachedIcons
+  return iconCache.loadIcons()
 }
 
-let binaryPath
+let binaryPath = ''
 if (app.isPackaged) {
   // packaged (e.g., using electron-builder)
   binaryPath = path.join(process.resourcesPath, 'TaskbarHelper')

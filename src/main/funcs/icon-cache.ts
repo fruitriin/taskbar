@@ -38,6 +38,7 @@ class IconCacheStore {
       }
     } catch (error) {
       console.error('Failed to load icons.json:', error)
+      return {}
     }
     return {}
   }
