@@ -95,17 +95,16 @@ func getWindowInfoListData() -> Data? {
 
     // アイコンキャッシュディレクトリの作成
     let fileManager = FileManager.default
-    // JSコードと同じApplication Supportディレクトリのicon_cacheフォルダを使用
+    // JSコードと同じApplication Supportディレクトリのtaskbar.fmフォルダを直接使用
     let userDataDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("taskbar.fm")
-    let iconCacheDir = userDataDir.appendingPathComponent("icon_cache").path
-    if !fileManager.fileExists(atPath: iconCacheDir) {
-        try? fileManager.createDirectory(atPath: iconCacheDir, withIntermediateDirectories: true, attributes: nil)
+    if !fileManager.fileExists(atPath: userDataDir.path) {
+        try? fileManager.createDirectory(at: userDataDir, withIntermediateDirectories: true, attributes: nil)
     }
     // JSONとして保存
     do {
         let iconJsonData = try JSONSerialization.data(withJSONObject: iconDict, options: .prettyPrinted)
-        let iconJsonPath = iconCacheDir + "/icons.json"
-        try? iconJsonData.write(to: URL(fileURLWithPath: iconJsonPath))
+        let iconJsonPath = userDataDir.appendingPathComponent("icons.json")
+        try? iconJsonData.write(to: iconJsonPath)
     } catch {
         print("Error serializing icon JSON: \(error)")
     }

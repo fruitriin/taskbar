@@ -4,7 +4,6 @@ const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
 
 // ここでいうキャッシュはswiftからみた場合なのでTypeScript的には頭の良い実装は特にないかも
-let cachedIcons: Record<string, string>
 function loadIconCache(): Record<string, string> {
   return iconCache.loadIcons()
 }
@@ -52,6 +51,10 @@ export async function getAndSubmitProcesses(): Promise<void> {
         } catch (parseError) {
           console.error('Failed to parse JSON:', parseError)
           rawData = '' // Reset rawData to avoid accumulating invalid data
+          
+          // JSONパースエラーが発生した場合、ヘルパーの再起動をスケジュール
+          console.log('JSON parse error detected, scheduling helper restart in 3 seconds')
+          scheduleHelperRestart(3000)
         }
       }
     }
@@ -87,14 +90,33 @@ export async function getAndSubmitProcesses(): Promise<void> {
 }
 
 // taskbar-helperの再起動をスケジュールする関数
-function scheduleHelperRestart(delay: number = 3000): void {
+export function scheduleHelperRestart(delay: number = 3000): void {
   // 既存のタイムアウトがあればクリア
   if (helperRestartTimeout) {
     clearTimeout(helperRestartTimeout)
   }
 
   helperRestartTimeout = setTimeout(() => {
-    console.log('Restarting TaskbarHelper...')
+    const date = new Date() // 現在時刻
+
+    const formatter = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo', // 任意のタイムゾーン（例: 日本時間）
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+
+    const parts = formatter.formatToParts(date)
+
+    const formatMap = Object.fromEntries(parts.map((p) => [p.type, p.value]))
+
+    const result = `${formatMap.year}/${formatMap.month}/${formatMap.day} ${formatMap.hour}:${formatMap.minute}:${formatMap.second}`
+
+    console.log('Restarting TaskbarHelper... ', result)
     getAndSubmitProcesses().catch((error) => {
       console.error('Failed to restart TaskbarHelper:', error)
       // 再起動に失敗した場合は10秒後に再試行
@@ -105,7 +127,25 @@ function scheduleHelperRestart(delay: number = 3000): void {
 
 // スリープ復帰時にtaskbar-helperを再起動する関数
 export function restartHelperAfterSleep(): void {
-  console.log('System resumed from sleep, restarting TaskbarHelper')
+  const date = new Date()
+  const formatter = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo', // 任意のタイムゾーン（例: 日本時間）
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+
+  const parts = formatter.formatToParts(date)
+
+  const formatMap = Object.fromEntries(parts.map((p) => [p.type, p.value]))
+
+  const result = `${formatMap.year}/${formatMap.month}/${formatMap.day} ${formatMap.hour}:${formatMap.minute}:${formatMap.second}`
+
+  console.log('System resumed from sleep, restarting TaskbarHelper: detcted ', result)
 
   // 現在のプロセスを強制終了
   isHelperRunning = false
@@ -118,6 +158,7 @@ export function restartHelperAfterSleep(): void {
 
   // 少し待ってから再起動
   scheduleHelperRestart(2000)
+  scheduleHelperRestart(20000)
 }
 
 export function grantPermission(): void {
@@ -140,8 +181,7 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
     diffApply(macWindowProcesses, result)
 
     // icon_cache/icons.jsonからbase64をセット
-    // キャッシュをクリアして最新のアイコンを読み込み
-    cachedIcons = {}
+    // 最新のアイコンキャッシュを読み込み
     const icons = loadIconCache()
     for (const proc of macWindowProcesses) {
       if (!proc.appIcon) {
