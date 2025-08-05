@@ -50,12 +50,47 @@ extension NSImage {
 
 // MARK: - Icon Management
 
+// アイコンキャッシュ（プロセス毎にキャッシュしてパフォーマンス向上）
+var iconCache: [Int: String] = [:]
+var iconCacheLock = NSLock()
+
 func getIconBase64(pid: Int, owner: String, windowName: String, size: Int) -> String? {
-    guard let iconImage = NSRunningApplication(processIdentifier: pid_t(pid))?.icon?.resized(to: size),
-          let iconData = iconImage.png() else {
+    // キャッシュから取得を試行
+    iconCacheLock.lock()
+    if let cachedIcon = iconCache[pid] {
+        iconCacheLock.unlock()
+        return cachedIcon
+    }
+    iconCacheLock.unlock()
+    
+    // タイムアウト付きでアイコン取得
+    let semaphore = DispatchSemaphore(value: 0)
+    var result: String?
+    
+    DispatchQueue.global(qos: .utility).async {
+        defer { semaphore.signal() }
+        
+        guard let runningApp = NSRunningApplication(processIdentifier: pid_t(pid)),
+              let iconImage = runningApp.icon?.resized(to: size),
+              let iconData = iconImage.png() else {
+            return
+        }
+        result = iconData.base64EncodedString()
+    }
+    
+    // 50ms以内にアイコンが取得できない場合はタイムアウト
+    if semaphore.wait(timeout: .now() + 0.05) == .timedOut {
         return nil
     }
-    return iconData.base64EncodedString()
+    
+    // キャッシュに保存
+    if let iconResult = result {
+        iconCacheLock.lock()
+        iconCache[pid] = iconResult
+        iconCacheLock.unlock()
+    }
+    
+    return result
 }
 
 func stringify(data: Data) -> String {
@@ -78,6 +113,10 @@ func getWindowInfoListData() -> Data? {
     var windowInfoList: [[String: Any]] = []
     var iconDict: [String: String] = [:]
 
+    // 重複するPIDを削除してアイコン取得を効率化
+    var uniquePids = Set<Int>()
+    var pidToOwner: [Int: String] = [:]
+
     for windowInfo in windowsListInfo {
         var formattedWindowInfo: [String: Any] = [:]
 
@@ -85,19 +124,43 @@ func getWindowInfoListData() -> Data? {
             formattedWindowInfo[key] = value
         }
 
-        // アイコンのbase64を収集（安全に処理）
+        // PIDとOwnerの情報を収集（重複削除のため）
         if let pid = formattedWindowInfo["kCGWindowOwnerPID"] as? Int,
            let owner = formattedWindowInfo["kCGWindowOwnerName"] as? String,
            !owner.isEmpty {
-            if let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: "", size: 32) {
-                let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
-                iconDict[safeOwner] = iconBase64
-            }
+            uniquePids.insert(pid)
+            pidToOwner[pid] = owner
         }
         windowInfoList.append(formattedWindowInfo)
     }
+    
+    // ユニークなPIDのみからアイコンを取得（並列処理で高速化）
+    let iconQueue = DispatchQueue(label: "icon-processing", qos: .utility, attributes: .concurrent)
+    let iconGroup = DispatchGroup()
+    let iconLock = NSLock()
+    
+    for pid in uniquePids {
+        guard let owner = pidToOwner[pid] else { continue }
+        
+        iconGroup.enter()
+        iconQueue.async {
+            defer { iconGroup.leave() }
+            
+            if let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: "", size: 32) {
+                let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
+                iconLock.lock()
+                iconDict[safeOwner] = iconBase64
+                iconLock.unlock()
+            }
+        }
+    }
+    
+    // アイコン取得完了を最大1秒まで待機
+    if iconGroup.wait(timeout: .now() + 1.0) == .timedOut {
+        standardError.write("Icon processing timeout for \(uniquePids.count) processes\n".data(using: .utf8)!)
+    }
 
-    // アイコンキャッシュディレクトリの作成
+    // アイコンキャッシュディレクトリの作成（非同期でメインスレッドをブロックしない）
     let fileManager = FileManager.default
     // JSコードと同じApplication Supportディレクトリのtaskbar.fmフォルダを直接使用
     let userDataDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("taskbar.fm")
