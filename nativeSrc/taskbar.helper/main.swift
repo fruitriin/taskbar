@@ -64,6 +64,9 @@ func stringify(data: Data) -> String {
 
 // MARK: - Window Information
 
+// エラー出力用
+var standardError = FileHandle.standardError
+
 // グローバルなウィンドウリストプロバイダー（テスト用に差し替え可能）
 var windowListProvider: () -> [[String: AnyObject]] = {
     CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
@@ -82,13 +85,14 @@ func getWindowInfoListData() -> Data? {
             formattedWindowInfo[key] = value
         }
 
-        // アイコンのbase64を収集
+        // アイコンのbase64を収集（安全に処理）
         if let pid = formattedWindowInfo["kCGWindowOwnerPID"] as? Int,
            let owner = formattedWindowInfo["kCGWindowOwnerName"] as? String,
-           let windowName = formattedWindowInfo["kCGWindowName"] as? String,
-           let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: windowName, size: 32) {
-            let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
-            iconDict[safeOwner] = iconBase64
+           !owner.isEmpty {
+            if let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: "", size: 32) {
+                let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
+                iconDict[safeOwner] = iconBase64
+            }
         }
         windowInfoList.append(formattedWindowInfo)
     }
@@ -165,6 +169,7 @@ class WindowObserver {
                     if let data = getWindowInfoListData() {
                         let stdOut = FileHandle.standardOutput
                         stdOut.write(data)
+                        stdOut.write("\n".data(using: .utf8)!)
                     }
                 }
             }
@@ -203,6 +208,13 @@ case "list":
     // ウィンドウの変更を監視
     print("ウィンドウ変更の監視を開始しました...")
     WindowObserver.shared.observeWindowChanges()
+    
+    // SIGINT (Ctrl+C) でプログラムを終了できるようにする
+    signal(SIGINT) { _ in
+        print("\n監視を終了します...")
+        exit(0)
+    }
+    
     RunLoop.main.run()
     
 default:
