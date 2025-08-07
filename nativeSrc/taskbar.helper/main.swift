@@ -97,6 +97,59 @@ func stringify(data: Data) -> String {
     return "data:image/png;base64,\(data.base64EncodedString())"
 }
 
+// MARK: - Permission Management
+
+// 権限チェック関数
+func checkAccessibilityPermission() -> Bool {
+    return AXIsProcessTrusted()
+}
+
+func checkScreenRecordingPermission() -> Bool {
+    // 画面録画権限をチェックするため、SCShareableContentを使用
+    let semaphore = DispatchSemaphore(value: 0)
+    var hasPermission = false
+    
+    if #available(macOS 12.3, *) {
+        SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { content, error in
+            hasPermission = (error == nil)
+            semaphore.signal()
+        }
+        
+        // タイムアウト設定（100ms）
+        if semaphore.wait(timeout: .now() + 0.1) == .timedOut {
+            return false
+        }
+    } else {
+        // macOS 12.3未満の場合は簡易的な権限チェック
+        // 実際にはSCShareableContentが利用できない古いバージョンでは
+        // 完全な権限チェックは困難なため、基本的にtrueを返す
+        hasPermission = true
+    }
+    
+    return hasPermission
+}
+
+// 権限状態をJSONで返す関数
+func getPermissionStatus() -> Data? {
+    let accessibilityPermission = checkAccessibilityPermission()
+    let screenRecordingPermission = checkScreenRecordingPermission()
+    
+    let permissionStatus: [String: Any] = [
+        "command": "check-permissions",
+        "accessibility": accessibilityPermission,
+        "screenRecording": screenRecordingPermission,
+        "timestamp": ISO8601DateFormatter().string(from: Date())
+    ]
+    
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: permissionStatus, options: .prettyPrinted)
+        return jsonData
+    } catch {
+        print("Error serializing permission status: \(error)")
+        return nil
+    }
+}
+
 // MARK: - Window Information
 
 // エラー出力用
@@ -245,9 +298,10 @@ class WindowObserver {
 let arguments = CommandLine.arguments
 guard arguments.count > 1 else {
     print("使用方法:")
-    print("  grant  - スクリーンキャプチャのアクセス権限を要求")
-    print("  debug  - 現在のウィンドウ情報をデバッグ出力")
-    print("  list   - ウィンドウ変更を監視してリアルタイム出力")
+    print("  grant         - スクリーンキャプチャのアクセス権限を要求")
+    print("  debug         - 現在のウィンドウ情報をデバッグ出力")
+    print("  list          - ウィンドウ変更を監視してリアルタイム出力")
+    print("  check-permissions - 権限状態をJSON形式で出力")
     exit(1)
 }
 
@@ -280,8 +334,22 @@ case "list":
     
     RunLoop.main.run()
     
+case "check-permissions":
+    // 権限状態をJSONで出力
+    if let data = getPermissionStatus() {
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print(jsonString)
+        } else {
+            print("権限状態の変換に失敗しました")
+            exit(1)
+        }
+    } else {
+        print("権限状態の取得に失敗しました")
+        exit(1)
+    }
+    
 default:
     print("不明なオプション: \(option)")
-    print("使用可能なオプション: grant, debug, list")
+    print("使用可能なオプション: grant, debug, list, check-permissions")
     exit(1)
 }

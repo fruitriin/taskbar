@@ -171,6 +171,45 @@ export function grantPermission(): void {
   })
 }
 
+export async function checkPermissions(): Promise<{ accessibility: boolean; screenRecording: boolean } | null> {
+  return new Promise((resolve) => {
+    let rawData = ''
+    
+    const taskbarHelper = spawn(binaryPath, ['check-permissions'], {
+      env: {
+        ...process.env,
+        ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
+      }
+    })
+
+    taskbarHelper.stdout.on('data', (chunk) => {
+      rawData += chunk.toString()
+    })
+
+    taskbarHelper.stderr.on('data', (data) => {
+      console.error(`Permission check error: ${data.toString()}`)
+    })
+
+    taskbarHelper.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(rawData)
+          resolve({
+            accessibility: result.accessibility,
+            screenRecording: result.screenRecording
+          })
+        } catch (parseError) {
+          console.error('Failed to parse permission status:', parseError)
+          resolve(null)
+        }
+      } else {
+        console.error(`Permission check process exited with code ${code}`)
+        resolve(null)
+      }
+    })
+  })
+}
+
 import { diff } from 'just-diff'
 import { diffApply } from 'just-diff-apply'
 

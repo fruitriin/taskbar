@@ -4,7 +4,7 @@
       <img :src="icon" style="height: 40px" />
     </div>
     <div class="permissions">
-      <button v-if="!granted" class="button" @click="grant">タイトルを取得</button>
+      <MainPermissionStatus />
     </div>
     <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
       <button
@@ -68,11 +68,13 @@ import { Electron } from '../utils'
 import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
+import MainPermissionStatus from '../components/MainPermissionStatus.vue'
 import { createNewSortInstance } from 'fast-sort'
 
 export default defineComponent({
   components: {
-    Debug
+    Debug,
+    MainPermissionStatus
   },
 
   data() {

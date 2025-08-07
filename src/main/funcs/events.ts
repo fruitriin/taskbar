@@ -1,6 +1,6 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
-import { activateWindow, closeWindow, grantPermission, macWindowProcesses } from '@/funcs/helper'
+import { activateWindow, closeWindow, grantPermission, macWindowProcesses, checkPermissions } from '@/funcs/helper'
 import { app, ipcMain, screen, BrowserWindow } from 'electron'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
@@ -47,6 +47,15 @@ export function setEventHandlers(): void {
   ipcMain.on('grantPermission', () => {
     grantPermission()
     store.set('granted', true)
+  })
+
+  ipcMain.handle('checkPermissions', async () => {
+    return await checkPermissions()
+  })
+
+  ipcMain.on('openSystemPreferences', () => {
+    const { shell } = require('electron')
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
   })
   ipcMain.on('clearSetting', () => {
     store.clear()

@@ -1,6 +1,12 @@
 <template>
   <div class="option">
     <h1>Taskbar.fm 設定</h1>
+    
+    <!-- 権限セクション -->
+    <div class="permissions-section">
+      <PermissionStatus />
+    </div>
+    
     <div class="main-options">
       <div class="field is-horizontal">
         <div class="field-label is-normal">
@@ -121,11 +127,13 @@
 import { Electron } from '../utils'
 import draggable from 'vuedraggable'
 import AddFilter from '../components/AddFilter.vue'
+import PermissionStatus from '../components/PermissionStatus.vue'
 
 export default {
   components: {
     draggable,
-    AddFilter
+    AddFilter,
+    PermissionStatus
   },
   data(): {
     drag: boolean
@@ -198,6 +206,12 @@ export default {
 <style lang="scss" scoped>
 .option {
   padding: 24px;
+}
+
+.permissions-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .label {
