@@ -39,17 +39,16 @@ class IconCacheStore {
       try {
         if (fs.existsSync(this.iconJsonPath)) {
           const data = fs.readFileSync(this.iconJsonPath, 'utf8')
-          
+
           // JSONパースを試行
           const parsed = JSON.parse(data)
-          console.log('Successfully loaded icons.json')
           return parsed
         }
         return {}
       } catch (error) {
         retryCount++
         console.error(`Failed to load icons.json (attempt ${retryCount}/${maxRetries}):`, error)
-        
+
         if (retryCount >= maxRetries) {
           // 最大リトライ回数に達した場合、壊れたファイルをバックアップして削除
           try {
@@ -62,26 +61,26 @@ class IconCacheStore {
           } catch (backupError) {
             console.error('Failed to backup/remove corrupted icons.json:', backupError)
           }
-          
+
           // ヘルパーの再起動をスケジュールして新しいアイコンデータを生成
           console.log('Scheduling helper restart to regenerate icons.json')
           scheduleHelperRestart(2000)
-          
+
           return {}
         }
-        
+
         // リトライ前に短い待機とヘルパー再起動
         const waitTime = 500 * retryCount
         console.log(`Retrying icons.json load, triggering helper restart (attempt ${retryCount})`)
         scheduleHelperRestart(waitTime)
-        
+
         const start = Date.now()
         while (Date.now() - start < waitTime + 1000) {
           // リトライ前により長い待機時間を設定
         }
       }
     }
-    
+
     return {}
   }
 
