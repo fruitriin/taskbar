@@ -43,7 +43,8 @@ export async function getAndSubmitProcesses(): Promise<void> {
 
     for await (const chunk of taskbarHelper.stdout) {
       rawData += chunk.toString()
-      if (rawData.endsWith(']')) {
+
+      if (rawData.trim().endsWith(']')) {
         try {
           const jsoned = JSON.parse(rawData)
           await applyProcessChange(jsoned)
@@ -51,7 +52,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
         } catch (parseError) {
           console.error('Failed to parse JSON:', parseError)
           rawData = '' // Reset rawData to avoid accumulating invalid data
-          
+
           // JSONパースエラーが発生した場合、ヘルパーの再起動をスケジュール
           console.log('JSON parse error detected, scheduling helper restart in 3 seconds')
           scheduleHelperRestart(3000)
