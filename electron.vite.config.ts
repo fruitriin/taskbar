@@ -33,6 +33,9 @@ export default defineConfig({
     }
   },
   renderer: {
+    server: {
+      port: 6234
+    },
     build: {
       watch: {},
       rollupOptions: {
