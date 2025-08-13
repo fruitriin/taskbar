@@ -29,7 +29,6 @@
 
 <script lang="ts">
 import { PropType } from 'vue'
-import { MacWindow } from '../../../type'
 
 export default {
   props: {

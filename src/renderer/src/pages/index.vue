@@ -1,6 +1,6 @@
 <template>
   <div :class="options.layout">
-    <div class="icon" @click="openOption">
+    <div class="icon-area" @click="openOption">
       <img :src="icon" style="height: 40px" />
     </div>
     <div class="permissions">
@@ -64,8 +64,6 @@
 <script lang="ts">
 import icon from '../assets/icon.png'
 import { Electron } from '../utils'
-
-import { MacWindow } from '../../../type'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
 import MainPermissionStatus from '../components/MainPermissionStatus.vue'
@@ -74,6 +72,7 @@ import { createNewSortInstance } from 'fast-sort'
 export default defineComponent({
   components: {
     Debug,
+
     MainPermissionStatus
   },
 

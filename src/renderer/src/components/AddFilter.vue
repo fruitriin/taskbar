@@ -38,7 +38,7 @@
 </template>
 
 <script lang="ts">
-interface Filter {
+export type Filter = {
   property: string
   is: string
 }
