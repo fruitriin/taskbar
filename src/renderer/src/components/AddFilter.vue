@@ -1,5 +1,5 @@
 <template>
-  <div class="add-filter-form" style="margin-top: 16px">
+  <div class="add-filter-form" style="margin-top: 16px; max-width: 380px;">
     <div class="field has-addons">
       <div class="control">
         <div class="select is-small">
