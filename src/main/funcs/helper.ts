@@ -20,6 +20,7 @@ if (app.isPackaged) {
 // taskbar-helperプロセスの管理用変数
 let isHelperRunning = false
 let helperRestartTimeout: NodeJS.Timeout | null = null
+let currentHelperProcess: any = null
 
 export const macWindowProcesses: MacWindow[] = []
 
@@ -40,6 +41,9 @@ export async function getAndSubmitProcesses(): Promise<void> {
         ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
       }
     })
+
+    // 現在のプロセスを保存
+    currentHelperProcess = taskbarHelper
 
     for await (const chunk of taskbarHelper.stdout) {
       rawData += chunk.toString()
@@ -68,6 +72,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
       taskbarHelper.on('close', (code) => {
         console.log(`TaskbarHelper process exited with code ${code}`)
         isHelperRunning = false
+        currentHelperProcess = null
 
         // プロセスが予期せず終了した場合は3秒後に再起動
         if (code !== 0) {
@@ -171,10 +176,13 @@ export function grantPermission(): void {
   })
 }
 
-export async function checkPermissions(): Promise<{ accessibility: boolean; screenRecording: boolean } | null> {
+export async function checkPermissions(): Promise<{
+  accessibility: boolean
+  screenRecording: boolean
+} | null> {
   return new Promise((resolve) => {
     let rawData = ''
-    
+
     const taskbarHelper = spawn(binaryPath, ['check-permissions'], {
       env: {
         ...process.env,
@@ -210,6 +218,37 @@ export async function checkPermissions(): Promise<{ accessibility: boolean; scre
   })
 }
 
+// アプリ終了時にTaskbarHelperプロセスをクリーンアップする関数
+export function cleanupHelperProcess(): void {
+  console.log('Cleaning up TaskbarHelper process...')
+
+  // 再起動タイマーをクリア
+  if (helperRestartTimeout) {
+    clearTimeout(helperRestartTimeout)
+    helperRestartTimeout = null
+  }
+
+  // 現在のプロセスを強制終了
+  if (currentHelperProcess) {
+    try {
+      currentHelperProcess.kill('SIGTERM')
+      console.log('TaskbarHelper process terminated')
+    } catch (error) {
+      console.error('Error terminating TaskbarHelper process:', error)
+      // SIGTERMで終了できない場合はSIGKILLを試行
+      try {
+        currentHelperProcess.kill('SIGKILL')
+        console.log('TaskbarHelper process killed')
+      } catch (killError) {
+        console.error('Error killing TaskbarHelper process:', killError)
+      }
+    }
+    currentHelperProcess = null
+  }
+
+  isHelperRunning = false
+}
+
 import { diff } from 'just-diff'
 import { diffApply } from 'just-diff-apply'
 
@@ -242,6 +281,7 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
 
 import { escape } from 'html-escaper'
 import { store } from './store'
+import type { LabeledFilters } from './store'
 import { taskbars } from './windows'
 
 // ウィンドウをアクティブにする関数
@@ -313,26 +353,53 @@ end tell`
 }
 
 /**
- * 高さ・幅が低すぎるものと、store.filters から条件に一致するものを除外する
+ * 高さ・幅が低すぎるものと、labeledFilters から条件に一致するものを除外する
  */
 export function filterProcesses(windows: MacWindow[]): MacWindow[] {
-  return windows.filter((win) => {
+  const wins = windows.filter((win) => {
+    // サイズフィルター（従来通り）
     if (win.kCGWindowBounds?.Height < 40) return false
     if (win.kCGWindowBounds?.Width < 40) return false
 
-    for (const filter of store.store.filters) {
-      const match: boolean[] = []
-      for (const filterElement of filter) {
-        if (win[filterElement.property] === undefined) return false
-        if (win[filterElement.property] == filterElement.is) {
-          match.push(true)
-        } else {
-          match.push(false)
+    try {
+      // 新しいlabeledFilters形式での処理
+
+      const labeledFilters = store.get('labeledFilters', []) as LabeledFilters[]
+
+      if (Array.isArray(labeledFilters)) {
+        for (const labeledFilter of labeledFilters) {
+          const match: boolean[] = []
+
+          for (const filterElement of labeledFilter.filters) {
+            // ウィンドウのプロパティが存在しない場合はスキップ
+            if (win[filterElement.property] === undefined) {
+              match.push(false)
+              continue
+            }
+
+            // 値が一致するかチェック
+            if (win[filterElement.property] == filterElement.is) {
+              match.push(true)
+            } else {
+              match.push(false)
+            }
+          }
+
+          // すべての条件が一致した場合はフィルタリング対象（除外）
+          if (match.length > 0 && match.every((elem) => elem)) {
+            return false
+          }
         }
       }
-      if (match.every((elem) => elem)) return false
-    }
 
-    return true
+      return true
+    } catch (error) {
+      // ストアアクセスエラーが発生した場合はフィルタリングせずに通す
+      console.error('Filter processing error:', error)
+
+      return true
+    }
   })
+  // console.log(windows)
+  return wins
 }

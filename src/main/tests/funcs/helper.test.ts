@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { LabeledFilters } from '@/funcs/store'
+
+// ストアのモック
+vi.mock('@/funcs/store', () => ({
+  store: {
+    get: vi.fn(),
+    store: {}
+  }
+}))
+
 import { filterProcesses } from '@/funcs/helper'
+import { store } from '@/funcs/store'
 
 // MacWindowの型定義をモック
 const mockMacWindow: MacWindow = {
@@ -25,6 +36,36 @@ describe('helper', () => {
   describe('filterProcesses', () => {
     beforeEach(() => {
       vi.clearAllMocks()
+      
+      // デフォルトのlabeledFiltersを設定
+      const defaultLabeledFilters: LabeledFilters[] = [
+        {
+          label: 'Dockを除外',
+          filters: [{ property: 'kCGWindowOwnerName', is: 'Dock' }]
+        },
+        {
+          label: 'Spotlightを除外',
+          filters: [{ property: 'kCGWindowOwnerName', is: 'Spotlight' }]
+        },
+        {
+          label: 'Taskbar.fmアプリを除外',
+          filters: [{ property: 'kCGWindowOwnerName', is: 'taskbar.fm' }]
+        },
+        {
+          label: 'Taskbar.fmウィンドウを除外',
+          filters: [{ property: 'kCGWindowName', is: 'taskbar.fm' }]
+        }
+      ]
+      
+      vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
+        if (key === 'labeledFilters') {
+          return defaultLabeledFilters
+        }
+        if (key === 'filters') {
+          return [] // レガシーフィルターは空
+        }
+        return defaultValue
+      })
     })
 
     it('通常のウィンドウはフィルタリングされない', () => {
