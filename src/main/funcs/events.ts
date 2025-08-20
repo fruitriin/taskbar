@@ -1,6 +1,13 @@
 // レンダラープロセスからのメッセージを受信する
 import { createOptionWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
-import { activateWindow, closeWindow, grantPermission, macWindowProcesses, checkPermissions } from '@/funcs/helper'
+import {
+  activateWindow,
+  closeWindow,
+  grantPermission,
+  macWindowProcesses,
+  checkPermissions,
+  scheduleHelperRestart
+} from '@/funcs/helper'
 import { app, ipcMain, screen, BrowserWindow } from 'electron'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
@@ -55,7 +62,9 @@ export function setEventHandlers(): void {
 
   ipcMain.on('openSystemPreferences', () => {
     const { shell } = require('electron')
-    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+    shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+    )
   })
   ipcMain.on('clearSetting', () => {
     store.clear()
@@ -69,6 +78,10 @@ export function setEventHandlers(): void {
     ipcMain.on('exit', () => {
       app.quit()
     })
+
+  ipcMain.on('restartHelper', (_event, delay?: number) => {
+    scheduleHelperRestart(delay)
+  })
   // タスクを右クリックしたときのコンテキストメニュー
   // index.vueの@click.right.preventでイベントが発火
   // しかしクリック位置の情報が送られていないため、画面上部に表示される

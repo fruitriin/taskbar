@@ -1,10 +1,15 @@
 <template>
   <div :class="options.layout">
-    <div class="icon-area" @click="openOption">
-      <img :src="icon" style="height: 40px" />
-    </div>
-    <div class="permissions">
-      <MainPermissionStatus />
+    <div style="display: flex">
+      <div class="icon-area" @click="openOption">
+        <img :src="icon" style="height: 40px" />
+      </div>
+      <div class="permissions">
+        <MainPermissionStatus />
+      </div>
+      <div class="helper-restart">
+        <button class="button is-small" @click="restartHelper()">Helper再起動</button>
+      </div>
     </div>
     <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
       <button
@@ -190,20 +195,25 @@ export default defineComponent({
     },
     async acticveWindow(win: MacWindow) {
       Electron.send('activeWindow', win)
+    },
+    restartHelper(delay?: number): void {
+      Electron.send('restartHelper', delay)
     }
   }
 })
 </script>
 
 <style lang="scss" scoped>
-.icon {
+.icon-area {
   display: flex;
-  margin: 0 8px;
   align-items: center;
+  margin: 8px;
+  margin-right: 0;
 }
+
 .left,
 .right {
-  .icon {
+  .icon-area {
     display: flex;
     justify-content: center;
     margin: 8px;
@@ -214,6 +224,13 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.helper-restart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 8px;
 }
 
 .checkbox:hover {
