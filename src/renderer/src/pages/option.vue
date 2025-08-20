@@ -105,12 +105,42 @@
                   margin-bottom: 0.75rem;
                 "
               >
+                <!-- 編集モード時 -->
+                <div v-if="editingLabelIndex === i" style="display: flex; align-items: center; flex: 1">
+                  <span style="margin-right: 0.5rem">
+                    {{ filterGroup.filters.length > 1 ? '📁' : '📄' }}
+                  </span>
+                  <input
+                    v-model="filterGroup.label"
+                    class="input is-small"
+                    style="flex: 1; margin-right: 0.5rem"
+                    @blur="finishEditLabel()"
+                    @keyup.enter="finishEditLabel()"
+                    @keyup.escape="cancelEditLabel()"
+                    autofocus
+                  />
+                  <span
+                    :style="{
+                      color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
+                      fontSize: '0.875rem'
+                    }"
+                  >
+                    ({{ filterGroup.filters.length }}条件{{ filterGroup.filters.length > 1 ? ' - AND' : '' }})
+                  </span>
+                </div>
+                
+                <!-- 通常モード時 -->
                 <span
+                  v-else
                   :style="{
                     color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
                     fontWeight: 'bold',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    flex: 1
                   }"
+                  @click="startEditLabel(i)"
+                  title="クリックして編集"
                 >
                   {{ filterGroup.filters.length > 1 ? '📁' : '📄' }} {{ filterGroup.label }} ({{
                     filterGroup.filters.length
@@ -160,25 +190,10 @@
                     ×
                   </button>
                 </div>
-              </div>
 
-              <!-- ラベル編集フォーム -->
-              <div class="label-edit" style="margin-bottom: 0.75rem">
-                <div class="field has-addons" style="margin-bottom: 0">
-                  <div class="control is-expanded">
-                    <input
-                      v-model="filterGroup.label"
-                      class="input is-small"
-                      placeholder="フィルターグループ名"
-                      @blur="updateLabel(i, filterGroup.label)"
-                      @keyup.enter="updateLabel(i, filterGroup.label)"
-                    />
-                  </div>
-                </div>
+                <!-- 条件追加フォーム -->
+                <AddFilter :filter-index="i" @add-filter="handleAddFilter" />
               </div>
-
-              <!-- 条件追加フォーム -->
-              <AddFilter :filter-index="i" @add-filter="handleAddFilter" />
             </div>
 
             <!-- 新規グループ作成 -->
@@ -225,8 +240,12 @@ export default {
     drag: boolean
     options: any
     sortRule: Array<{ name: string; label: string }>
-    labeledFilters: Array<{ label: string; filters: Array<{ property: string; is: string | number | boolean }> }>
+    labeledFilters: Array<{
+      label: string
+      filters: Array<{ property: string; is: string | number | boolean }>
+    }>
     newFilter: { property: string; is: string }
+    editingLabelIndex: number | null
   } {
     return {
       drag: false,
@@ -241,7 +260,8 @@ export default {
       newFilter: {
         property: '',
         is: ''
-      }
+      },
+      editingLabelIndex: null
     }
   },
   computed: {
@@ -313,6 +333,20 @@ export default {
       newFilters[index].label = newLabel
       this.labeledFilters = newFilters
       Electron.send('setLabeledFilters', this.labeledFilters)
+    },
+    startEditLabel(index: number): void {
+      this.editingLabelIndex = index
+    },
+    finishEditLabel(): void {
+      if (this.editingLabelIndex !== null) {
+        Electron.send('setLabeledFilters', this.labeledFilters)
+        this.editingLabelIndex = null
+      }
+    },
+    cancelEditLabel(): void {
+      // 編集をキャンセルして元の値に戻す
+      this.labeledFilters = [...window.store.labeledFilters]
+      this.editingLabelIndex = null
     }
   }
 }

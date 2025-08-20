@@ -1,6 +1,19 @@
 <template>
-  <div class="add-filter-form" style="margin-top: 16px; max-width: 380px;">
-    <div class="field has-addons">
+  <div class="add-filter-form" style="margin-top: 16px; max-width: 380px">
+    <!-- プラスボタン（フォーム非表示時） -->
+    <div v-if="!isExpanded" class="add-button-container">
+      <button
+        class="button is-small is-primary is-rounded"
+        @click="isExpanded = true"
+        style="display: flex; align-items: center; gap: 0.5rem"
+      >
+        <span style="font-size: 1rem">+</span>
+        <span>{{ filterIndex !== undefined ? '' : '新しいグループを作成' }}</span>
+      </button>
+    </div>
+
+    <!-- フォーム（展開時） -->
+    <div v-if="isExpanded" class="field has-addons">
       <div class="control">
         <div class="select is-small">
           <select v-model="filter.property">
@@ -30,8 +43,11 @@
           :disabled="!filter.property"
           @click="handleAddFilter"
         >
-          {{ filterIndex !== undefined ? 'ルール追加' : '新規グループ' }}
+          {{ filterIndex !== undefined ? '追加' : '作成' }}
         </button>
+      </div>
+      <div class="control">
+        <button class="button is-small" @click="cancelAdd">キャンセル</button>
       </div>
     </div>
   </div>
@@ -53,33 +69,43 @@ export default {
     }
   },
   emits: ['add-filter'],
-  data(): { filter: Filter } {
+  data(): { filter: Filter; isExpanded: boolean } {
     return {
       filter: {
         property: '',
         is: ''
-      }
+      },
+      isExpanded: false
     }
   },
   methods: {
     handleAddFilter(): void {
       const convertedFilter = { ...this.filter }
-      
+
       // 型変換を行う
       if (this.getInputType(this.filter.property) === 'number') {
         const numValue = Number(this.filter.is)
         convertedFilter.is = isNaN(numValue) ? this.filter.is : numValue
-      } else if (this.filter.property === 'kCGWindowIsOnscreen' && typeof this.filter.is === 'string') {
+      } else if (
+        this.filter.property === 'kCGWindowIsOnscreen' &&
+        typeof this.filter.is === 'string'
+      ) {
         // booleanの場合
         convertedFilter.is = this.filter.is === 'true' || this.filter.is === '1'
       }
-      
+
       this.$emit('add-filter', {
         filter: convertedFilter,
         filterIndex: this.filterIndex
       })
       this.filter.property = ''
       this.filter.is = ''
+      this.isExpanded = false
+    },
+    cancelAdd(): void {
+      this.filter.property = ''
+      this.filter.is = ''
+      this.isExpanded = false
     },
     getInputType(property: string): string {
       const numericProperties = [
