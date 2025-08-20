@@ -41,15 +41,15 @@
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
-            <th @click="setSortField('name')" class="sortable">
-              ウィンドウ名
-              <span v-if="sortField === 'name'" class="sort-indicator">
-                {{ sortDirection === 'asc' ? '↑' : '↓' }}
-              </span>
-            </th>
             <th @click="setSortField('owner')" class="sortable">
               アプリ名
               <span v-if="sortField === 'owner'" class="sort-indicator">
+                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              </span>
+            </th>
+            <th @click="setSortField('name')" class="sortable">
+              ウィンドウ名
+              <span v-if="sortField === 'name'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
@@ -77,13 +77,6 @@
           </tr>
           <tr v-for="window in paginatedWindows" :key="window.id" class="window-row">
             <td>
-              <div class="window-name">
-                <span class="window-title" :title="window.name">
-                  {{ window.name || '(無題)' }}
-                </span>
-              </div>
-            </td>
-            <td>
               <div class="app-info">
                 <img 
                   v-if="window.appIcon" 
@@ -97,6 +90,13 @@
                 </div>
                 <span class="app-name" :title="window.owner">
                   {{ window.owner }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="window-name">
+                <span class="window-title" :title="window.name">
+                  {{ window.name || '(無題)' }}
                 </span>
               </div>
             </td>
@@ -245,7 +245,7 @@ export default {
     return {
       windowsList: [],
       searchQuery: '',
-      sortField: 'name',
+      sortField: 'owner',
       sortDirection: 'asc',
       currentPage: 1,
       itemsPerPage: 50,
