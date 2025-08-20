@@ -7,11 +7,11 @@
       <div class="permissions">
         <MainPermissionStatus />
       </div>
-      <div class="helper-restart">
+      <div class="helper-restart" v-if="visibleWindows.length == 0">
         <button class="button is-small" @click="restartHelper()">Helper再起動</button>
       </div>
     </div>
-    <div class="tasks" :style="{ gridTemplateColumns: filteredWindows.map(() => '1fr').join(' ') }">
+    <div class="tasks" :style="{ gridTemplateColumns: visibleWindows.map(() => '1fr').join(' ') }">
       <button
         v-for="win in headerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
@@ -58,9 +58,9 @@
     <pre>{{ options }}</pre>
 
     <h2 class="block">見えているもの</h2>
-    <Debug v-if="debug" :windows="filteredWindows" />
+    <Debug v-if="debug" :windows="visibleWindows" />
     <hr />
-    filteredWindows
+    visibleWindows
     <h2 class="block">隠しているもの</h2>
   </div>
 </template>
@@ -102,20 +102,20 @@ export default defineComponent({
   },
   computed: {
     headerWindows() {
-      const headers = this.filteredWindows.filter((w) => {
+      const headers = this.visibleWindows.filter((w) => {
         if (this.options?.headers.includes(w.kCGWindowOwnerName)) return true
       })
 
       return this.sort(headers, 'headers')
     },
-    footerWindows() {
-      const footers = this.filteredWindows.filter((w) => {
+    footerWindows(): MacWindow[] {
+      const footers = this.visibleWindows.filter((w) => {
         if (this.options?.footers.includes(w.kCGWindowOwnerName)) return true
       })
       return this.sort(footers, 'footers')
     },
-    centerWindows() {
-      return this.filteredWindows.filter((w) => {
+    centerWindows(): MacWindow[] {
+      return this.visibleWindows.filter((w: MacWindow) => {
         if (
           !this.options?.headers.includes(w.kCGWindowOwnerName) &&
           !this.options?.footers.includes(w.kCGWindowOwnerName)
@@ -123,7 +123,8 @@ export default defineComponent({
           return true
       })
     },
-    filteredWindows() {
+    // ディスプレイの中にウィンドウだけに絞り込む
+    visibleWindows(): MacWindow[] {
       if (this.windows === null) return []
       const displayConrner = {
         left: this.displayInfo.workArea?.x,
@@ -132,7 +133,6 @@ export default defineComponent({
         bottom: this.displayInfo?.workArea?.y + this.displayInfo.workArea?.height
       }
       return [...this.windows].filter((win) => {
-        // ディスプレイの中にウィンドウの内側になければ表示しない
         if (displayConrner.left > win.kCGWindowBounds.X + win.kCGWindowBounds.Width) return false
         if (win.kCGWindowBounds.X > displayConrner.right) return false
 
@@ -145,15 +145,19 @@ export default defineComponent({
   },
 
   mounted() {
-    Electron.listen('updateOptions', (event, value) => {
+    Electron.listen('updateOptions', (_event, value) => {
       console.log('[taskbar]updated:', value)
       this.options = value
     })
-    Electron.listen('process', (event, value: MacWindow[]) => {
+    Electron.listen('process', (_event, value: MacWindow[]) => {
+      if (this.windows == null) {
+        this.windows = value
+        return
+      }
       this.windows.splice(0, this.windows.length, ...value)
     })
     Electron.send('windowReady')
-    Electron.listen('displayInfo', (event, value) => {
+    Electron.listen('displayInfo', (_event, value) => {
       this.displayInfo = value
     })
   },
