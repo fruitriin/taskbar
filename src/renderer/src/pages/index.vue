@@ -11,7 +11,11 @@
         <button class="button is-small" @click="restartHelper()">Helper再起動</button>
       </div>
     </div>
-    <div class="tasks" :style="{ gridTemplateColumns: visibleWindows.map(() => '1fr').join(' ') }">
+    <div
+      class="tasks"
+      :style="{ gridTemplateColumns: visibleWindows.map(() => '1fr').join(' ') }"
+      style="overflow-y: auto"
+    >
       <button
         v-for="win in headerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
@@ -53,7 +57,7 @@
       </button>
     </div>
   </div>
-  <div>
+  <div style="height: calc(100% - 56px); overflow-y: auto">
     <hr />
     <pre>{{ options }}</pre>
 
@@ -61,7 +65,6 @@
     <Debug v-if="debug" :windows="visibleWindows" />
     <hr />
     visibleWindows
-    <h2 class="block">隠しているもの</h2>
   </div>
 </template>
 
