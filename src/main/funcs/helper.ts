@@ -276,13 +276,18 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
         taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
       }
     }
+    
+    // FullWindowListウィンドウが開いている場合にも送信
+    if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
+      fullWindowListWindow.webContents.send('process', macWindowProcesses)
+    }
   }
 }
 
 import { escape } from 'html-escaper'
 import { store } from './store'
 import type { LabeledFilters } from './store'
-import { taskbars } from './windows'
+import { taskbars, fullWindowListWindow } from './windows'
 
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {

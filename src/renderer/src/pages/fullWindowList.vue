@@ -3,19 +3,7 @@
     <h1>ウィンドウ一覧 - フィルター設定補助</h1>
 
     <div class="controls">
-      <button class="button is-primary mr-2" @click="refreshData">
-        <span class="icon">
-          <i class="fas fa-refresh"></i>
-        </span>
-        <span>更新</span>
-      </button>
-      <button class="button is-info mr-2" @click="exportWindowList">
-        <span class="icon">
-          <i class="fas fa-download"></i>
-        </span>
-        <span>エクスポート</span>
-      </button>
-      <div class="field has-addons ml-4">
+      <div class="field has-addons">
         <div class="control">
           <input
             v-model="searchQuery"
@@ -97,6 +85,16 @@
             </td>
             <td>
               <div class="app-info">
+                <img 
+                  v-if="window.appIcon" 
+                  :src="window.appIcon" 
+                  class="app-icon" 
+                  :alt="window.owner"
+                  @error="handleImageError"
+                />
+                <div v-else class="app-icon-placeholder">
+                  <i class="fas fa-window-maximize"></i>
+                </div>
                 <span class="app-name" :title="window.owner">
                   {{ window.owner }}
                 </span>
@@ -204,12 +202,33 @@ interface WindowInfo {
   pid: number
   layer: number
   isOnscreen: boolean
+  appIcon?: string
   bounds?: {
     x: number
     y: number
     width: number
     height: number
   }
+}
+
+// MacWindow型をインポート
+type MacWindow = {
+  kCGWindowLayer: number
+  kCGWindowName: string
+  kCGWindowMemoryUsage: number
+  kCGWindowIsOnscreen: number
+  kCGWindowSharingState: number
+  kCGWindowOwnerPID: number
+  kCGWindowOwnerName: string
+  kCGWindowNumber: number
+  kCGWindowStoreType: number
+  kCGWindowBounds: {
+    X: number
+    Height: number
+    Y: number
+    Width: number
+  }
+  appIcon: string
 }
 
 export default {
@@ -222,7 +241,6 @@ export default {
     itemsPerPage: number
     activeDropdown: number | null
     notification: string | null
-    refreshInterval: number | null
   } {
     return {
       windowsList: [],
@@ -232,8 +250,7 @@ export default {
       currentPage: 1,
       itemsPerPage: 50,
       activeDropdown: null,
-      notification: null,
-      refreshInterval: null
+      notification: null
     }
   },
   computed: {
@@ -293,59 +310,40 @@ export default {
     }
   },
   mounted() {
-    this.refreshData()
-    this.startAutoRefresh()
+    // IPCイベントリスナーを追加
+    Electron.listen('process', this.handleProcessData)
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
   },
   beforeUnmount() {
-    this.stopAutoRefresh()
     document.removeEventListener('click', this.handleOutsideClick)
+    // IPCイベントリスナーを削除
+    window.electron.ipcRenderer.removeAllListeners('process')
   },
   methods: {
-    refreshData() {
-      // 実際の実装ではhelperプロセスからウィンドウリストを取得
-      // 現在はモックデータを使用
-      this.generateMockData()
+    handleProcessData(_event: any, macWindows: MacWindow[]) {
+      // MacWindowデータをWindowInfoに変換
+      this.windowsList = macWindows.map((macWindow, index) => ({
+        id: macWindow.kCGWindowNumber || index,
+        name: macWindow.kCGWindowName || '(無題)',
+        owner: macWindow.kCGWindowOwnerName || '不明',
+        pid: macWindow.kCGWindowOwnerPID,
+        layer: macWindow.kCGWindowLayer,
+        isOnscreen: macWindow.kCGWindowIsOnscreen === 1,
+        appIcon: macWindow.appIcon || undefined,
+        bounds: macWindow.kCGWindowBounds ? {
+          x: macWindow.kCGWindowBounds.X,
+          y: macWindow.kCGWindowBounds.Y,
+          width: macWindow.kCGWindowBounds.Width,
+          height: macWindow.kCGWindowBounds.Height
+        } : undefined
+      }))
+      console.log(`受信したウィンドウ数: ${this.windowsList.length}`)
     },
-    generateMockData() {
-      // モックデータの生成（実際の実装では削除）
-      const mockApps = [
-        'Safari',
-        'Chrome',
-        'VSCode',
-        'Terminal',
-        'Finder',
-        'Spotify',
-        'Slack',
-        'Discord'
-      ]
-      const mockWindows = []
-
-      for (let i = 0; i < 120; i++) {
-        const app = mockApps[Math.floor(Math.random() * mockApps.length)]
-        mockWindows.push({
-          id: i + 1,
-          name: `${app} Window ${i + 1}`,
-          owner: app,
-          pid: Math.floor(Math.random() * 10000) + 1000,
-          layer: Math.floor(Math.random() * 10),
-          isOnscreen: Math.random() > 0.3
-        })
-      }
-
-      this.windowsList = mockWindows
-    },
-    startAutoRefresh() {
-      this.refreshInterval = window.setInterval(() => {
-        this.refreshData()
-      }, 10000) // 10秒間隔
-    },
-    stopAutoRefresh() {
-      if (this.refreshInterval) {
-        clearInterval(this.refreshInterval)
-        this.refreshInterval = null
-      }
+    handleImageError(event: Event) {
+      // アイコン読み込みエラー時の処理
+      const target = event.target as HTMLImageElement
+      target.style.display = 'none'
     },
     setSortField(field: string) {
       if (this.sortField === field) {
@@ -397,32 +395,6 @@ export default {
       setTimeout(() => {
         this.notification = null
       }, 3000)
-    },
-    exportWindowList() {
-      const data = {
-        timestamp: new Date().toISOString(),
-        totalWindows: this.totalWindows,
-        uniqueApps: this.uniqueApps,
-        windows: this.windowsList.map((w) => ({
-          name: w.name,
-          owner: w.owner,
-          pid: w.pid,
-          layer: w.layer,
-          isOnscreen: w.isOnscreen
-        }))
-      }
-
-      const dataStr = JSON.stringify(data, null, 2)
-      const blob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `window-list-${Date.now()}.json`
-      a.click()
-
-      URL.revokeObjectURL(url)
-      this.showNotification('ウィンドウリストをエクスポートしました')
     }
   }
 }
@@ -540,14 +512,40 @@ h1 {
     }
 
     .app-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .app-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+
+      .app-icon-placeholder {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #444;
+        border-radius: 3px;
+        color: #888;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+      }
+
       .app-name {
         color: #86efac;
         font-weight: 500;
         display: block;
-        max-width: 200px;
+        max-width: 150px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        flex: 1;
       }
     }
 
@@ -630,13 +628,6 @@ h1 {
   max-width: 400px;
 }
 
-.mr-2 {
-  margin-right: 0.5rem;
-}
-
-.ml-4 {
-  margin-left: 1rem;
-}
 </style>
 
 <style lang="sass" scoped>
