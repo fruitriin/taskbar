@@ -57,7 +57,6 @@
     <hr />
     filteredWindows
     <h2 class="block">隠しているもの</h2>
-    <Debug v-if="debug" :windows="invertWindows" />
   </div>
 </template>
 
@@ -87,23 +86,16 @@ export default defineComponent({
       headers: window.store.options?.headers,
       footers: window.store.options?.footers,
       displayInfo: {} as {
-        workArea:
-          | {
-              x: number
-              y: number
-              width: number
-              height: number
-            }
-          | undefined
+        workArea: {
+          x: number
+          y: number
+          width: number
+          height: number
+        }
       }
     }
   },
   computed: {
-    invertWindows() {
-      return this.windows?.filter((win) => {
-        return !this.filteredWindows.includes(win)
-      })
-    },
     headerWindows() {
       const headers = this.filteredWindows.filter((w) => {
         if (this.options?.headers.includes(w.kCGWindowOwnerName)) return true
