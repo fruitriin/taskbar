@@ -27,7 +27,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/preload.ts'),
-          option: resolve(__dirname, 'src/preload.ts')
+          option: resolve(__dirname, 'src/preload.ts'),
+          fullWindowList: resolve(__dirname, 'src/preload.ts')
         }
       }
     }
@@ -41,7 +42,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
-          option: resolve(__dirname, 'src/renderer/option.html')
+          option: resolve(__dirname, 'src/renderer/option.html'),
+          fullWindowList: resolve(__dirname, 'src/renderer/fullWindowList.html')
         }
       }
     },

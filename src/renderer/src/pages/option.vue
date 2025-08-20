@@ -232,6 +232,7 @@
           <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
           <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
           <button class="button ml-4" @click="Electron.send('exit')">終了</button>
+          <button class="button is-info ml-4" @click="Electron.send('openFullWindowList')">ウィンドウ一覧</button>
         </div>
       </div>
     </div>

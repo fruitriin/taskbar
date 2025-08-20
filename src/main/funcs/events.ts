@@ -1,5 +1,5 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
+import { createOptionWindow, createFullWindowListWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
 import {
   activateWindow,
   closeWindow,
@@ -20,6 +20,9 @@ export function setEventHandlers(): void {
   })
   ipcMain.on('openOption', () => {
     createOptionWindow()
+  })
+  ipcMain.on('openFullWindowList', () => {
+    createFullWindowListWindow()
   })
 
   ipcMain.on('windowReady', () => {

@@ -1,7 +1,7 @@
-import { app, BrowserWindow, powerMonitor } from 'electron'
-import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, powerMonitor, globalShortcut } from 'electron'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-import { createAllWindows, initializeDisplayEvents } from '@/funcs/windows'
+import { createAllWindows, initializeDisplayEvents, createFullWindowListWindow } from '@/funcs/windows'
 import { setEventHandlers } from '@/funcs/events'
 import { getAndSubmitProcesses, restartHelperAfterSleep, cleanupHelperProcess } from '@/funcs/helper'
 
@@ -41,6 +41,13 @@ app.whenReady().then(() => {
 
   // イベントハンドラーを設定する
   setEventHandlers()
+
+  // 開発時のみウィンドウ一覧のキーボードショートカットを追加
+  if (is.dev) {
+    globalShortcut.register('CommandOrControl+Shift+W', () => {
+      createFullWindowListWindow()
+    })
+  }
 })
 
 // プロセスを取得するプロセスを起動

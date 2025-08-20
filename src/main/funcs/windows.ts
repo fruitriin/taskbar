@@ -129,6 +129,34 @@ export function createOptionWindow(): void {
   })
 }
 
+export let fullWindowListWindow: BrowserWindow
+export function createFullWindowListWindow(): void {
+  // すでにウィンドウを開いているならそれをアクティブにする
+  if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
+    fullWindowListWindow.show()
+    return
+  }
+  fullWindowListWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    title: 'Taskbar.fm - ウィンドウ一覧',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  })
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    fullWindowListWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/fullWindowList.html')
+  } else {
+    fullWindowListWindow.loadFile(join(__dirname, '../renderer/fullWindowList.html'))
+  }
+  fullWindowListWindow.on('ready-to-show', () => {
+    fullWindowListWindow.show()
+  })
+}
+
 export function windowPosition(
   display: Electron.Display,
   type: LayoutType

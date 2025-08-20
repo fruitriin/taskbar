@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>taskbar.fm - ウィンドウ一覧</title>
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
+    <style>
+      html,
+      body,
+      #app {
+        height: 100%;
+        overflow: auto !important;
+        background-color: hsl(0, 0%, 14%);
+        color: white;
+        font-family:
+          'SF Mono',
+          Monaco,
+          'Cascadia Code',
+          'Roboto Mono',
+          Consolas,
+          'Courier New',
+          monospace;
+      }
+      html,
+      body,
+      p,
+      ol,
+      ul,
+      li,
+      dl,
+      dt,
+      dd,
+      blockquote,
+      figure,
+      fieldset,
+      legend,
+      textarea,
+      pre,
+      iframe,
+      hr,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/renderer-fullWindowList.ts"></script>
+  </body>
+</html>
