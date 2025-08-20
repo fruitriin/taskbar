@@ -2,12 +2,15 @@
   <div class="option">
     <h1>Taskbar.fm 設定</h1>
 
-    <!-- 権限セクション -->
-    <div class="permissions-section">
-      <PermissionStatus />
-    </div>
-
     <div class="main-options">
+      <div class="field is-horizontal">
+        <div class="field-label is-normal">
+          <label class="label">システム権限</label>
+        </div>
+        <div class="field-body">
+          <PermissionStatus />
+        </div>
+      </div>
       <div class="field is-horizontal">
         <div class="field-label is-normal">
           <label class="label">表示位置</label>
@@ -75,8 +78,8 @@
         <div class="field-label">
           <label class="label">フィルター </label>
         </div>
-        <div class="field-body" style="width: 100%;">
-          <div style="width: 100%;">
+        <div class="field-body" style="width: 100%">
+          <div style="width: 100%">
             <!-- フィルターグループの表示（インライン式レイアウト） -->
             <div
               v-for="(filterElements, i) in filters"
@@ -93,14 +96,25 @@
               }"
             >
               <!-- グループヘッダー -->
-              <div class="group-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <span :style="{
-                  color: filterElements.length > 1 ? '#4a90e2' : '#059669',
-                  fontWeight: 'bold',
-                  fontSize: '0.875rem'
-                }">
-                  {{ filterElements.length > 1 ? '📁' : '📄' }} フィルターグループ{{ i + 1 }} 
-                  ({{ filterElements.length }}条件{{ filterElements.length > 1 ? ' - AND' : '' }})
+              <div
+                class="group-header"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 0.75rem;
+                "
+              >
+                <span
+                  :style="{
+                    color: filterElements.length > 1 ? '#4a90e2' : '#059669',
+                    fontWeight: 'bold',
+                    fontSize: '0.875rem'
+                  }"
+                >
+                  {{ filterElements.length > 1 ? '📁' : '📄' }} フィルターグループ{{ i + 1 }} ({{
+                    filterElements.length
+                  }}条件{{ filterElements.length > 1 ? ' - AND' : '' }})
                 </span>
                 <button class="button is-small is-danger" @click="removeFilter(i)">
                   グループ削除
@@ -108,7 +122,10 @@
               </div>
 
               <!-- フィルター条件のピル表示 -->
-              <div class="filter-pills" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <div
+                class="filter-pills"
+                style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem"
+              >
                 <div
                   v-for="(filter, k) in filterElements"
                   :key="k"
@@ -122,15 +139,21 @@
                     border: filterElements.length > 1 ? '1px solid #4a90e2' : '1px solid #059669'
                   }"
                 >
-                  <span style="color: #7dd3fc; font-size: 0.8rem; margin-right: 0.3rem;">
+                  <span style="color: #7dd3fc; font-size: 0.8rem; margin-right: 0.3rem">
                     {{ getPropertyDisplayName(filter.property) }}
                   </span>
-                  <span style="color: #888; margin-right: 0.3rem;">=</span>
-                  <span style="color: #86efac; font-size: 0.8rem; margin-right: 0.3rem;">
+                  <span style="color: #888; margin-right: 0.3rem">=</span>
+                  <span style="color: #86efac; font-size: 0.8rem; margin-right: 0.3rem">
                     {{ filter.is }}
                   </span>
-                  <button 
-                    style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;"
+                  <button
+                    style="
+                      background: none;
+                      border: none;
+                      color: #ef4444;
+                      cursor: pointer;
+                      font-size: 0.8rem;
+                    "
                     @click="removeCondition(i, k)"
                   >
                     ×
@@ -143,8 +166,10 @@
             </div>
 
             <!-- 新規グループ作成 -->
-            <div style="margin-top: 1rem;">
-              <h5 style="color: #b0b0b0; margin-bottom: 0.5rem; font-size: 0.875rem;">新規フィルターグループを作成</h5>
+            <div style="margin-top: 1rem">
+              <h5 style="color: #b0b0b0; margin-bottom: 0.5rem; font-size: 0.875rem">
+                新規フィルターグループを作成
+              </h5>
               <AddFilter @add-filter="handleAddFilter" />
             </div>
           </div>
@@ -226,12 +251,12 @@ export default {
     removeCondition(groupIndex: number, conditionIndex: number): void {
       const newFilters = [...this.filters]
       newFilters[groupIndex].splice(conditionIndex, 1)
-      
+
       // グループが空になったら、グループ自体を削除
       if (newFilters[groupIndex].length === 0) {
         newFilters.splice(groupIndex, 1)
       }
-      
+
       this.filters = newFilters
       Electron.send('setFilters', this.filters)
     },
