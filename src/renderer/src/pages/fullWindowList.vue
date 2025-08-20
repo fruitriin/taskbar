@@ -1,39 +1,74 @@
 <template>
   <div class="full-window-list">
-    <h1>ウィンドウ一覧 - フィルター設定補助</h1>
+    <div class="h1-title">ウィンドウ一覧 - フィルター設定補助</div>
 
     <div class="controls">
-      <div class="field has-addons">
-        <div class="control">
-          <input
-            v-model="searchQuery"
-            class="input"
-            type="text"
-            placeholder="ウィンドウ名・アプリ名で検索..."
-          />
-        </div>
-        <div class="control">
-          <button class="button is-static">
-            <span class="icon">
-              <i class="fas fa-search"></i>
-            </span>
-          </button>
+      <div class="control-group">
+        <div class="field">
+          <div class="control">
+            <div class="buttons has-addons filter-buttons">
+              <button
+                class="button"
+                :class="{ 'is-primary': displayMode === 'filtered' }"
+                @click="switchDisplayMode('filtered')"
+              >
+                <span class="icon">
+                  <i class="fas fa-filter"></i>
+                </span>
+                <span class="button-text">フィルター済み</span>
+                <span v-if="allProcessesData" class="tag is-light ml-1">{{
+                  allProcessesData.filtered.length
+                }}</span>
+              </button>
+              <button
+                class="button"
+                :class="{ 'is-info': displayMode === 'all' }"
+                @click="switchDisplayMode('all')"
+              >
+                <span class="icon">
+                  <i class="fas fa-list"></i>
+                </span>
+                <span class="button-text">全ウィンドウ</span>
+                <span v-if="allProcessesData" class="tag is-light ml-1">{{
+                  allProcessesData.all.length
+                }}</span>
+              </button>
+              <button
+                class="button"
+                :class="{ 'is-warning': displayMode === 'excluded' }"
+                @click="switchDisplayMode('excluded')"
+              >
+                <span class="icon">
+                  <i class="fas fa-eye-slash"></i>
+                </span>
+                <span class="button-text">除外済み</span>
+                <span v-if="allProcessesData" class="tag is-light ml-1">{{
+                  allProcessesData.excluded.length
+                }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="stats">
-      <div class="stat-item">
-        <span class="stat-value">{{ filteredWindows.length }}</span>
-        <span class="stat-label">表示中のウィンドウ</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ totalWindows }}</span>
-        <span class="stat-label">総ウィンドウ数</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ uniqueApps }}</span>
-        <span class="stat-label">アプリ数</span>
+      <div class="control-group">
+        <div class="field has-addons search-field">
+          <div class="control search-control">
+            <input
+              v-model="searchQuery"
+              class="input"
+              type="text"
+              placeholder="ウィンドウ名・アプリ名で検索..."
+            />
+          </div>
+          <div class="control">
+            <button class="button is-static search-button">
+              <span class="icon">
+                <i class="fas fa-search"></i>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -65,7 +100,12 @@
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
-            <th>状態</th>
+            <th @click="setSortField('status')" class="sortable">
+              状態
+              <span v-if="sortField === 'status'" class="sort-indicator">
+                {{ sortDirection === 'asc' ? '↑' : '↓' }}
+              </span>
+            </th>
             <th>フィルター作成</th>
           </tr>
         </thead>
@@ -78,10 +118,10 @@
           <tr v-for="window in paginatedWindows" :key="window.id" class="window-row">
             <td>
               <div class="app-info">
-                <img 
-                  v-if="window.appIcon" 
-                  :src="window.appIcon" 
-                  class="app-icon" 
+                <img
+                  v-if="window.appIcon"
+                  :src="window.appIcon"
+                  class="app-icon"
                   :alt="window.owner"
                   @error="handleImageError"
                 />
@@ -107,8 +147,12 @@
               <code class="layer">{{ window.layer }}</code>
             </td>
             <td>
-              <span class="tag" :class="window.isOnscreen ? 'is-success' : 'is-light'">
-                {{ window.isOnscreen ? '表示中' : '非表示' }}
+              <span
+                class="tag"
+                :class="getWindowStatus(window.id).class"
+                :title="getWindowStatus(window.id).tooltip"
+              >
+                {{ getWindowStatus(window.id).label }}
               </span>
             </td>
             <td>
@@ -171,14 +215,18 @@
           次のページ
         </button>
         <ul class="pagination-list">
-          <li v-for="page in visiblePages" :key="page">
+          <li v-for="(page, index) in visiblePages" :key="`page-${index}`">
             <button
+              v-if="typeof page === 'number'"
               class="pagination-link"
               :class="{ 'is-current': page === currentPage }"
               @click="currentPage = page"
             >
               {{ page }}
             </button>
+            <span v-else class="pagination-ellipsis">
+              {{ page }}
+            </span>
           </li>
         </ul>
       </nav>
@@ -233,7 +281,8 @@ type MacWindow = {
 
 export default {
   data(): {
-    windowsList: WindowInfo[]
+    allProcessesData: { all: WindowInfo[]; filtered: WindowInfo[]; excluded: WindowInfo[] } | null
+    displayMode: 'filtered' | 'all' | 'excluded'
     searchQuery: string
     sortField: string
     sortDirection: 'asc' | 'desc'
@@ -243,7 +292,8 @@ export default {
     notification: string | null
   } {
     return {
-      windowsList: [],
+      allProcessesData: null,
+      displayMode: 'filtered',
       searchQuery: '',
       sortField: 'owner',
       sortDirection: 'asc',
@@ -254,8 +304,28 @@ export default {
     }
   },
   computed: {
+    displayWindowsList(): WindowInfo[] {
+      // allProcessesDataが利用できない場合は空配列
+      if (!this.allProcessesData) {
+        return []
+      }
+
+      // 表示モードに応じてデータを切り替え
+      switch (this.displayMode) {
+        case 'all':
+          console.log('全プロセス表示モード:', this.allProcessesData.all.length)
+          return this.allProcessesData.all
+        case 'excluded':
+          console.log('除外プロセス表示モード:', this.allProcessesData.excluded.length)
+          return this.allProcessesData.excluded
+        case 'filtered':
+        default:
+          console.log('フィルター済み表示モード:', this.allProcessesData.filtered.length)
+          return this.allProcessesData.filtered
+      }
+    },
     filteredWindows(): WindowInfo[] {
-      let filtered = [...this.windowsList]
+      let filtered = [...this.displayWindowsList]
 
       // 検索フィルター
       if (this.searchQuery.trim()) {
@@ -269,8 +339,17 @@ export default {
 
       // ソート
       filtered.sort((a, b) => {
-        let aVal = a[this.sortField as keyof WindowInfo]
-        let bVal = b[this.sortField as keyof WindowInfo]
+        let aVal: any
+        let bVal: any
+
+        // 特殊な'status'フィールドの処理
+        if (this.sortField === 'status') {
+          aVal = this.getWindowStatus(a.id).label
+          bVal = this.getWindowStatus(b.id).label
+        } else {
+          aVal = a[this.sortField as keyof WindowInfo]
+          bVal = b[this.sortField as keyof WindowInfo]
+        }
 
         // 文字列の場合は小文字で比較
         if (typeof aVal === 'string') aVal = aVal.toLowerCase()
@@ -291,59 +370,155 @@ export default {
     totalPages(): number {
       return Math.ceil(this.filteredWindows.length / this.itemsPerPage)
     },
-    visiblePages(): number[] {
-      const pages = []
-      const start = Math.max(1, this.currentPage - 2)
-      const end = Math.min(this.totalPages, this.currentPage + 2)
+    visiblePages(): (number | string)[] {
+      const pages: (number | string)[] = []
+      const total = this.totalPages
+      const current = this.currentPage
+
+      // 総ページ数が7以下の場合はすべて表示
+      if (total <= 7) {
+        for (let i = 1; i <= total; i++) {
+          pages.push(i)
+        }
+        return pages
+      }
+
+      // 1ページ目は常に表示
+      pages.push(1)
+
+      // 現在のページが1から遠い場合は省略記号
+      if (current > 4) {
+        pages.push('...')
+      }
+
+      // 現在のページ周辺を表示
+      const start = Math.max(2, current - 1)
+      const end = Math.min(total - 1, current + 1)
 
       for (let i = start; i <= end; i++) {
-        pages.push(i)
+        // 1ページ目の重複を避ける
+        if (i > 1) {
+          pages.push(i)
+        }
       }
+
+      // 最後のページから遠い場合は省略記号
+      if (current < total - 3) {
+        pages.push('...')
+      }
+
+      // 最後のページは常に表示（重複を避ける）
+      if (total > 1 && !pages.includes(total)) {
+        pages.push(total)
+      }
+
       return pages
-    },
-    totalWindows(): number {
-      return this.windowsList.length
-    },
-    uniqueApps(): number {
-      const apps = new Set(this.windowsList.map((w) => w.owner))
-      return apps.size
     }
   },
   mounted() {
     // IPCイベントリスナーを追加
-    Electron.listen('process', this.handleProcessData)
+    Electron.listen('allProcesses', this.handleAllProcessesData)
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
   },
   beforeUnmount() {
     document.removeEventListener('click', this.handleOutsideClick)
     // IPCイベントリスナーを削除
-    window.electron.ipcRenderer.removeAllListeners('process')
+    window.electron.ipcRenderer.removeAllListeners('allProcesses')
   },
   methods: {
-    handleProcessData(_event: any, macWindows: MacWindow[]) {
-      // MacWindowデータをWindowInfoに変換
-      this.windowsList = macWindows.map((macWindow, index) => ({
+    handleAllProcessesData(
+      _event: any,
+      data: { all: MacWindow[]; filtered: MacWindow[]; excluded: MacWindow[] }
+    ) {
+      // 全プロセスデータを変換して保存
+      this.allProcessesData = {
+        all: data.all.map((macWindow, index) =>
+          this.convertMacWindowToWindowInfo(macWindow, index)
+        ),
+        filtered: data.filtered.map((macWindow, index) =>
+          this.convertMacWindowToWindowInfo(macWindow, index)
+        ),
+        excluded: data.excluded.map((macWindow, index) =>
+          this.convertMacWindowToWindowInfo(macWindow, index)
+        )
+      }
+    },
+    convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
+      return {
         id: macWindow.kCGWindowNumber || index,
         name: macWindow.kCGWindowName || '(無題)',
         owner: macWindow.kCGWindowOwnerName || '不明',
         pid: macWindow.kCGWindowOwnerPID,
         layer: macWindow.kCGWindowLayer,
-        isOnscreen: macWindow.kCGWindowIsOnscreen === 1,
+        isOnscreen: macWindow.kCGWindowIsOnscreen > 0,
         appIcon: macWindow.appIcon || undefined,
-        bounds: macWindow.kCGWindowBounds ? {
-          x: macWindow.kCGWindowBounds.X,
-          y: macWindow.kCGWindowBounds.Y,
-          width: macWindow.kCGWindowBounds.Width,
-          height: macWindow.kCGWindowBounds.Height
-        } : undefined
-      }))
-      console.log(`受信したウィンドウ数: ${this.windowsList.length}`)
+        bounds: macWindow.kCGWindowBounds
+          ? {
+              x: macWindow.kCGWindowBounds.X,
+              y: macWindow.kCGWindowBounds.Y,
+              width: macWindow.kCGWindowBounds.Width,
+              height: macWindow.kCGWindowBounds.Height
+            }
+          : undefined
+      }
     },
     handleImageError(event: Event) {
       // アイコン読み込みエラー時の処理
       const target = event.target as HTMLImageElement
       target.style.display = 'none'
+    },
+    getWindowStatus(windowId: number): { label: string; class: string; tooltip: string } {
+      // allProcessesDataが利用できない場合
+      if (!this.allProcessesData) {
+        return {
+          label: 'データ待機中',
+          class: 'is-light',
+          tooltip: 'プロセスデータを読み込み中です'
+        }
+      }
+
+      // フィルター済みリストに含まれているかで判定
+      const isInFiltered = this.allProcessesData.filtered.some((w) => w.id === windowId)
+
+      if (isInFiltered) {
+        return {
+          label: 'フィルター通過',
+          class: 'is-success',
+          tooltip: 'このウィンドウはフィルターを通過し、タスクバーに表示されます'
+        }
+      } else {
+        // 除外された理由を特定
+        const isInAll = this.allProcessesData.all.some((w) => w.id === windowId)
+        const isInExcluded = this.allProcessesData.excluded.some((w) => w.id === windowId)
+
+        if (isInExcluded) {
+          return {
+            label: 'フィルター除外',
+            class: 'is-warning',
+            tooltip:
+              'このウィンドウはフィルターにより除外されています（サイズ不足、除外アプリなど）'
+          }
+        } else if (isInAll) {
+          return {
+            label: '不明',
+            class: 'is-light',
+            tooltip: '全ウィンドウリストにはあるが、分類が不明'
+          }
+        } else {
+          return {
+            label: 'データなし',
+            class: 'is-light',
+            tooltip: 'ウィンドウデータが見つかりません'
+          }
+        }
+      }
+    },
+    switchDisplayMode(mode: 'filtered' | 'all' | 'excluded') {
+      this.displayMode = mode
+      this.currentPage = 1 // ページをリセット
+      this.activeDropdown = null // ドロップダウンを閉じる
+      console.log(`表示モード切り替え: ${mode}`)
     },
     setSortField(field: string) {
       if (this.sortField === field) {
@@ -402,27 +577,207 @@ export default {
 
 <style lang="scss" scoped>
 .full-window-list {
-  padding: 1.5rem;
+  padding: 2rem;
   min-height: 100vh;
   background: hsl(0, 0%, 21%);
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+  }
 }
 
-h1 {
-  color: #ffffff;
-  margin-bottom: 1.5rem;
-  font-size: 1.8rem;
-  font-weight: 600;
+.h1-title {
+  color: #fff;
+  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
 
 .controls {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: flex-start;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  gap: 2rem;
 
-  .field {
-    margin-bottom: 0;
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    gap: 1rem;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .field {
+      margin-bottom: 0;
+    }
+
+    &:first-child {
+      justify-self: start;
+    }
+
+    &:last-child {
+      justify-self: end;
+
+      @media (max-width: 1024px) {
+        justify-self: start;
+      }
+    }
+  }
+
+  // フィルターボタングループ
+  .filter-buttons {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    overflow: hidden;
+
+    .button {
+      color: #b0b0b0;
+      background: #2a2a2a;
+      border-color: #444;
+      border-radius: 0;
+      padding: 0.75rem 1rem;
+      position: relative;
+      margin-bottom: 0;
+
+      // モバイルでは小さなボタン
+      @media (max-width: 768px) {
+        padding: 0.5rem 0.75rem;
+
+        .button-text {
+          display: none;
+        }
+      }
+
+      // デフォルトのボタンテキストサイズ
+      .button-text {
+        font-size: 0.95rem;
+      }
+
+      // タブレットサイズでもテキストを短縮
+      @media (max-width: 1024px) {
+        .button-text {
+          font-size: 0.9rem;
+        }
+      }
+
+      &:hover {
+        background: #333;
+        border-color: #4a90e2;
+      }
+
+      &.is-primary {
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+        border-color: #4a90e2;
+        color: white;
+      }
+
+      &.is-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        border-color: #17a2b8;
+        color: white;
+      }
+
+      &.is-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        border-color: #ffc107;
+        color: #212529;
+      }
+
+      .icon {
+        margin-right: 0.5rem;
+
+        @media (max-width: 768px) {
+          margin-right: 0;
+        }
+      }
+
+      .tag {
+        margin-left: 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: inherit;
+        border: none;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+
+        @media (max-width: 768px) {
+          margin-left: 0.25rem;
+          padding: 0.15rem 0.35rem;
+          font-size: 0.7rem;
+        }
+      }
+    }
+  }
+
+  // 検索フィールド
+  .search-field {
+    min-width: 320px;
+    max-width: 400px;
+    width: 100%;
+
+    @media (max-width: 768px) {
+      min-width: auto;
+      max-width: none;
+    }
+
+    .search-control {
+      flex: 1;
+
+      .input {
+        background: #2a2a2a;
+        border-color: #444;
+        color: #e0e0e0;
+        border-radius: 6px 0 0 6px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+
+        &:focus {
+          background: #333;
+          border-color: #4a90e2;
+          box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+          outline: none;
+        }
+
+        &::placeholder {
+          color: #888;
+          font-style: italic;
+        }
+      }
+    }
+
+    .search-button {
+      background: #333;
+      border-color: #444;
+      color: #b0b0b0;
+      border-radius: 0 6px 6px 0;
+      padding: 0.75rem 1rem;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #4a90e2;
+        border-color: #4a90e2;
+        color: white;
+      }
+    }
   }
 }
 
@@ -430,35 +785,89 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
 
   .stat-item {
-    background: #2a2a2a;
-    padding: 1rem;
-    border-radius: 6px;
+    background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+    padding: 1.5rem 1.25rem;
+    border-radius: 10px;
     border: 1px solid #444;
     text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #4a90e2, #17a2b8, #ffc107);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      padding: 1.25rem 1rem;
+    }
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      border-color: #4a90e2;
+
+      &::before {
+        opacity: 1;
+      }
+    }
 
     .stat-value {
       display: block;
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 700;
       color: #4a90e2;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      line-height: 1;
+
+      @media (max-width: 768px) {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
     }
 
     .stat-label {
-      color: #b0b0b0;
-      font-size: 0.9rem;
+      color: #c0c0c0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      opacity: 0.9;
+
+      @media (max-width: 768px) {
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+      }
     }
   }
 }
 
 .windows-table-container {
   background: #2a2a2a;
-  border-radius: 6px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid #444;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease;
 
   .table {
     background: transparent;
@@ -470,7 +879,7 @@ h1 {
       border: none;
       padding: 0.5rem 0.8rem;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
 
       &.sortable {
         cursor: pointer;
@@ -492,7 +901,7 @@ h1 {
       padding: 0.4rem 0.8rem;
       border-bottom: 1px solid #333;
       background: #2a2a2a;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
     }
 
     tr:hover td {
@@ -591,30 +1000,78 @@ h1 {
   margin-top: 2rem;
   display: flex;
   justify-content: center;
+  padding: 1rem 0;
+
+  @media (max-width: 768px) {
+    margin-top: 1.5rem;
+    padding: 0.5rem 0;
+  }
 
   .pagination {
+    gap: 0.25rem;
+
     .pagination-link,
     .pagination-previous,
     .pagination-next {
       background: #2a2a2a;
       border-color: #444;
       color: #b0b0b0;
+      border-radius: 6px;
+      margin: 0 0.125rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
-      &:hover {
+      @media (max-width: 768px) {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      &:hover:not(:disabled) {
         background: #333;
         border-color: #4a90e2;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(74, 144, 226, 0.2);
       }
 
       &.is-current {
-        background: #4a90e2;
+        background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
         border-color: #4a90e2;
         color: white;
+        box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+        transform: translateY(-1px);
       }
 
       &:disabled {
         background: #1a1a1a;
         color: #666;
         cursor: not-allowed;
+        opacity: 0.5;
+      }
+    }
+
+    .pagination-ellipsis {
+      color: #666;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+
+      @media (max-width: 768px) {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.85rem;
+      }
+    }
+
+    .pagination-list {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.25rem;
+
+      @media (max-width: 768px) {
+        gap: 0.125rem;
       }
     }
   }
@@ -628,6 +1085,13 @@ h1 {
   max-width: 400px;
 }
 
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
+.ml-4 {
+  margin-left: 1rem;
+}
 </style>
 
 <style lang="sass" scoped>

@@ -254,33 +254,73 @@ import { diffApply } from 'just-diff-apply'
 
 //  なんかごきげん斜め ウィンドウの増減で動かなくなる
 export function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
-  const result = diff(macWindowProcesses, filterProcesses(newProcesses))
+  const filteredProcesses = filterProcesses(newProcesses)
+  
+  // 除外されたウィンドウを取得
+  const excludedProcesses = newProcesses.filter(window => 
+    !filteredProcesses.some(filtered => filtered.kCGWindowNumber === window.kCGWindowNumber)
+  )
+  
+  // デバッグログ
+  if (excludedProcesses.length > 0) {
+    console.log('除外されたウィンドウ:', excludedProcesses.map(w => ({
+      name: w.kCGWindowName,
+      owner: w.kCGWindowOwnerName,
+      reason: `${w.kCGWindowBounds?.Width}x${w.kCGWindowBounds?.Height}`
+    })))
+  }
 
+  const result = diff(macWindowProcesses, filteredProcesses)
+
+  // アイコンの設定は常に実行
+  const icons = loadIconCache()
+  
   if (result.length > 0) {
     diffApply(macWindowProcesses, result)
+  }
 
-    // icon_cache/icons.jsonからbase64をセット
-    // 最新のアイコンキャッシュを読み込み
-    const icons = loadIconCache()
-    for (const proc of macWindowProcesses) {
-      if (!proc.appIcon) {
-        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-        if (icons[owner]) {
-          proc.appIcon = `data:image/png;base64,${icons[owner]}`
-        }
+  // アイコンを設定（フィルター済みプロセス）
+  for (const proc of macWindowProcesses) {
+    if (!proc.appIcon) {
+      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+      if (icons[owner]) {
+        proc.appIcon = `data:image/png;base64,${icons[owner]}`
       }
     }
+  }
 
+  // 全プロセス（オリジナル）にもアイコンをセット
+  const allProcessesWithIcons = newProcesses.map(proc => {
+    if (!proc.appIcon) {
+      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+      if (icons[owner]) {
+        return { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
+      }
+    }
+    return proc
+  })
+
+  // 変更があった場合のみタスクバーに送信
+  if (result.length > 0) {
     for (const taskbarKey in taskbars) {
       if (!taskbars[taskbarKey].isDestroyed()) {
         taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
       }
     }
-    
-    // FullWindowListウィンドウが開いている場合にも送信
-    if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
-      fullWindowListWindow.webContents.send('process', macWindowProcesses)
-    }
+  }
+  
+  // FullWindowListウィンドウには全プロセス情報のみ送信
+  if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
+    fullWindowListWindow.webContents.send('allProcesses', {
+      all: allProcessesWithIcons,
+      filtered: macWindowProcesses,
+      excluded: excludedProcesses.map(proc => {
+        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+        return icons[owner] 
+          ? { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
+          : proc
+      })
+    })
   }
 }
 
