@@ -119,6 +119,7 @@ export default defineComponent({
       })
     },
     filteredWindows() {
+      if (this.windows === null) return []
       const displayConrner = {
         left: this.displayInfo.workArea?.x,
         right: this.displayInfo.workArea?.x + this.displayInfo.workArea?.width,
