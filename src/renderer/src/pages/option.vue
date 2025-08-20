@@ -74,134 +74,151 @@
           </div>
         </div>
       </div>
+
       <div class="filterRule field is-horizontal">
         <div class="field-label">
-          <label class="label">フィルター </label>
+          <label class="label">フィルター</label>
         </div>
-        <div class="field-body" style="width: 100%">
-          <div style="width: 100%">
-            <!-- フィルターグループの表示（インライン式レイアウト） -->
+        <div class="field-body" style="width: 100%; display: flex; gap: 0.5rem">
+          <!-- メインエリア：フィルターピル -->
+          <div
+            style="flex: 1; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start"
+          >
             <div
               v-for="(filterGroup, i) in labeledFilters"
               :key="i"
-              class="inline-group"
+              style="
+                display: inline-flex;
+                align-items: center;
+                background: #2a2a2a;
+                border: 1px solid #444;
+                border-radius: 20px;
+                padding: 0.3rem 0.6rem;
+                font-size: 0.8rem;
+                margin: 0.1rem;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
               :style="{
-                background: '#2a2a2a',
-                padding: '1rem',
-                borderRadius: '6px',
-                border: filterGroup.filters.length > 1 ? '2px solid #4a90e2' : '2px solid #059669',
-                marginBottom: '0.75rem',
-                width: '100%',
-                boxSizing: 'border-box'
+                borderColor: selectedFilterIndex === i ? '#4a90e2' : '#444',
+                background: selectedFilterIndex === i ? '#1a3a5a' : '#2a2a2a'
               }"
+              @click="selectedFilterIndex = selectedFilterIndex === i ? null : i"
             >
-              <!-- グループヘッダー -->
-              <div
-                class="group-header"
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 0.75rem;
-                "
+              <span
+                :style="{
+                  color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
+                  fontWeight: '600'
+                }"
+                style="margin-right: 0.3rem"
               >
-                <!-- 編集モード時 -->
-                <div v-if="editingLabelIndex === i" style="display: flex; align-items: center; flex: 1">
-                  <span style="margin-right: 0.5rem">
-                    {{ filterGroup.filters.length > 1 ? '📁' : '📄' }}
-                  </span>
-                  <input
-                    v-model="filterGroup.label"
-                    class="input is-small"
-                    style="flex: 1; margin-right: 0.5rem"
-                    @blur="finishEditLabel()"
-                    @keyup.enter="finishEditLabel()"
-                    @keyup.escape="cancelEditLabel()"
-                    autofocus
-                  />
-                  <span
-                    :style="{
-                      color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
-                      fontSize: '0.875rem'
-                    }"
-                  >
-                    ({{ filterGroup.filters.length }}条件{{ filterGroup.filters.length > 1 ? ' - AND' : '' }})
-                  </span>
-                </div>
-                
-                <!-- 通常モード時 -->
-                <span
-                  v-else
-                  :style="{
-                    color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
-                    fontWeight: 'bold',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    flex: 1
-                  }"
-                  @click="startEditLabel(i)"
-                  title="クリックして編集"
-                >
-                  {{ filterGroup.filters.length > 1 ? '📁' : '📄' }} {{ filterGroup.label }} ({{
-                    filterGroup.filters.length
-                  }}条件{{ filterGroup.filters.length > 1 ? ' - AND' : '' }})
-                </span>
-                <button class="button is-small is-danger" @click="removeFilter(i)">
-                  グループ削除
-                </button>
-              </div>
+                {{ filterGroup.label }}
+              </span>
+              <span style="color: #888; margin-right: 0.3rem"
+                >({{ filterGroup.filters.length }})</span
+              >
+              <button
+                style="
+                  background: none;
+                  border: none;
+                  color: #ef4444;
+                  cursor: pointer;
+                  font-size: 0.7rem;
+                "
+                @click.stop="removeFilter(i)"
+              >
+                ×
+              </button>
+            </div>
+            <div style="display: inline-flex; margin-left: 0.5rem">
+              <AddFilter @add-filter="handleAddFilter" />
+            </div>
+          </div>
 
-              <!-- フィルター条件のピル表示 -->
+          <!-- サイドパネル：詳細編集 -->
+          <div
+            v-if="selectedFilterIndex !== null"
+            style="
+              width: 280px;
+              background: #1a1a1a;
+              padding: 0.8rem;
+              border-radius: 6px;
+              border: 1px solid #4a90e2;
+              flex-shrink: 0;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 0.8rem;
+              "
+            >
+              <span style="color: #4a90e2; font-weight: 600; font-size: 0.9rem">編集中</span>
+              <button
+                style="background: none; border: none; color: #888; cursor: pointer"
+                @click="selectedFilterIndex = null"
+              >
+                ✕
+              </button>
+            </div>
+
+            <!-- ラベル編集（コンパクト） -->
+            <div style="margin-bottom: 0.6rem">
+              <label
+                style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.2rem"
+                >ラベル</label
+              >
+              <input
+                v-model="labeledFilters[selectedFilterIndex].label"
+                class="input is-small"
+                style="width: 100%; font-size: 0.8rem"
+                @input="updateLabelRealtime"
+              />
+            </div>
+
+            <!-- フィルター条件（コンパクト） -->
+            <div>
+              <label
+                style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.3rem"
+              >
+                条件 ({{ labeledFilters[selectedFilterIndex].filters.length }}件)
+              </label>
               <div
-                class="filter-pills"
-                style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem"
+                style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem"
               >
                 <div
-                  v-for="(filter, k) in filterGroup.filters"
+                  v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters"
                   :key="k"
-                  class="filter-pill"
-                  :style="{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    background: '#1a1a1a',
-                    padding: '0.4rem 0.6rem',
-                    borderRadius: '20px',
-                    border:
-                      filterGroup.filters.length > 1 ? '1px solid #4a90e2' : '1px solid #059669'
-                  }"
+                  style="
+                    font-size: 0.7rem;
+                    background: #2a2a2a;
+                    padding: 0.3rem 0.4rem;
+                    border-radius: 4px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
                 >
-                  <span style="color: #7dd3fc; font-size: 0.8rem; margin-right: 0.3rem">
-                    {{ getPropertyDisplayName(filter.property) }}
-                  </span>
-                  <span style="color: #888; margin-right: 0.3rem">=</span>
-                  <span style="color: #86efac; font-size: 0.8rem; margin-right: 0.3rem">
-                    {{ filter.is }}
-                  </span>
+                  <span style="color: #ccc"
+                    >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
+                  >
                   <button
                     style="
                       background: none;
                       border: none;
                       color: #ef4444;
                       cursor: pointer;
-                      font-size: 0.8rem;
+                      font-size: 0.7rem;
                     "
-                    @click="removeCondition(i, k)"
+                    @click="removeCondition(selectedFilterIndex, k)"
                   >
                     ×
                   </button>
                 </div>
-
-                <!-- 条件追加フォーム -->
-                <AddFilter :filter-index="i" @add-filter="handleAddFilter" />
               </div>
-            </div>
-
-            <!-- 新規グループ作成 -->
-            <div style="margin-top: 1rem">
-              <h5 style="color: #b0b0b0; margin-bottom: 0.5rem; font-size: 0.875rem">
-                新規フィルターグループを作成
-              </h5>
-              <AddFilter @add-filter="handleAddFilter" />
+              <AddFilter :filter-index="selectedFilterIndex" @add-filter="handleAddFilter" />
             </div>
           </div>
         </div>
@@ -246,6 +263,7 @@ export default {
     }>
     newFilter: { property: string; is: string }
     editingLabelIndex: number | null
+    selectedFilterIndex: number | null
   } {
     return {
       drag: false,
@@ -261,7 +279,8 @@ export default {
         property: '',
         is: ''
       },
-      editingLabelIndex: null
+      editingLabelIndex: null,
+      selectedFilterIndex: null
     }
   },
   computed: {
@@ -347,6 +366,10 @@ export default {
       // 編集をキャンセルして元の値に戻す
       this.labeledFilters = [...window.store.labeledFilters]
       this.editingLabelIndex = null
+    },
+    updateLabelRealtime(): void {
+      // サイドパネルでのリアルタイムラベル更新
+      Electron.send('setLabeledFilters', this.labeledFilters)
     }
   }
 }
@@ -404,6 +427,12 @@ export default {
 
 .list-group-item i {
   cursor: pointer;
+}
+
+/* フィルターピルのホバーエフェクト */
+.filterRule [style*='border-radius: 20px']:hover {
+  transform: scale(1.02);
+  border-color: #4a90e2 !important;
 }
 </style>
 
