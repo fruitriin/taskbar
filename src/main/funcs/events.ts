@@ -82,6 +82,16 @@ export function setEventHandlers(): void {
   ipcMain.on('restartHelper', (_event, delay?: number) => {
     scheduleHelperRestart(delay)
   })
+
+  // フィルター設定の保存
+  ipcMain.on('setLabeledFilters', (_event, value) => {
+    store.set('labeledFilters', value)
+  })
+
+  // フィルター設定の取得
+  ipcMain.handle('getLabeledFilters', () => {
+    return store.get('labeledFilters', [])
+  })
   // タスクを右クリックしたときのコンテキストメニュー
   // index.vueの@click.right.preventでイベントが発火
   // しかしクリック位置の情報が送られていないため、画面上部に表示される

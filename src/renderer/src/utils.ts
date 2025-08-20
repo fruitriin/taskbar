@@ -6,6 +6,33 @@ declare global {
   }
 }
 
+type NumberFilter = {
+  property:
+    | 'X'
+    | 'Y'
+    | 'Height'
+    | 'Width'
+    | 'kCGWindowMemoryUsage'
+    | 'kCGWindowOwnerPID'
+    | 'kCGWindowNumber'
+  is: number
+}
+type StringFilter = {
+  property: 'kCGWindowOwnerName' | 'kCGWindowName'
+  is: string
+}
+type BooleanFilter = {
+  property: 'kCGWindowStoreType' | 'kCGWindowIsOnscreen'
+  is: boolean
+}
+
+type Filter = NumberFilter | StringFilter | BooleanFilter
+
+type LabeledFilters = {
+  label: string
+  filters: Filter[]
+}
+
 type Store = {
   granted: boolean
   options: {
@@ -14,7 +41,7 @@ type Store = {
     headers: string[]
     footers: string[]
   }
-  filters: { property: string; is: string }[][]
+  labeledFilters: LabeledFilters[]
 }
 
 export const Electron = {

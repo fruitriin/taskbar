@@ -40,7 +40,7 @@
 <script lang="ts">
 export type Filter = {
   property: string
-  is: string
+  is: string | number | boolean
 }
 
 export default {
@@ -63,8 +63,19 @@ export default {
   },
   methods: {
     handleAddFilter(): void {
+      const convertedFilter = { ...this.filter }
+      
+      // 型変換を行う
+      if (this.getInputType(this.filter.property) === 'number') {
+        const numValue = Number(this.filter.is)
+        convertedFilter.is = isNaN(numValue) ? this.filter.is : numValue
+      } else if (this.filter.property === 'kCGWindowIsOnscreen' && typeof this.filter.is === 'string') {
+        // booleanの場合
+        convertedFilter.is = this.filter.is === 'true' || this.filter.is === '1'
+      }
+      
       this.$emit('add-filter', {
-        filter: { ...this.filter },
+        filter: convertedFilter,
         filterIndex: this.filterIndex
       })
       this.filter.property = ''

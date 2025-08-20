@@ -82,14 +82,14 @@
           <div style="width: 100%">
             <!-- フィルターグループの表示（インライン式レイアウト） -->
             <div
-              v-for="(filterElements, i) in filters"
+              v-for="(filterGroup, i) in labeledFilters"
               :key="i"
               class="inline-group"
               :style="{
                 background: '#2a2a2a',
                 padding: '1rem',
                 borderRadius: '6px',
-                border: filterElements.length > 1 ? '2px solid #4a90e2' : '2px solid #059669',
+                border: filterGroup.filters.length > 1 ? '2px solid #4a90e2' : '2px solid #059669',
                 marginBottom: '0.75rem',
                 width: '100%',
                 boxSizing: 'border-box'
@@ -107,14 +107,14 @@
               >
                 <span
                   :style="{
-                    color: filterElements.length > 1 ? '#4a90e2' : '#059669',
+                    color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
                     fontWeight: 'bold',
                     fontSize: '0.875rem'
                   }"
                 >
-                  {{ filterElements.length > 1 ? '📁' : '📄' }} フィルターグループ{{ i + 1 }} ({{
-                    filterElements.length
-                  }}条件{{ filterElements.length > 1 ? ' - AND' : '' }})
+                  {{ filterGroup.filters.length > 1 ? '📁' : '📄' }} {{ filterGroup.label }} ({{
+                    filterGroup.filters.length
+                  }}条件{{ filterGroup.filters.length > 1 ? ' - AND' : '' }})
                 </span>
                 <button class="button is-small is-danger" @click="removeFilter(i)">
                   グループ削除
@@ -127,7 +127,7 @@
                 style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem"
               >
                 <div
-                  v-for="(filter, k) in filterElements"
+                  v-for="(filter, k) in filterGroup.filters"
                   :key="k"
                   class="filter-pill"
                   :style="{
@@ -136,7 +136,8 @@
                     background: '#1a1a1a',
                     padding: '0.4rem 0.6rem',
                     borderRadius: '20px',
-                    border: filterElements.length > 1 ? '1px solid #4a90e2' : '1px solid #059669'
+                    border:
+                      filterGroup.filters.length > 1 ? '1px solid #4a90e2' : '1px solid #059669'
                   }"
                 >
                   <span style="color: #7dd3fc; font-size: 0.8rem; margin-right: 0.3rem">
@@ -158,6 +159,21 @@
                   >
                     ×
                   </button>
+                </div>
+              </div>
+
+              <!-- ラベル編集フォーム -->
+              <div class="label-edit" style="margin-bottom: 0.75rem">
+                <div class="field has-addons" style="margin-bottom: 0">
+                  <div class="control is-expanded">
+                    <input
+                      v-model="filterGroup.label"
+                      class="input is-small"
+                      placeholder="フィルターグループ名"
+                      @blur="updateLabel(i, filterGroup.label)"
+                      @keyup.enter="updateLabel(i, filterGroup.label)"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -209,7 +225,7 @@ export default {
     drag: boolean
     options: any
     sortRule: Array<{ name: string; label: string }>
-    filters: Array<Array<{ property: string; is: string }>>
+    labeledFilters: Array<{ label: string; filters: Array<{ property: string; is: string | number | boolean }> }>
     newFilter: { property: string; is: string }
   } {
     return {
@@ -221,7 +237,7 @@ export default {
         { name: 'headers', label: '先頭' },
         { name: 'footers', label: '末尾' }
       ],
-      filters: [...window.store.filters],
+      labeledFilters: [...window.store.labeledFilters],
       newFilter: {
         property: '',
         is: ''
@@ -243,22 +259,22 @@ export default {
   },
   methods: {
     removeFilter(index: number): void {
-      const newFilters = [...this.filters]
+      const newFilters = [...this.labeledFilters]
       newFilters.splice(index, 1)
-      this.filters = newFilters
-      Electron.send('setFilters', this.filters)
+      this.labeledFilters = newFilters
+      Electron.send('setLabeledFilters', this.labeledFilters)
     },
     removeCondition(groupIndex: number, conditionIndex: number): void {
-      const newFilters = [...this.filters]
-      newFilters[groupIndex].splice(conditionIndex, 1)
+      const newFilters = [...this.labeledFilters]
+      newFilters[groupIndex].filters.splice(conditionIndex, 1)
 
       // グループが空になったら、グループ自体を削除
-      if (newFilters[groupIndex].length === 0) {
+      if (newFilters[groupIndex].filters.length === 0) {
         newFilters.splice(groupIndex, 1)
       }
 
-      this.filters = newFilters
-      Electron.send('setFilters', this.filters)
+      this.labeledFilters = newFilters
+      Electron.send('setLabeledFilters', this.labeledFilters)
     },
     getPropertyDisplayName(property: string): string {
       const displayNames: Record<string, string> = {
@@ -277,16 +293,26 @@ export default {
       filter: { property: string; is: string }
       filterIndex?: number
     }): void {
-      const newFilters = [...this.filters]
+      const newFilters = [...this.labeledFilters]
       if (data.filterIndex !== undefined) {
         // 既存のフィルターグループにルールを追加
-        newFilters[data.filterIndex].push(data.filter)
+        newFilters[data.filterIndex].filters.push(data.filter)
       } else {
         // 新しいフィルターグループを作成
-        newFilters.push([data.filter])
+        const newGroupLabel = `カスタムフィルター ${newFilters.length + 1}`
+        newFilters.push({
+          label: newGroupLabel,
+          filters: [data.filter]
+        })
       }
-      this.filters = newFilters
-      Electron.send('setFilters', this.filters)
+      this.labeledFilters = newFilters
+      Electron.send('setLabeledFilters', this.labeledFilters)
+    },
+    updateLabel(index: number, newLabel: string): void {
+      const newFilters = [...this.labeledFilters]
+      newFilters[index].label = newLabel
+      this.labeledFilters = newFilters
+      Electron.send('setLabeledFilters', this.labeledFilters)
     }
   }
 }
