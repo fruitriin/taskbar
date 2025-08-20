@@ -1,7 +1,5 @@
 <template>
   <div class="permission-status">
-    <h3 class="title is-6">システム権限</h3>
-    
     <div class="permissions-grid">
       <div class="permission-item">
         <div class="permission-content">
@@ -25,15 +23,15 @@
     </div>
 
     <div class="action-section">
-      <button 
-        class="button is-primary is-small" 
+      <button
+        class="button is-primary is-small"
         @click="checkPermissions"
         :class="{ 'is-loading': isChecking }"
       >
         権限状態を更新
       </button>
-      <button 
-        class="button is-info is-small" 
+      <button
+        class="button is-info is-small"
         @click="openSystemPreferences"
         v-if="!accessibilityStatus || !screenRecordingStatus"
       >
