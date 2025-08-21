@@ -13,7 +13,7 @@ import { filterProcesses } from '@/funcs/helper'
 import { store } from '@/funcs/store'
 
 // テスト用のWindowデータ
-const createTestWindow = (overrides: any = {}) => ({
+const createTestWindow = (overrides: any = {}): MacWindow => ({
   kCGWindowLayer: 0,
   kCGWindowName: 'TestWindow',
   kCGWindowMemoryUsage: 1024,
@@ -246,6 +246,7 @@ describe('Helper filterProcesses - Debug', () => {
   })
 
   it('デバッグ: サイズフィルターの動作確認', () => {
+    // @ts-ignore - Test mock parameter
     vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
       return defaultValue || []
     })

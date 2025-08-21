@@ -55,7 +55,7 @@ const accessibilityStatus = ref<boolean>(false)
 const screenRecordingStatus = ref<boolean>(false)
 const isChecking = ref<boolean>(false)
 
-const checkPermissions = async () => {
+const checkPermissions = async (): Promise<void> => {
   isChecking.value = true
   try {
     const result = await window.electron.ipcRenderer.invoke('checkPermissions')
@@ -70,7 +70,7 @@ const checkPermissions = async () => {
   }
 }
 
-const openSystemPreferences = () => {
+const openSystemPreferences = (): void => {
   window.electron.ipcRenderer.send('openSystemPreferences')
 }
 

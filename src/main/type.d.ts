@@ -1,14 +1,14 @@
 declare global {
   type MacWindow = {
     kCGWindowLayer: number
-    kCGWindowName: string
+    kCGWindowName?: string
     kCGWindowMemoryUsage: number
-    kCGWindowIsOnscreen?: number
+    kCGWindowIsOnscreen?: boolean
     kCGWindowSharingState: number
     kCGWindowOwnerPID: number
     kCGWindowOwnerName: string
     kCGWindowNumber: number
-    kCGWindowStoreType: number
+    kCGWindowStoreType?: number
     kCGWindowBounds: {
       X: number
       Height: number

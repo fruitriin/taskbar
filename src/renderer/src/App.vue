@@ -14,7 +14,7 @@ export default defineComponent({
     }
   },
   errorCaptured(e) {
-    this.hasError = e
+    this.hasError = e as any
 
     return false
   }

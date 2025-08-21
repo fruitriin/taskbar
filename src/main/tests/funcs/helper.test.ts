@@ -17,7 +17,7 @@ const mockMacWindow: MacWindow = {
   kCGWindowLayer: 0,
   kCGWindowName: 'TestWindow',
   kCGWindowMemoryUsage: 1024,
-  kCGWindowIsOnscreen: 1,
+  kCGWindowIsOnscreen: true,
   kCGWindowSharingState: 1,
   kCGWindowOwnerPID: 12345,
   kCGWindowOwnerName: 'TestApp',

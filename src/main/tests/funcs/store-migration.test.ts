@@ -1,26 +1,47 @@
+/* eslint-disable no-prototype-builtins */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { LegacyFilter, LabeledFilters } from '@/funcs/store'
+import type { LegacyFilter, LabeledFilters, Options } from '@/funcs/store'
+import type ElectronStore from 'electron-store'
+
+// ストアの設定タイプを定義
+type StoreSchema = {
+  options: Options
+  labeledFilters: LabeledFilters[]
+  filters?: LegacyFilter[][]
+  filters_backup?: LegacyFilter[][]
+  filters_backup_v1?: LegacyFilter[][]
+}
 
 // テスト用のモックストア
-const createMockStore = (initialData: any = {}) => {
+const createMockStore = (
+  initialData: Partial<StoreSchema> = {}
+): Pick<ElectronStore<StoreSchema>, 'get' | 'set' | 'delete' | 'has' | 'clear'> & {
+  store: Partial<StoreSchema>
+} => {
   let storeData = { ...initialData }
 
   return {
-    get: vi.fn((key: string, defaultValue?: any) => {
-      const keys = key.split('.')
-      let current = storeData
-      for (const k of keys) {
-        if (current && typeof current === 'object' && k in current) {
-          current = current[k]
-        } else {
-          return defaultValue
+    get: vi.fn(
+      <K extends keyof StoreSchema>(
+        key: K,
+        defaultValue?: StoreSchema[K]
+      ): StoreSchema[K] | undefined => {
+        const keys = (key as string).split('.')
+        let current: any = storeData
+        for (const k of keys) {
+          if (current && typeof current === 'object' && k in current) {
+            current = current[k]
+          } else {
+            return defaultValue
+          }
         }
+        return current
       }
-      return current
-    }),
-    set: vi.fn((key: string, value: any) => {
-      const keys = key.split('.')
-      let current = storeData
+    ),
+    // @ts-ignore - Mock type compatibility
+    set: vi.fn(<K extends keyof StoreSchema>(key: K, value: StoreSchema[K]): void => {
+      const keys = (key as string).split('.')
+      let current: any = storeData
       for (let i = 0; i < keys.length - 1; i++) {
         const k = keys[i]
         if (!(k in current) || typeof current[k] !== 'object') {
@@ -30,9 +51,9 @@ const createMockStore = (initialData: any = {}) => {
       }
       current[keys[keys.length - 1]] = value
     }),
-    delete: vi.fn((key: string) => {
-      const keys = key.split('.')
-      let current = storeData
+    delete: vi.fn(<K extends keyof StoreSchema>(key: K): void => {
+      const keys = (key as string).split('.')
+      let current: any = storeData
       for (let i = 0; i < keys.length - 1; i++) {
         const k = keys[i]
         if (!(k in current) || typeof current[k] !== 'object') {
@@ -42,9 +63,9 @@ const createMockStore = (initialData: any = {}) => {
       }
       delete current[keys[keys.length - 1]]
     }),
-    has: vi.fn((key: string) => {
-      const keys = key.split('.')
-      let current = storeData
+    has: vi.fn(<K extends keyof StoreSchema>(key: K): boolean => {
+      const keys = (key as string).split('.')
+      let current: any = storeData
       for (const k of keys) {
         if (current && typeof current === 'object' && k in current) {
           current = current[k]
@@ -54,7 +75,7 @@ const createMockStore = (initialData: any = {}) => {
       }
       return true
     }),
-    clear: vi.fn(() => {
+    clear: vi.fn((): void => {
       storeData = {}
     }),
     store: storeData
@@ -84,6 +105,8 @@ describe('Store Migration', () => {
       })
 
       const filters = mockStore.get('filters')
+
+      if (filters === undefined) throw new Error('filters is undefined')
 
       // Legacy形式の特徴をチェック
       expect(Array.isArray(filters)).toBe(true)
@@ -119,6 +142,7 @@ describe('Store Migration', () => {
       })
 
       const filters = mockStore.get('filters')
+      if (filters === undefined) throw new Error('filters is undefined')
       expect(Array.isArray(filters)).toBe(true)
       expect(filters.length).toBe(0)
     })
@@ -140,7 +164,7 @@ describe('Store Migration', () => {
       })
 
       // マイグレーション関数をシミュレート
-      const migration2_0_0 = (store: any) => {
+      const migration2_0_0 = (store: any): void => {
         const oldFilters = store.get('filters', [])
         if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
           // LegacyFilter形式を検出した場合の処理
@@ -181,7 +205,7 @@ describe('Store Migration', () => {
         labeledFilters: labeledFilters
       })
 
-      const migration2_0_0 = (store: any) => {
+      const migration2_0_0 = (store: any): void => {
         const oldFilters = store.get('filters', [])
         const existingLabeledFilters = store.get('labeledFilters', [])
 
@@ -219,7 +243,7 @@ describe('Store Migration', () => {
       })
 
       // データの整合性を保つマイグレーション
-      const migration2_0_0 = (store: any) => {
+      const migration2_0_0 = (store: any): void => {
         const oldFilters = store.get('filters', [])
 
         if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
@@ -257,10 +281,10 @@ describe('Store Migration', () => {
       ]
 
       mockStore = createMockStore({
-        filters: corruptedData
+        filters: corruptedData as any
       })
 
-      const migration2_0_0 = (store: any) => {
+      const migration2_0_0 = (store: any): void => {
         try {
           const oldFilters = store.get('filters', [])
           const validFilters = oldFilters.filter((filterGroup: any) => {
@@ -317,7 +341,7 @@ describe('Store Migration', () => {
       })
 
       // バックアップを作成するマイグレーション
-      const safeMigration2_0_0 = (store: any) => {
+      const safeMigration2_0_0 = (store: any): void => {
         const oldFilters = store.get('filters', [])
 
         // バックアップ作成

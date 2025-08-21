@@ -16,12 +16,12 @@ export interface MacWindow {
   kCGWindowIsOnscreen?: boolean
   kCGWindowLayer: number
   kCGWindowMemoryUsage: number
-  kCGWindowName: string
+  kCGWindowName?: string
   kCGWindowNumber: number
-  kCGWindowOwnerName: string
+  kCGWindowOwnerName?: string
   kCGWindowOwnerPID: number
   kCGWindowSharingState: number
-  kCGWindowStoreType: number
+  kCGWindowStoreType?: number
   appIcon?: string
 }
 

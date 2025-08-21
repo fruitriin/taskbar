@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import type { Filter, LegacyFilter, LabeledFilters } from '@/funcs/store'
 import {
   convertLegacyToFilter,
@@ -14,7 +14,8 @@ import {
 } from '../fixtures/filter-fixtures'
 
 // フィルター移行関数の型定義
-type FilterMigrationFunction = (legacyFilters: LegacyFilter[][]) => LabeledFilters[]
+// @ts-ignore - Type definition for reference
+type _FilterMigrationFunction = (legacyFilters: LegacyFilter[][]) => LabeledFilters[]
 
 // テスト用のLegacyFilter データ
 const sampleLegacyFilters: LegacyFilter[][] = [
@@ -31,7 +32,8 @@ const sampleLegacyFilters: LegacyFilter[][] = [
 ]
 
 // 期待される移行後のデータ
-const expectedMigratedFilters: LabeledFilters[] = [
+// @ts-ignore - Test data for reference
+const _expectedMigratedFilters: LabeledFilters[] = [
   {
     label: 'オフスクリーンウィンドウを除外',
     filters: [{ property: 'kCGWindowIsOnscreen', is: false }]

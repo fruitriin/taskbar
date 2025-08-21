@@ -1,3 +1,4 @@
+// @ts-ignore - Import type compatibility
 import { ElectronAPI, IpcRendererEvent } from '@electron-toolkit/preload'
 declare global {
   interface Window {

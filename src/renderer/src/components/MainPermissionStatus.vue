@@ -19,7 +19,7 @@ const allPermissionsGranted = computed(() => {
   return accessibilityStatus.value && screenRecordingStatus.value
 })
 
-const checkPermissions = async () => {
+const checkPermissions = async (): Promise<void> => {
   try {
     const result = await window.electron.ipcRenderer.invoke('checkPermissions')
     if (result) {
@@ -31,7 +31,7 @@ const checkPermissions = async () => {
   }
 }
 
-const openSettings = () => {
+const openSettings = (): void => {
   window.electron.ipcRenderer.send('openOption')
 }
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { LabeledFilters } from '@/funcs/store'
+
 import {
   sampleAppWindows,
   systemWindows,
@@ -9,8 +10,7 @@ import {
   mixedWindowScenario,
   expectedFilteredWindows,
   emptyWindowScenario,
-  testHelpers,
-  type MacWindow
+  testHelpers
 } from '../fixtures/taskbar-helper-fixtures'
 
 // ストアのモック
@@ -82,7 +82,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
   describe('Size filtering', () => {
     it('40px未満の高さのウィンドウを除外する', () => {
-      const result = filterProcesses(tinyWindows)
+      const result = filterProcesses(tinyWindows as MacWindow[])
 
       // tinyWindowsには高さ20pxのウィンドウが含まれている
       const tinyHeight = tinyWindows.find((w) => w.kCGWindowBounds.Height < 40)
@@ -94,7 +94,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
     })
 
     it('40px未満の幅のウィンドウを除外する', () => {
-      const result = filterProcesses(tinyWindows)
+      const result = filterProcesses(tinyWindows as MacWindow[])
 
       // tinyWindowsには幅30pxのウィンドウが含まれている
       const tinyWidth = tinyWindows.find((w) => w.kCGWindowBounds.Width < 40)
@@ -106,7 +106,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
     })
 
     it('十分なサイズのウィンドウは残す', () => {
-      const result = filterProcesses(sampleAppWindows)
+      const result = filterProcesses(sampleAppWindows as MacWindow[])
 
       // sampleAppWindowsはすべて十分なサイズなので、システムフィルター以外で除外されない
       expect(result.length).toBeGreaterThan(0)
@@ -122,14 +122,14 @@ describe('Helper filterProcesses with LabeledFilters', () => {
   describe('LabeledFilters filtering', () => {
     it('Dockウィンドウを除外する', () => {
       const dockWindow = systemWindows.find((w) => w.kCGWindowOwnerName === 'Dock')!
-      const result = filterProcesses([dockWindow])
+      const result = filterProcesses([dockWindow] as MacWindow[])
 
       expect(result).toHaveLength(0)
     })
 
     it('Spotlightウィンドウを除外する', () => {
       const spotlightWindow = systemWindows.find((w) => w.kCGWindowOwnerName === 'Spotlight')!
-      const result = filterProcesses([spotlightWindow])
+      const result = filterProcesses([spotlightWindow] as MacWindow[])
 
       expect(result).toHaveLength(0)
     })
@@ -138,7 +138,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       const notificationWindow = systemWindows.find(
         (w) => w.kCGWindowName === 'Notification Center'
       )!
-      const result = filterProcesses([notificationWindow])
+      const result = filterProcesses([notificationWindow] as MacWindow[])
 
       expect(result).toHaveLength(0)
     })
@@ -147,13 +147,13 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       const controlCenterWindow = systemWindows.find(
         (w) => w.kCGWindowOwnerName === 'コントロールセンター'
       )!
-      const result = filterProcesses([controlCenterWindow])
+      const result = filterProcesses([controlCenterWindow] as MacWindow[])
 
       expect(result).toHaveLength(0)
     })
 
     it('Taskbar.fmウィンドウを除外する', () => {
-      const result = filterProcesses(taskbarWindows)
+      const result = filterProcesses(taskbarWindows as MacWindow[])
 
       expect(result).toHaveLength(0)
     })
@@ -162,7 +162,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       const emptyFinderWindow = finderWindows.find((w) => w.kCGWindowName === '')!
       const namedFinderWindow = finderWindows.find((w) => w.kCGWindowName !== '')!
 
-      const result = filterProcesses([emptyFinderWindow, namedFinderWindow])
+      const result = filterProcesses([emptyFinderWindow, namedFinderWindow] as MacWindow[])
 
       // 空のFinderウィンドウは除外、名前のあるFinderウィンドウは残る
       expect(result).toHaveLength(1)
@@ -170,7 +170,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
     })
 
     it('一般的なアプリケーションウィンドウは残す', () => {
-      const result = filterProcesses(sampleAppWindows)
+      const result = filterProcesses(sampleAppWindows as MacWindow[])
 
       // システムフィルターに該当しないアプリケーションウィンドウは残る
       expect(result.length).toBe(sampleAppWindows.length)
@@ -184,11 +184,17 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
   describe('Mixed scenarios', () => {
     it('複合シナリオで適切にフィルタリングする', () => {
-      const result = filterProcesses(mixedWindowScenario)
+      const result = filterProcesses(mixedWindowScenario as MacWindow[])
 
       // 期待される結果と比較
       const resultAppNames = result.map((w) => w.kCGWindowOwnerName)
-      const expectedAppNames = expectedFilteredWindows.map((w) => w.kCGWindowOwnerName)
+      const expectedAppNames = (expectedFilteredWindows as MacWindow[]).map(
+        (w) => w.kCGWindowOwnerName
+      )
+
+      // 結果と期待値を直接比較
+      expect(resultAppNames).toEqual(expect.arrayContaining(expectedAppNames))
+      expect(result).toHaveLength(expectedFilteredWindows.length)
 
       // 除外されるべきアプリが含まれていないことを確認
       expect(resultAppNames).not.toContain('Dock')
@@ -202,7 +208,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
     })
 
     it('空の配列を適切に処理する', () => {
-      const result = filterProcesses(emptyWindowScenario)
+      const result = filterProcesses(emptyWindowScenario as MacWindow[])
 
       expect(result).toEqual([])
     })
@@ -215,7 +221,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           kCGWindowName: 'Test Window',
           kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
         })
-      ]
+      ] as MacWindow[]
 
       const result = filterProcesses(customWindows)
 
@@ -244,7 +250,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
       })
 
-      const result = filterProcesses([legacyWindow])
+      const result = filterProcesses([legacyWindow] as MacWindow[])
 
       expect(result).toHaveLength(0) // レガシーフィルターで除外される
     })
@@ -285,7 +291,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         })
       ]
 
-      const result = filterProcesses(windows)
+      const result = filterProcesses(windows as MacWindow[])
 
       // NewAppとOldAppの両方が除外され、ValidAppのみ残る
       expect(result).toHaveLength(1)
@@ -301,7 +307,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       }
 
       // undefinedプロパティではフィルターマッチしないので残る（サイズ条件は満たす）
-      const result = filterProcesses([windowWithUndefined])
+      const result = filterProcesses([windowWithUndefined] as MacWindow[])
 
       expect(result).toHaveLength(1)
     })
@@ -314,7 +320,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
       })
 
-      const result = filterProcesses([partialMatchWindow])
+      const result = filterProcesses([partialMatchWindow] as MacWindow[])
 
       // Finderかつ空でないウィンドウなので、複合条件に一致せず残る
       expect(result).toHaveLength(1)
@@ -327,7 +333,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
       // エラーが発生してもアプリがクラッシュしない
       expect(() => {
-        filterProcesses(sampleAppWindows)
+        filterProcesses(sampleAppWindows as MacWindow[])
       }).not.toThrow()
     })
   })
@@ -340,7 +346,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           kCGWindowOwnerName: 'TestApp',
           kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
         })
-      )
+      ) as MacWindow[]
 
       const startTime = performance.now()
       const result = filterProcesses(largeWindowSet)

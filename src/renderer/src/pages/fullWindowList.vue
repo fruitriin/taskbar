@@ -415,13 +415,13 @@ export default {
       return pages
     }
   },
-  mounted() {
+  mounted(): void {
     // IPCイベントリスナーを追加
     Electron.listen('allProcesses', this.handleAllProcessesData)
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
   },
-  beforeUnmount() {
+  beforeUnmount(): void {
     document.removeEventListener('click', this.handleOutsideClick)
     // IPCイベントリスナーを削除
     window.electron.ipcRenderer.removeAllListeners('allProcesses')
@@ -430,7 +430,7 @@ export default {
     handleAllProcessesData(
       _event: any,
       data: { all: MacWindow[]; filtered: MacWindow[]; excluded: MacWindow[] }
-    ) {
+    ): void {
       // 全プロセスデータを変換して保存
       this.allProcessesData = {
         all: data.all.map((macWindow, index) =>
@@ -463,7 +463,7 @@ export default {
           : undefined
       }
     },
-    handleImageError(event: Event) {
+    handleImageError(event: Event): void {
       // アイコン読み込みエラー時の処理
       const target = event.target as HTMLImageElement
       target.style.display = 'none'
@@ -514,13 +514,13 @@ export default {
         }
       }
     },
-    switchDisplayMode(mode: 'filtered' | 'all' | 'excluded') {
+    switchDisplayMode(mode: 'filtered' | 'all' | 'excluded'): void {
       this.displayMode = mode
       this.currentPage = 1 // ページをリセット
       this.activeDropdown = null // ドロップダウンを閉じる
       console.log(`表示モード切り替え: ${mode}`)
     },
-    setSortField(field: string) {
+    setSortField(field: string): void {
       if (this.sortField === field) {
         this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'
       } else {
@@ -529,16 +529,16 @@ export default {
       }
       this.currentPage = 1
     },
-    toggleDropdown(windowId: number) {
+    toggleDropdown(windowId: number): void {
       this.activeDropdown = this.activeDropdown === windowId ? null : windowId
     },
-    handleOutsideClick(event: Event) {
+    handleOutsideClick(event: Event): void {
       const target = event.target as Element
       if (!target.closest('.dropdown')) {
         this.activeDropdown = null
       }
     },
-    createFilter(property: string, value: string | number, window: WindowInfo) {
+    createFilter(property: string, value: string | number, window: WindowInfo): void {
       // フィルター作成ロジック（設定ウィンドウにフィルターを追加）
       const filterData = {
         property,
@@ -565,7 +565,7 @@ export default {
       }
       return displayNames[property] || property
     },
-    showNotification(message: string) {
+    showNotification(message: string): void {
       this.notification = message
       setTimeout(() => {
         this.notification = null

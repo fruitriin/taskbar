@@ -6,4 +6,5 @@ const router = createRouter({
   history: createMemoryHistory(),
   routes: routes
 })
+// @ts-ignore - Router plugin compatibility
 createApp(App).use(router).mount('#app')

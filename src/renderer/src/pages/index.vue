@@ -104,25 +104,34 @@ export default defineComponent({
   },
   computed: {
     headerWindows() {
-      const headers = this.visibleWindows.filter((w) => {
-        if (this.options?.headers.includes(w.kCGWindowOwnerName)) return true
+      const headers = this.visibleWindows.filter((w: MacWindow) => {
+        if (this.options?.headers.includes(w.kCGWindowOwnerName)) {
+          return true
+        }
+        return false
       })
 
       return this.sort(headers, 'headers')
     },
     footerWindows(): MacWindow[] {
-      const footers = this.visibleWindows.filter((w) => {
-        if (this.options?.footers.includes(w.kCGWindowOwnerName)) return true
+      const footers = this.visibleWindows.filter((w: MacWindow) => {
+        if (this.options?.footers.includes(w.kCGWindowOwnerName)) {
+          return true
+        }
+        return false
       })
-      return this.sort(footers, 'footers')
+      this.sort(footers, 'footers')
+      return footers
     },
     centerWindows(): MacWindow[] {
       return this.visibleWindows.filter((w: MacWindow) => {
         if (
           !this.options?.headers.includes(w.kCGWindowOwnerName) &&
           !this.options?.footers.includes(w.kCGWindowOwnerName)
-        )
+        ) {
           return true
+        }
+        return false
       })
     },
     // ディスプレイの中にウィンドウだけに絞り込む

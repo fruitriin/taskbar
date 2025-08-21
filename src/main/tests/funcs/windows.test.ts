@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { windowPosition } from '@/funcs/windows'
+import type { Display } from 'electron'
 
 describe('windows', () => {
   describe('windowPosition', () => {
@@ -7,7 +8,7 @@ describe('windows', () => {
       id: 1,
       label: 'Display 1',
       workArea: { x: 0, y: 0, width: 1920, height: 1080 }
-    }
+    } as Display
 
     it('右レイアウトで正しい位置を返す', () => {
       const result = windowPosition(mockDisplay, 'right')
@@ -47,7 +48,7 @@ describe('windows', () => {
         id: 2,
         label: 'Display 2',
         workArea: { x: 100, y: 100, width: 1366, height: 768 }
-      }
+      } as Display
 
       const result = windowPosition(smallDisplay, 'right')
 

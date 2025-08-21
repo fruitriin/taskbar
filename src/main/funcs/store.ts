@@ -21,20 +21,21 @@ type BooleanFilter = {
   is: boolean
 }
 
-type Filter = NumberFilter | StringFilter | BooleanFilter
+export type Filter = NumberFilter | StringFilter | BooleanFilter
 
-type LabeledFilters = {
+export type LabeledFilters = {
   label: string
   filters: Filter[]
 }
 
-type LegacyFilter = {
+export type LegacyFilter = {
   property: string
   is: string | number | boolean
 }
-type LegacyFilters = LegacyFilter[][]
+export type LegacyFilters = LegacyFilter[][]
 
 type LayoutType = 'right' | 'left' | 'bottom'
+
 export const store = new ElectronStore({
   migrations: {
     '>=1.6.2': (store): void => {
@@ -81,9 +82,12 @@ export const store = new ElectronStore({
         console.error('Filter migration failed:', error)
 
         // エラー時はバックアップから復元
+        // @ts-ignore - Migration backup key
         const backup = store.get('filters_backup_v1')
         if (backup) {
+          // @ts-ignore - Migration backup key
           store.set('filters', backup)
+          // @ts-ignore - Migration backup key
           store.delete('filters_backup_v1')
           console.log('Restored filters from backup due to migration failure')
         }
@@ -99,6 +103,8 @@ export const store = new ElectronStore({
       headers: [] as string[],
       footers: [] as string[]
     },
+    // >= 1.6.2
+    filters: [],
     // 新しいLabeledFilters形式のデフォルト
     labeledFilters: [
       {
