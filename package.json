@@ -6,7 +6,8 @@
   "author": "FruitRiin",
   "homepage": "https://www.electronjs.org",
   "scripts": {
-    "moved": "mise run"
+    "moved": "mise run",
+    "nortize": "scripts/notarize.js"
   },
   "prettier": {
     "singleQuote": true,

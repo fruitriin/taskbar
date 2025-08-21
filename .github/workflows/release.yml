@@ -1,0 +1,41 @@
+on:
+  push:
+    tags:
+      - 'v*'
+name: Release
+jobs:
+  release:
+    name: Release GitHub Actions
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: |
+          echo ${{ secrets.CERT }} > encoded.txt
+          base64 -d encoded.txt >> ~/.cert.p12
+      - run: yarn helper
+      - name: Build/release Electron app
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          # GitHub token, automatically provided to the action
+          # (No need to define this secret in the repo settings)
+          github_token: ${{ secrets.github_token }}
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+        env:
+          CSC_LINK: ~/.cert.p12
+          CSC_KEY_PASSWORD: ${{ secrets.CERT_PASS }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}

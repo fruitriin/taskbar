@@ -83,3 +83,5 @@ run = "npm run test:coverage"
 dir = "src/renderer"
 description = "レンダラープロセスのテストをカバレッジ付きで実行"
 
+[tasks."afterSign"]
+run = "node scripts/notarize.js"
