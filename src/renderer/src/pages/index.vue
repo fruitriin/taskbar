@@ -7,7 +7,7 @@
       <div class="permissions">
         <MainPermissionStatus />
       </div>
-      <div class="helper-restart" v-if="visibleWindows.length == 0">
+      <div v-if="visibleWindows.length == 0" class="helper-restart">
         <button class="button is-small" @click="restartHelper()">Helper再起動</button>
       </div>
     </div>

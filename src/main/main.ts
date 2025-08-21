@@ -1,9 +1,17 @@
 import { app, BrowserWindow, powerMonitor, globalShortcut } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-import { createAllWindows, initializeDisplayEvents, createFullWindowListWindow } from '@/funcs/windows'
+import {
+  createAllWindows,
+  initializeDisplayEvents,
+  createFullWindowListWindow
+} from '@/funcs/windows'
 import { setEventHandlers } from '@/funcs/events'
-import { getAndSubmitProcesses, restartHelperAfterSleep, cleanupHelperProcess } from '@/funcs/helper'
+import {
+  getAndSubmitProcesses,
+  restartHelperAfterSleep,
+  cleanupHelperProcess
+} from '@/funcs/helper'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

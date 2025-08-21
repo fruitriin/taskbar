@@ -4,8 +4,8 @@
     <div v-if="!isExpanded" class="add-button-container">
       <button
         class="button is-small is-primary is-rounded"
-        @click="isExpanded = true"
         style="display: flex; align-items: center; gap: 0.5rem"
+        @click="isExpanded = true"
       >
         <span style="font-size: 1rem">+</span>
         <span>{{ filterIndex !== undefined ? '' : '新しいグループを作成' }}</span>
@@ -13,7 +13,10 @@
     </div>
 
     <!-- フォーム（展開時） -->
-    <div v-if="isExpanded" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 100%">
+    <div
+      v-if="isExpanded"
+      style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 100%"
+    >
       <div class="field has-addons" style="margin-bottom: 0">
         <div class="control" style="flex: 1">
           <div class="select is-small" style="width: 100%">

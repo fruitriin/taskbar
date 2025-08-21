@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import ElectronStore from 'electron-store'
 import type { LegacyFilter, LabeledFilters } from '@/funcs/store'
 
 // テスト用のモックストア
 const createMockStore = (initialData: any = {}) => {
   let storeData = { ...initialData }
-  
+
   return {
     get: vi.fn((key: string, defaultValue?: any) => {
       const keys = key.split('.')
@@ -85,7 +84,7 @@ describe('Store Migration', () => {
       })
 
       const filters = mockStore.get('filters')
-      
+
       // Legacy形式の特徴をチェック
       expect(Array.isArray(filters)).toBe(true)
       expect(Array.isArray(filters[0])).toBe(true)
@@ -107,7 +106,7 @@ describe('Store Migration', () => {
       })
 
       const filters = mockStore.get('labeledFilters')
-      
+
       // LabeledFilters形式の特徴をチェック
       expect(Array.isArray(filters)).toBe(true)
       expect(typeof filters[0].label).toBe('string')
@@ -146,14 +145,14 @@ describe('Store Migration', () => {
         if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
           // LegacyFilter形式を検出した場合の処理
           const labeledFilters: LabeledFilters[] = []
-          
+
           oldFilters.forEach((filterGroup: LegacyFilter[], index: number) => {
             labeledFilters.push({
               label: `フィルターグループ ${index + 1}`,
               filters: filterGroup as any // 実際の変換は後で実装
             })
           })
-          
+
           store.set('labeledFilters', labeledFilters)
           store.delete('filters')
         }
@@ -164,7 +163,7 @@ describe('Store Migration', () => {
       // マイグレーション後の状態を確認
       expect(mockStore.has('labeledFilters')).toBe(true)
       expect(mockStore.has('filters')).toBe(false)
-      
+
       const migratedFilters = mockStore.get('labeledFilters')
       expect(migratedFilters).toHaveLength(3)
       expect(migratedFilters[0].label).toBe('フィルターグループ 1')
@@ -185,12 +184,12 @@ describe('Store Migration', () => {
       const migration2_0_0 = (store: any) => {
         const oldFilters = store.get('filters', [])
         const existingLabeledFilters = store.get('labeledFilters', [])
-        
+
         if (existingLabeledFilters.length > 0) {
           // すでにLabeledFilters形式が存在する場合はスキップ
           return
         }
-        
+
         if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
           // マイグレーション処理
         }
@@ -222,13 +221,15 @@ describe('Store Migration', () => {
       // データの整合性を保つマイグレーション
       const migration2_0_0 = (store: any) => {
         const oldFilters = store.get('filters', [])
-        
+
         if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
-          const labeledFilters: LabeledFilters[] = oldFilters.map((filterGroup: LegacyFilter[], index: number) => ({
-            label: `マイグレーションフィルター ${index + 1}`,
-            filters: filterGroup
-          }))
-          
+          const labeledFilters: LabeledFilters[] = oldFilters.map(
+            (filterGroup: LegacyFilter[], index: number) => ({
+              label: `マイグレーションフィルター ${index + 1}`,
+              filters: filterGroup
+            })
+          )
+
           store.set('labeledFilters', labeledFilters)
           store.delete('filters')
         }
@@ -237,10 +238,10 @@ describe('Store Migration', () => {
       migration2_0_0(mockStore)
 
       const migratedFilters = mockStore.get('labeledFilters')
-      
+
       // 元のデータ数と一致することを確認
       expect(migratedFilters).toHaveLength(originalLegacyFilters.length)
-      
+
       // 各フィルターグループの内容が保持されていることを確認
       migratedFilters.forEach((labeledFilter: LabeledFilters, index: number) => {
         expect(labeledFilter.filters).toEqual(originalLegacyFilters[index])
@@ -263,30 +264,35 @@ describe('Store Migration', () => {
         try {
           const oldFilters = store.get('filters', [])
           const validFilters = oldFilters.filter((filterGroup: any) => {
-            return Array.isArray(filterGroup) && 
-                   filterGroup.length > 0 &&
-                   filterGroup.every((filter: any) => 
-                     filter && 
-                     typeof filter.property === 'string' && 
-                     filter.property.length > 0 &&
-                     filter.hasOwnProperty('is') &&
-                     filter.is !== null &&
-                     filter.is !== undefined
-                   )
+            return (
+              Array.isArray(filterGroup) &&
+              filterGroup.length > 0 &&
+              filterGroup.every(
+                (filter: any) =>
+                  filter &&
+                  typeof filter.property === 'string' &&
+                  filter.property.length > 0 &&
+                  filter.hasOwnProperty('is') &&
+                  filter.is !== null &&
+                  filter.is !== undefined
+              )
+            )
           })
 
           if (validFilters.length > 0) {
-            const labeledFilters: LabeledFilters[] = validFilters.map((filterGroup: LegacyFilter[], index: number) => ({
-              label: `有効フィルター ${index + 1}`,
-              filters: filterGroup
-            }))
-            
+            const labeledFilters: LabeledFilters[] = validFilters.map(
+              (filterGroup: LegacyFilter[], index: number) => ({
+                label: `有効フィルター ${index + 1}`,
+                filters: filterGroup
+              })
+            )
+
             store.set('labeledFilters', labeledFilters)
           } else {
             // 有効なフィルターがない場合はデフォルトを設定
             store.set('labeledFilters', [])
           }
-          
+
           store.delete('filters')
         } catch (error) {
           console.error('Migration failed:', error)
@@ -296,7 +302,7 @@ describe('Store Migration', () => {
       }
 
       expect(() => migration2_0_0(mockStore)).not.toThrow()
-      
+
       const result = mockStore.get('labeledFilters')
       expect(Array.isArray(result)).toBe(true)
     })
@@ -304,9 +310,7 @@ describe('Store Migration', () => {
 
   describe('Migration rollback scenarios', () => {
     it('マイグレーション失敗時にロールバック可能な状態を維持', () => {
-      const originalFilters: LegacyFilter[][] = [
-        [{ property: 'kCGWindowOwnerName', is: 'Dock' }]
-      ]
+      const originalFilters: LegacyFilter[][] = [[{ property: 'kCGWindowOwnerName', is: 'Dock' }]]
 
       mockStore = createMockStore({
         filters: originalFilters
@@ -315,17 +319,19 @@ describe('Store Migration', () => {
       // バックアップを作成するマイグレーション
       const safeMigration2_0_0 = (store: any) => {
         const oldFilters = store.get('filters', [])
-        
+
         // バックアップ作成
         store.set('filters_backup', oldFilters)
-        
+
         try {
           if (oldFilters.length > 0 && Array.isArray(oldFilters[0])) {
-            const labeledFilters: LabeledFilters[] = oldFilters.map((filterGroup: LegacyFilter[], index: number) => ({
-              label: `フィルター ${index + 1}`,
-              filters: filterGroup
-            }))
-            
+            const labeledFilters: LabeledFilters[] = oldFilters.map(
+              (filterGroup: LegacyFilter[], index: number) => ({
+                label: `フィルター ${index + 1}`,
+                filters: filterGroup
+              })
+            )
+
             store.set('labeledFilters', labeledFilters)
             store.delete('filters')
             store.delete('filters_backup') // 成功時はバックアップ削除

@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Filter, LegacyFilter, LabeledFilters } from '@/funcs/store'
-import { 
+import {
   convertLegacyToFilter,
   generateFilterLabel,
   migrateLegacyFiltersToLabeled,
   validateLabeledFilters,
   detectFilterFormat
 } from '@/funcs/filter-migration'
-import { legacyFilterFixtures, labeledFilterFixtures, migrationTestPairs } from '../fixtures/filter-fixtures'
+import {
+  legacyFilterFixtures,
+  labeledFilterFixtures,
+  migrationTestPairs
+} from '../fixtures/filter-fixtures'
 
 // フィルター移行関数の型定義
 type FilterMigrationFunction = (legacyFilters: LegacyFilter[][]) => LabeledFilters[]
@@ -68,7 +72,7 @@ describe('Filter Migration', () => {
         property: 'kCGWindowOwnerName',
         is: 'TestApp'
       }
-      
+
       expect(typeof validLegacyFilter.property).toBe('string')
       expect(['string', 'number', 'boolean']).toContain(typeof validLegacyFilter.is)
     })
@@ -78,15 +82,16 @@ describe('Filter Migration', () => {
         { property: '', is: 'value' }, // 空のプロパティ
         { property: 'test', is: null }, // nullの値
         { property: 'test', is: undefined }, // undefinedの値
-        { property: 123, is: 'value' }, // 数値のプロパティ
+        { property: 123, is: 'value' } // 数値のプロパティ
       ]
 
-      invalidFilters.forEach(filter => {
-        const isValid = typeof filter.property === 'string' && 
-                       filter.property.length > 0 &&
-                       filter.is !== null && 
-                       filter.is !== undefined &&
-                       ['string', 'number', 'boolean'].includes(typeof filter.is)
+      invalidFilters.forEach((filter) => {
+        const isValid =
+          typeof filter.property === 'string' &&
+          filter.property.length > 0 &&
+          filter.is !== null &&
+          filter.is !== undefined &&
+          ['string', 'number', 'boolean'].includes(typeof filter.is)
         expect(isValid).toBe(false)
       })
     })
@@ -98,7 +103,7 @@ describe('Filter Migration', () => {
         property: 'kCGWindowOwnerName',
         is: 'TestApp'
       }
-      
+
       expect(stringFilter.property).toBe('kCGWindowOwnerName')
       expect(typeof stringFilter.is).toBe('string')
     })
@@ -108,7 +113,7 @@ describe('Filter Migration', () => {
         property: 'kCGWindowNumber',
         is: 123
       }
-      
+
       expect(numberFilter.property).toBe('kCGWindowNumber')
       expect(typeof numberFilter.is).toBe('number')
     })
@@ -118,7 +123,7 @@ describe('Filter Migration', () => {
         property: 'kCGWindowIsOnscreen',
         is: false
       }
-      
+
       expect(booleanFilter.property).toBe('kCGWindowIsOnscreen')
       expect(typeof booleanFilter.is).toBe('boolean')
     })
@@ -140,7 +145,7 @@ describe('Filter Migration', () => {
         { property: 'kCGWindowIsOnscreen', is: false }
       ]
 
-      validCombinations.forEach(combo => {
+      validCombinations.forEach((combo) => {
         expect(() => {
           const filter: Filter = combo as Filter
           return filter
@@ -170,7 +175,7 @@ describe('Filter Migration', () => {
         }
       ]
 
-      testCases.forEach(testCase => {
+      testCases.forEach((testCase) => {
         const label = generateFilterLabel([testCase.filter as Filter])
         expect(label).toBe(testCase.expectedLabel)
       })
@@ -181,7 +186,7 @@ describe('Filter Migration', () => {
         { property: 'kCGWindowOwnerName', is: 'Finder' },
         { property: 'kCGWindowName', is: '' }
       ] as Filter[]
-      
+
       const label = generateFilterLabel(multipleFilters)
       expect(label).toBe('空のFinderウィンドウを除外')
     })
@@ -207,7 +212,7 @@ describe('Filter Migration', () => {
         { property: 'X', is: 'string' } // 数値プロパティに文字列
       ]
 
-      invalidLegacyFilters.forEach(filter => {
+      invalidLegacyFilters.forEach((filter) => {
         expect(() => convertLegacyToFilter(filter as LegacyFilter)).toThrow()
       })
     })
@@ -221,7 +226,7 @@ describe('Filter Migration', () => {
 
     it('空のLegacyFilters配列を適切に処理する', () => {
       const emptyLegacyFilters: LegacyFilter[][] = []
-      
+
       const result = migrateLegacyFiltersToLabeled(emptyLegacyFilters)
       expect(result).toEqual([])
     })
@@ -245,7 +250,7 @@ describe('Filter Migration', () => {
       migrationTestPairs.pairs.forEach(({ legacy, labeled }) => {
         const result = migrateLegacyFiltersToLabeled(legacy)
         expect(result).toHaveLength(labeled.length)
-        
+
         result.forEach((resultFilter, index) => {
           expect(resultFilter.label).toBe(labeled[index].label)
           expect(resultFilter.filters).toEqual(labeled[index].filters)
@@ -256,9 +261,7 @@ describe('Filter Migration', () => {
 
   describe('Backward compatibility', () => {
     it('既存のLegacyFilter形式を引き続きサポートする', () => {
-      const legacyFormat: LegacyFilter[][] = [
-        [{ property: 'kCGWindowOwnerName', is: 'Dock' }]
-      ]
+      const legacyFormat: LegacyFilter[][] = [[{ property: 'kCGWindowOwnerName', is: 'Dock' }]]
 
       // レガシー形式でも動作することを確認
       expect(Array.isArray(legacyFormat)).toBe(true)
@@ -310,17 +313,19 @@ describe('Filter Migration', () => {
         [{ label: 'Test', filters: [{ property: 'invalid', is: 'test' }] }] // 無効プロパティ
       ]
 
-      invalidCases.forEach(invalidCase => {
+      invalidCases.forEach((invalidCase) => {
         expect(validateLabeledFilters(invalidCase)).toBe(false)
       })
     })
 
     it('空ラベルは有効とする', () => {
-      const validWithEmptyLabel = [{
-        label: '', 
-        filters: [{ property: 'kCGWindowOwnerName', is: 'Test' }]
-      }]
-      
+      const validWithEmptyLabel = [
+        {
+          label: '',
+          filters: [{ property: 'kCGWindowOwnerName', is: 'Test' }]
+        }
+      ]
+
       expect(validateLabeledFilters(validWithEmptyLabel)).toBe(true)
     })
   })
@@ -329,12 +334,12 @@ describe('Filter Migration', () => {
     it('デフォルトフィルターのマイグレーションが正しく動作する', () => {
       const legacyDefaults = legacyFilterFixtures.defaultFilters
       const result = migrateLegacyFiltersToLabeled(legacyDefaults)
-      
+
       expect(result.length).toBeGreaterThan(0)
       expect(validateLabeledFilters(result)).toBe(true)
-      
+
       // 特定のフィルターが正しく変換されることを確認
-      const dockFilter = result.find(f => f.label === 'Dockを除外')
+      const dockFilter = result.find((f) => f.label === 'Dockを除外')
       expect(dockFilter).toBeDefined()
       expect(dockFilter?.filters[0].property).toBe('kCGWindowOwnerName')
       expect(dockFilter?.filters[0].is).toBe('Dock')

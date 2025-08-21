@@ -29,7 +29,7 @@ import { store } from '@/funcs/store'
 describe('Helper filterProcesses with LabeledFilters', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // デフォルトのlabeledFiltersを設定
     const defaultLabeledFilters: LabeledFilters[] = [
       {
@@ -64,7 +64,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         ]
       }
     ]
-    
+
     vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
       if (key === 'labeledFilters') {
         return defaultLabeledFilters
@@ -83,36 +83,36 @@ describe('Helper filterProcesses with LabeledFilters', () => {
   describe('Size filtering', () => {
     it('40px未満の高さのウィンドウを除外する', () => {
       const result = filterProcesses(tinyWindows)
-      
+
       // tinyWindowsには高さ20pxのウィンドウが含まれている
-      const tinyHeight = tinyWindows.find(w => w.kCGWindowBounds.Height < 40)
+      const tinyHeight = tinyWindows.find((w) => w.kCGWindowBounds.Height < 40)
       expect(tinyHeight).toBeDefined()
-      
+
       // フィルタリング後には含まれていない
-      const resultIds = result.map(w => w.kCGWindowNumber)
+      const resultIds = result.map((w) => w.kCGWindowNumber)
       expect(resultIds).not.toContain(tinyHeight!.kCGWindowNumber)
     })
 
     it('40px未満の幅のウィンドウを除外する', () => {
       const result = filterProcesses(tinyWindows)
-      
+
       // tinyWindowsには幅30pxのウィンドウが含まれている
-      const tinyWidth = tinyWindows.find(w => w.kCGWindowBounds.Width < 40)
+      const tinyWidth = tinyWindows.find((w) => w.kCGWindowBounds.Width < 40)
       expect(tinyWidth).toBeDefined()
-      
+
       // フィルタリング後には含まれていない
-      const resultIds = result.map(w => w.kCGWindowNumber)
+      const resultIds = result.map((w) => w.kCGWindowNumber)
       expect(resultIds).not.toContain(tinyWidth!.kCGWindowNumber)
     })
 
     it('十分なサイズのウィンドウは残す', () => {
       const result = filterProcesses(sampleAppWindows)
-      
+
       // sampleAppWindowsはすべて十分なサイズなので、システムフィルター以外で除外されない
       expect(result.length).toBeGreaterThan(0)
-      
+
       // 各ウィンドウが十分なサイズを持つことを確認
-      result.forEach(window => {
+      result.forEach((window) => {
         expect(window.kCGWindowBounds.Height).toBeGreaterThanOrEqual(40)
         expect(window.kCGWindowBounds.Width).toBeGreaterThanOrEqual(40)
       })
@@ -121,45 +121,49 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
   describe('LabeledFilters filtering', () => {
     it('Dockウィンドウを除外する', () => {
-      const dockWindow = systemWindows.find(w => w.kCGWindowOwnerName === 'Dock')!
+      const dockWindow = systemWindows.find((w) => w.kCGWindowOwnerName === 'Dock')!
       const result = filterProcesses([dockWindow])
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('Spotlightウィンドウを除外する', () => {
-      const spotlightWindow = systemWindows.find(w => w.kCGWindowOwnerName === 'Spotlight')!
+      const spotlightWindow = systemWindows.find((w) => w.kCGWindowOwnerName === 'Spotlight')!
       const result = filterProcesses([spotlightWindow])
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('通知センターウィンドウを除外する', () => {
-      const notificationWindow = systemWindows.find(w => w.kCGWindowName === 'Notification Center')!
+      const notificationWindow = systemWindows.find(
+        (w) => w.kCGWindowName === 'Notification Center'
+      )!
       const result = filterProcesses([notificationWindow])
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('コントロールセンターを除外する', () => {
-      const controlCenterWindow = systemWindows.find(w => w.kCGWindowOwnerName === 'コントロールセンター')!
+      const controlCenterWindow = systemWindows.find(
+        (w) => w.kCGWindowOwnerName === 'コントロールセンター'
+      )!
       const result = filterProcesses([controlCenterWindow])
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('Taskbar.fmウィンドウを除外する', () => {
       const result = filterProcesses(taskbarWindows)
-      
+
       expect(result).toHaveLength(0)
     })
 
     it('空のFinderウィンドウを除外する（複合条件）', () => {
-      const emptyFinderWindow = finderWindows.find(w => w.kCGWindowName === '')!
-      const namedFinderWindow = finderWindows.find(w => w.kCGWindowName !== '')!
-      
+      const emptyFinderWindow = finderWindows.find((w) => w.kCGWindowName === '')!
+      const namedFinderWindow = finderWindows.find((w) => w.kCGWindowName !== '')!
+
       const result = filterProcesses([emptyFinderWindow, namedFinderWindow])
-      
+
       // 空のFinderウィンドウは除外、名前のあるFinderウィンドウは残る
       expect(result).toHaveLength(1)
       expect(result[0].kCGWindowNumber).toBe(namedFinderWindow.kCGWindowNumber)
@@ -167,12 +171,12 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
     it('一般的なアプリケーションウィンドウは残す', () => {
       const result = filterProcesses(sampleAppWindows)
-      
+
       // システムフィルターに該当しないアプリケーションウィンドウは残る
       expect(result.length).toBe(sampleAppWindows.length)
-      
-      const resultIds = result.map(w => w.kCGWindowNumber)
-      sampleAppWindows.forEach(window => {
+
+      const resultIds = result.map((w) => w.kCGWindowNumber)
+      sampleAppWindows.forEach((window) => {
         expect(resultIds).toContain(window.kCGWindowNumber)
       })
     })
@@ -181,16 +185,16 @@ describe('Helper filterProcesses with LabeledFilters', () => {
   describe('Mixed scenarios', () => {
     it('複合シナリオで適切にフィルタリングする', () => {
       const result = filterProcesses(mixedWindowScenario)
-      
+
       // 期待される結果と比較
-      const resultAppNames = result.map(w => w.kCGWindowOwnerName)
-      const expectedAppNames = expectedFilteredWindows.map(w => w.kCGWindowOwnerName)
-      
+      const resultAppNames = result.map((w) => w.kCGWindowOwnerName)
+      const expectedAppNames = expectedFilteredWindows.map((w) => w.kCGWindowOwnerName)
+
       // 除外されるべきアプリが含まれていないことを確認
       expect(resultAppNames).not.toContain('Dock')
       expect(resultAppNames).not.toContain('Spotlight')
       expect(resultAppNames).not.toContain('taskbar.fm')
-      
+
       // 残るべきアプリが含まれていることを確認
       expect(resultAppNames).toContain('TextEdit')
       expect(resultAppNames).toContain('Google Chrome')
@@ -199,7 +203,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
 
     it('空の配列を適切に処理する', () => {
       const result = filterProcesses(emptyWindowScenario)
-      
+
       expect(result).toEqual([])
     })
 
@@ -212,9 +216,9 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
         })
       ]
-      
+
       const result = filterProcesses(customWindows)
-      
+
       expect(result).toHaveLength(1)
       expect(result[0].kCGWindowOwnerName).toBe('UnknownApp')
     })
@@ -223,10 +227,8 @@ describe('Helper filterProcesses with LabeledFilters', () => {
   describe('Legacy filter compatibility', () => {
     it('レガシーフィルターも同時に処理する', () => {
       // レガシーフィルターを設定
-      const legacyFilters = [
-        [{ property: 'kCGWindowOwnerName', is: 'LegacyApp' }]
-      ]
-      
+      const legacyFilters = [[{ property: 'kCGWindowOwnerName', is: 'LegacyApp' }]]
+
       vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
         if (key === 'labeledFilters') {
           return [] // 新しいフィルターは空
@@ -236,14 +238,14 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         }
         return defaultValue
       })
-      
+
       const legacyWindow = testHelpers.generateRandomWindow({
         kCGWindowOwnerName: 'LegacyApp',
         kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
       })
-      
+
       const result = filterProcesses([legacyWindow])
-      
+
       expect(result).toHaveLength(0) // レガシーフィルターで除外される
     })
 
@@ -255,11 +257,9 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           filters: [{ property: 'kCGWindowOwnerName', is: 'NewApp' }]
         }
       ]
-      
-      const legacyFilters = [
-        [{ property: 'kCGWindowOwnerName', is: 'OldApp' }]
-      ]
-      
+
+      const legacyFilters = [[{ property: 'kCGWindowOwnerName', is: 'OldApp' }]]
+
       vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
         if (key === 'labeledFilters') {
           return labeledFilters
@@ -269,7 +269,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         }
         return defaultValue
       })
-      
+
       const windows = [
         testHelpers.generateRandomWindow({
           kCGWindowOwnerName: 'NewApp',
@@ -284,9 +284,9 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
         })
       ]
-      
+
       const result = filterProcesses(windows)
-      
+
       // NewAppとOldAppの両方が除外され、ValidAppのみ残る
       expect(result).toHaveLength(1)
       expect(result[0].kCGWindowOwnerName).toBe('ValidApp')
@@ -299,10 +299,10 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         ...testHelpers.generateRandomWindow(),
         kCGWindowOwnerName: undefined as any
       }
-      
+
       // undefinedプロパティではフィルターマッチしないので残る（サイズ条件は満たす）
       const result = filterProcesses([windowWithUndefined])
-      
+
       expect(result).toHaveLength(1)
     })
 
@@ -313,9 +313,9 @@ describe('Helper filterProcesses with LabeledFilters', () => {
         kCGWindowName: 'Documents', // 空ではない
         kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
       })
-      
+
       const result = filterProcesses([partialMatchWindow])
-      
+
       // Finderかつ空でないウィンドウなので、複合条件に一致せず残る
       expect(result).toHaveLength(1)
     })
@@ -324,7 +324,7 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       vi.mocked(store.get).mockImplementation(() => {
         throw new Error('Store access error')
       })
-      
+
       // エラーが発生してもアプリがクラッシュしない
       expect(() => {
         filterProcesses(sampleAppWindows)
@@ -341,14 +341,14 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
         })
       )
-      
+
       const startTime = performance.now()
       const result = filterProcesses(largeWindowSet)
       const endTime = performance.now()
-      
+
       // パフォーマンス確認（1秒以内に完了）
       expect(endTime - startTime).toBeLessThan(1000)
-      
+
       // 結果が正しいことを確認
       expect(result).toHaveLength(1000) // どのフィルターにも該当しないので全て残る
     })

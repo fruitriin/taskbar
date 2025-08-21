@@ -65,7 +65,7 @@ export const legacyFilterFixtures = {
     [{ property: 'invalidProperty', is: 'value' }], // 存在しないプロパティ
     [{ property: 'kCGWindowOwnerName', is: '' }], // 空の値
     [{ property: 'X', is: 'string' }], // 型不一致
-    [{ property: 'kCGWindowIsOnscreen', is: 'true' }], // 文字列のブール値
+    [{ property: 'kCGWindowIsOnscreen', is: 'true' }] // 文字列のブール値
   ] as any[][],
 
   // 空・null・undefinedケース
@@ -343,10 +343,12 @@ export const migrationTestPairs = {
   pairs: [
     {
       legacy: [[{ property: 'kCGWindowOwnerName', is: 'Dock' }]],
-      labeled: [{
-        label: 'Dockを除外',
-        filters: [{ property: 'kCGWindowOwnerName', is: 'Dock' }]
-      }]
+      labeled: [
+        {
+          label: 'Dockを除外',
+          filters: [{ property: 'kCGWindowOwnerName', is: 'Dock' }]
+        }
+      ]
     },
     {
       legacy: [
@@ -355,13 +357,15 @@ export const migrationTestPairs = {
           { property: 'kCGWindowName', is: '' }
         ]
       ],
-      labeled: [{
-        label: '空のFinderウィンドウを除外',
-        filters: [
-          { property: 'kCGWindowOwnerName', is: 'Finder' },
-          { property: 'kCGWindowName', is: '' }
-        ]
-      }]
+      labeled: [
+        {
+          label: '空のFinderウィンドウを除外',
+          filters: [
+            { property: 'kCGWindowOwnerName', is: 'Finder' },
+            { property: 'kCGWindowName', is: '' }
+          ]
+        }
+      ]
     },
     {
       legacy: [
@@ -384,7 +388,7 @@ export const migrationTestPairs = {
         }
       ]
     }
-  ] as { legacy: LegacyFilter[][], labeled: LabeledFilters[] }[]
+  ] as { legacy: LegacyFilter[][]; labeled: LabeledFilters[] }[]
 }
 
 /**

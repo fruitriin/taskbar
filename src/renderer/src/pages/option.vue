@@ -250,7 +250,6 @@ import { Electron } from '../utils'
 import draggable from 'vuedraggable'
 import AddFilter from '../components/AddFilter.vue'
 import PermissionStatus from '../components/PermissionStatus.vue'
-import { group } from 'console'
 
 export default {
   components: {

@@ -36,7 +36,7 @@ describe('helper', () => {
   describe('filterProcesses', () => {
     beforeEach(() => {
       vi.clearAllMocks()
-      
+
       // デフォルトのlabeledFiltersを設定
       const defaultLabeledFilters: LabeledFilters[] = [
         {
@@ -56,7 +56,7 @@ describe('helper', () => {
           filters: [{ property: 'kCGWindowName', is: 'taskbar.fm' }]
         }
       ]
-      
+
       vi.mocked(store.get).mockImplementation((key: string, defaultValue: any) => {
         if (key === 'labeledFilters') {
           return defaultLabeledFilters

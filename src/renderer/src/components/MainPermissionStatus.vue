@@ -1,14 +1,10 @@
 <template>
   <div class="main-permission-status">
     <!-- 権限が不足している場合のみ表示 -->
-    <button 
-      v-if="!allPermissionsGranted" 
-      class="button permission-warning"
-      @click="openSettings"
-    >
+    <button v-if="!allPermissionsGranted" class="button permission-warning" @click="openSettings">
       ⚠️ 権限設定
     </button>
-    
+
     <!-- すべての権限がある場合は何も表示しない -->
   </div>
 </template>
@@ -41,7 +37,7 @@ const openSettings = () => {
 
 onMounted(() => {
   checkPermissions()
-  
+
   // 定期的に権限状態をチェック（30秒間隔）
   setInterval(checkPermissions, 30000)
 })

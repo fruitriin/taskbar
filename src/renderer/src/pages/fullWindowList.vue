@@ -76,31 +76,31 @@
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
           <tr>
-            <th @click="setSortField('owner')" class="sortable">
+            <th class="sortable" @click="setSortField('owner')">
               アプリ名
               <span v-if="sortField === 'owner'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
-            <th @click="setSortField('name')" class="sortable">
+            <th class="sortable" @click="setSortField('name')">
               ウィンドウ名
               <span v-if="sortField === 'name'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
-            <th @click="setSortField('pid')" class="sortable">
+            <th class="sortable" @click="setSortField('pid')">
               PID
               <span v-if="sortField === 'pid'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
-            <th @click="setSortField('layer')" class="sortable">
+            <th class="sortable" @click="setSortField('layer')">
               レイヤー
               <span v-if="sortField === 'layer'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
               </span>
             </th>
-            <th @click="setSortField('status')" class="sortable">
+            <th class="sortable" @click="setSortField('status')">
               状態
               <span v-if="sortField === 'status'" class="sort-indicator">
                 {{ sortDirection === 'asc' ? '↑' : '↓' }}
@@ -202,7 +202,7 @@
       </table>
     </div>
 
-    <div class="pagination-container" v-if="totalPages > 1">
+    <div v-if="totalPages > 1" class="pagination-container">
       <nav class="pagination is-centered">
         <button class="pagination-previous" :disabled="currentPage === 1" @click="currentPage--">
           前のページ

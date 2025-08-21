@@ -1,5 +1,11 @@
 // レンダラープロセスからのメッセージを受信する
-import { createOptionWindow, createFullWindowListWindow, createWindow, taskbars, windowPosition } from '@/funcs/windows'
+import {
+  createOptionWindow,
+  createFullWindowListWindow,
+  createWindow,
+  taskbars,
+  windowPosition
+} from '@/funcs/windows'
 import {
   activateWindow,
   closeWindow,

@@ -25,21 +25,21 @@
     <div class="action-section">
       <button
         class="button is-primary is-small"
-        @click="checkPermissions"
         :class="{ 'is-loading': isChecking }"
+        @click="checkPermissions"
       >
         権限状態を更新
       </button>
       <button
+        v-if="!accessibilityStatus || !screenRecordingStatus"
         class="button is-info is-small"
         @click="openSystemPreferences"
-        v-if="!accessibilityStatus || !screenRecordingStatus"
       >
         システム環境設定を開く
       </button>
     </div>
 
-    <div class="warning-section" v-if="!accessibilityStatus || !screenRecordingStatus">
+    <div v-if="!accessibilityStatus || !screenRecordingStatus" class="warning-section">
       <div class="notification is-warning is-small">
         <strong>権限が不足しています</strong>
         <p>システム環境設定から権限を許可してください。</p>

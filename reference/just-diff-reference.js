@@ -1,6 +1,6 @@
 /**
  * just-diff ライブラリ - 包括的テスト・リファレンス
- * 
+ *
  * 公式: https://www.npmjs.com/package/just-diff
  * GitHub: https://github.com/angus-c/just
  * Version: 6.0.2
@@ -30,13 +30,33 @@ console.log('-'.repeat(40))
 
 // MacWindowを模倣したテストデータ
 const allWindows = [
-  { kCGWindowNumber: 101, kCGWindowName: 'Safari', kCGWindowOwnerName: 'Safari', kCGWindowBounds: { Height: 600, Width: 800 } },
-  { kCGWindowNumber: 102, kCGWindowName: 'Dock', kCGWindowOwnerName: 'Dock', kCGWindowBounds: { Height: 30, Width: 1200 } },
-  { kCGWindowNumber: 103, kCGWindowName: 'Chrome', kCGWindowOwnerName: 'Chrome', kCGWindowBounds: { Height: 500, Width: 900 } },
-  { kCGWindowNumber: 104, kCGWindowName: 'Tiny Window', kCGWindowOwnerName: 'TestApp', kCGWindowBounds: { Height: 20, Width: 30 } }
+  {
+    kCGWindowNumber: 101,
+    kCGWindowName: 'Safari',
+    kCGWindowOwnerName: 'Safari',
+    kCGWindowBounds: { Height: 600, Width: 800 }
+  },
+  {
+    kCGWindowNumber: 102,
+    kCGWindowName: 'Dock',
+    kCGWindowOwnerName: 'Dock',
+    kCGWindowBounds: { Height: 30, Width: 1200 }
+  },
+  {
+    kCGWindowNumber: 103,
+    kCGWindowName: 'Chrome',
+    kCGWindowOwnerName: 'Chrome',
+    kCGWindowBounds: { Height: 500, Width: 900 }
+  },
+  {
+    kCGWindowNumber: 104,
+    kCGWindowName: 'Tiny Window',
+    kCGWindowOwnerName: 'TestApp',
+    kCGWindowBounds: { Height: 20, Width: 30 }
+  }
 ]
 
-const filteredWindows = allWindows.filter(w => w.kCGWindowBounds.Height >= 40)
+const filteredWindows = allWindows.filter((w) => w.kCGWindowBounds.Height >= 40)
 
 console.log('全ウィンドウ数:', allWindows.length)
 console.log('フィルター後:', filteredWindows.length)
@@ -58,17 +78,22 @@ console.log('\n4. 除外されたアイテムの抽出方法')
 console.log('-'.repeat(40))
 
 // 方法1: 直接フィルタリング（推奨）
-const excludedDirect = allWindows.filter(window => 
-  !filteredWindows.some(filtered => filtered.kCGWindowNumber === window.kCGWindowNumber)
+const excludedDirect = allWindows.filter(
+  (window) =>
+    !filteredWindows.some((filtered) => filtered.kCGWindowNumber === window.kCGWindowNumber)
 )
 console.log('直接方法で除外されたウィンドウ:')
 excludedDirect.forEach((w, i) => {
-  console.log(`  ${i + 1}. ${w.kCGWindowName} (${w.kCGWindowOwnerName}) - ${w.kCGWindowBounds.Width}x${w.kCGWindowBounds.Height}`)
+  console.log(
+    `  ${i + 1}. ${w.kCGWindowName} (${w.kCGWindowOwnerName}) - ${w.kCGWindowBounds.Width}x${
+      w.kCGWindowBounds.Height
+    }`
+  )
 })
 
 // 方法2: diffからの復元（複雑）
 console.log('\ndiffからの除外ウィンドウ復元（参考）:')
-const removeOps = arrayDiff.filter(op => op.op === 'remove')
+const removeOps = arrayDiff.filter((op) => op.op === 'remove')
 console.log('remove操作:', removeOps)
 
 // ===== diffApplyのテスト =====
@@ -93,19 +118,21 @@ const largeArray = Array.from({ length: 1000 }, (_, i) => ({
   kCGWindowBounds: { Height: Math.random() > 0.5 ? 100 : 20, Width: 800 }
 }))
 
-const largeFiltered = largeArray.filter(w => w.kCGWindowBounds.Height >= 40)
+const largeFiltered = largeArray.filter((w) => w.kCGWindowBounds.Height >= 40)
 
 console.time('diff実行時間')
 const largeDiff = diff(largeArray, largeFiltered)
 console.timeEnd('diff実行時間')
 
 console.time('直接フィルタリング時間')
-const largeExcluded = largeArray.filter(window => 
-  !largeFiltered.some(filtered => filtered.kCGWindowNumber === window.kCGWindowNumber)
+const largeExcluded = largeArray.filter(
+  (window) => !largeFiltered.some((filtered) => filtered.kCGWindowNumber === window.kCGWindowNumber)
 )
 console.timeEnd('直接フィルタリング時間')
 
-console.log(`大規模配列テスト - 元配列: ${largeArray.length}, フィルター後: ${largeFiltered.length}, 除外: ${largeExcluded.length}`)
+console.log(
+  `大規模配列テスト - 元配列: ${largeArray.length}, フィルター後: ${largeFiltered.length}, 除外: ${largeExcluded.length}`
+)
 console.log(`diff操作数: ${largeDiff.length}`)
 
 // ===== 実際のhelper.ts用の推奨実装 =====
@@ -114,18 +141,19 @@ console.log('-'.repeat(40))
 
 function simulateApplyProcessChange(macWindowProcesses, newProcesses) {
   // フィルタリング関数（簡略化）
-  const filterProcesses = (processes) => processes.filter(p => p.kCGWindowBounds.Height >= 40)
-  
+  const filterProcesses = (processes) => processes.filter((p) => p.kCGWindowBounds.Height >= 40)
+
   const filteredProcesses = filterProcesses(newProcesses)
-  
+
   // 除外されたウィンドウを取得（推奨方法）
-  const excludedProcesses = newProcesses.filter(window => 
-    !filteredProcesses.some(filtered => filtered.kCGWindowNumber === window.kCGWindowNumber)
+  const excludedProcesses = newProcesses.filter(
+    (window) =>
+      !filteredProcesses.some((filtered) => filtered.kCGWindowNumber === window.kCGWindowNumber)
   )
-  
+
   // diff計算
   const result = diff(macWindowProcesses, filteredProcesses)
-  
+
   return {
     filteredCount: filteredProcesses.length,
     excludedCount: excludedProcesses.length,

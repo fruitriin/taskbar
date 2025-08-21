@@ -28,7 +28,15 @@ function isValidProperty(property: string): boolean {
  */
 function isValidValueForProperty(property: string, value: any): boolean {
   const stringProperties = ['kCGWindowOwnerName', 'kCGWindowName']
-  const numberProperties = ['X', 'Y', 'Height', 'Width', 'kCGWindowMemoryUsage', 'kCGWindowOwnerPID', 'kCGWindowNumber']
+  const numberProperties = [
+    'X',
+    'Y',
+    'Height',
+    'Width',
+    'kCGWindowMemoryUsage',
+    'kCGWindowOwnerPID',
+    'kCGWindowNumber'
+  ]
   const booleanProperties = ['kCGWindowStoreType', 'kCGWindowIsOnscreen']
 
   if (stringProperties.includes(property)) {
@@ -40,7 +48,7 @@ function isValidValueForProperty(property: string, value: any): boolean {
   if (booleanProperties.includes(property)) {
     return typeof value === 'boolean'
   }
-  
+
   return false
 }
 
@@ -65,7 +73,9 @@ export function convertLegacyToFilter(legacyFilter: LegacyFilter): Filter {
   }
 
   if (!isValidValueForProperty(legacyFilter.property, legacyFilter.is)) {
-    throw new Error(`Invalid legacy filter: value type mismatch for property "${legacyFilter.property}"`)
+    throw new Error(
+      `Invalid legacy filter: value type mismatch for property "${legacyFilter.property}"`
+    )
   }
 
   // 型安全なFilterとして返す（TypeScriptは上記の検証により型が正しいことを保証）
@@ -82,24 +92,24 @@ export function generateFilterLabel(filters: Filter[]): string {
 
   if (filters.length === 1) {
     const filter = filters[0]
-    
+
     // アプリ名によるフィルターの特別処理
     if (filter.property === 'kCGWindowOwnerName') {
       const appName = filter.is as string
       const appLabels: Record<string, string> = {
-        'Dock': 'Dockを除外',
-        'DockHelper': 'DockHelperを除外',
-        'screencapture': 'スクリーンキャプチャを除外',
-        'スクリーンショット': 'スクリーンショットアプリを除外',
-        '通知センター': '通知センター（日本語）を除外',
+        Dock: 'Dockを除外',
+        DockHelper: 'DockHelperを除外',
+        screencapture: 'スクリーンキャプチャを除外',
+        スクリーンショット: 'スクリーンショットアプリを除外',
+        通知センター: '通知センター（日本語）を除外',
         'Window Server': 'Window Serverを除外',
-        'コントロールセンター': 'コントロールセンターを除外',
-        'Spotlight': 'Spotlightを除外',
-        'GoogleJapaneseInputRenderer': 'Google日本語入力を除外',
+        コントロールセンター: 'コントロールセンターを除外',
+        Spotlight: 'Spotlightを除外',
+        GoogleJapaneseInputRenderer: 'Google日本語入力を除外',
         'taskbar.fm': 'Taskbar.fmアプリを除外',
-        'Finder': 'Finderを除外'
+        Finder: 'Finderを除外'
       }
-      
+
       if (appLabels[appName]) {
         return appLabels[appName]
       }
@@ -115,7 +125,7 @@ export function generateFilterLabel(filters: Filter[]): string {
         'taskbar.fm': 'Taskbar.fmウィンドウを除外',
         '': '名前なしウィンドウを除外'
       }
-      
+
       if (windowLabels[windowName]) {
         return windowLabels[windowName]
       }
@@ -160,18 +170,18 @@ export function generateFilterLabel(filters: Filter[]): string {
   }
 
   // 複合フィルターの特別処理
-  const hasFinderAndEmptyName = filters.some(f => f.property === 'kCGWindowOwnerName' && f.is === 'Finder') &&
-                                filters.some(f => f.property === 'kCGWindowName' && f.is === '')
+  const hasFinderAndEmptyName =
+    filters.some((f) => f.property === 'kCGWindowOwnerName' && f.is === 'Finder') &&
+    filters.some((f) => f.property === 'kCGWindowName' && f.is === '')
   if (hasFinderAndEmptyName) {
     return '空のFinderウィンドウを除外'
   }
 
   if (filters.length === 2) {
-
-    const appFilter = filters.find(f => f.property === 'kCGWindowOwnerName')
+    const appFilter = filters.find((f) => f.property === 'kCGWindowOwnerName')
     if (appFilter) {
       const appName = appFilter.is as string
-      const otherFilter = filters.find(f => f !== appFilter)
+      const otherFilter = filters.find((f) => f !== appFilter)
       if (otherFilter) {
         if (otherFilter.property === 'kCGWindowIsOnscreen') {
           const screenStatus = otherFilter.is ? 'オンスクリーン' : 'オフスクリーン'
@@ -191,7 +201,7 @@ export function generateFilterLabel(filters: Filter[]): string {
   }
 
   // 複合フィルターのデフォルト
-  const appFilter = filters.find(f => f.property === 'kCGWindowOwnerName')
+  const appFilter = filters.find((f) => f.property === 'kCGWindowOwnerName')
   if (appFilter) {
     const appName = appFilter.is as string
     return `${appName}の複合フィルター（${filters.length}条件）`
@@ -224,8 +234,8 @@ export function migrateLegacyFiltersToLabeled(legacyFilters: LegacyFilter[][]): 
     try {
       // 各フィルターを型安全なFilterに変換
       const convertedFilters: Filter[] = filterGroup
-        .filter(filter => filter != null) // null/undefinedを除外
-        .map(legacyFilter => {
+        .filter((filter) => filter != null) // null/undefinedを除外
+        .map((legacyFilter) => {
           try {
             return convertLegacyToFilter(legacyFilter)
           } catch (error) {
@@ -268,7 +278,7 @@ export function validateLabeledFilters(labeledFilters: any[]): boolean {
     return false
   }
 
-  return labeledFilters.every(item => {
+  return labeledFilters.every((item) => {
     return (
       item &&
       typeof item === 'object' &&
@@ -304,7 +314,12 @@ export function detectFilterFormat(filters: any): 'legacy' | 'labeled' | 'unknow
   const firstItem = filters[0]
 
   // LabeledFilters形式の検出
-  if (firstItem && typeof firstItem === 'object' && 'label' in firstItem && 'filters' in firstItem) {
+  if (
+    firstItem &&
+    typeof firstItem === 'object' &&
+    'label' in firstItem &&
+    'filters' in firstItem
+  ) {
     return 'labeled'
   }
 
