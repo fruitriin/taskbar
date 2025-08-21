@@ -103,7 +103,7 @@
                 borderColor: selectedFilterIndex === i ? '#4a90e2' : '#444',
                 background: selectedFilterIndex === i ? '#1a3a5a' : '#2a2a2a'
               }"
-              @click="selectedFilterIndex = selectedFilterIndex === i ? null : i"
+              @click="selectFilter(i)"
             >
               <span
                 :style="{
@@ -171,10 +171,10 @@
                 >ラベル</label
               >
               <input
-                v-model="labeledFilters[selectedFilterIndex].label"
+                v-model="editingLabel"
                 class="input is-small"
                 style="width: 100%; font-size: 0.8rem"
-                @input="updateLabelRealtime"
+                @input="updateLabel(selectedFilterIndex, editingLabel)"
               />
             </div>
 
@@ -218,8 +218,9 @@
                   </button>
                 </div>
               </div>
-              <AddFilter :filter-index="selectedFilterIndex" @add-filter="handleAddFilter" />
             </div>
+
+            <AddFilter :filter-index="selectedFilterIndex" @add-filter="handleAddFilter" />
           </div>
         </div>
       </div>
@@ -232,7 +233,9 @@
           <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
           <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
           <button class="button ml-4" @click="Electron.send('exit')">終了</button>
-          <button class="button is-info ml-4" @click="Electron.send('openFullWindowList')">ウィンドウ一覧</button>
+          <button class="button is-info ml-4" @click="Electron.send('openFullWindowList')">
+            ウィンドウ一覧
+          </button>
         </div>
       </div>
     </div>
@@ -247,6 +250,7 @@ import { Electron } from '../utils'
 import draggable from 'vuedraggable'
 import AddFilter from '../components/AddFilter.vue'
 import PermissionStatus from '../components/PermissionStatus.vue'
+import { group } from 'console'
 
 export default {
   components: {
@@ -263,6 +267,7 @@ export default {
       filters: Array<{ property: string; is: string | number | boolean }>
     }>
     newFilter: { property: string; is: string }
+    editingLabel: string
     editingLabelIndex: number | null
     selectedFilterIndex: number | null
   } {
@@ -275,11 +280,12 @@ export default {
         { name: 'headers', label: '先頭' },
         { name: 'footers', label: '末尾' }
       ],
-      labeledFilters: [...window.store.labeledFilters],
+      labeledFilters: [...JSON.parse(JSON.stringify(window.store.labeledFilters))],
       newFilter: {
         property: '',
         is: ''
       },
+      editingLabel: '',
       editingLabelIndex: null,
       selectedFilterIndex: null
     }
@@ -299,21 +305,17 @@ export default {
   },
   methods: {
     removeFilter(index: number): void {
-      const newFilters = [...this.labeledFilters]
-      newFilters.splice(index, 1)
-      this.labeledFilters = newFilters
+      this.labeledFilters.splice(index, 1)
       Electron.send('setLabeledFilters', this.labeledFilters)
     },
     removeCondition(groupIndex: number, conditionIndex: number): void {
-      const newFilters = [...this.labeledFilters]
-      newFilters[groupIndex].filters.splice(conditionIndex, 1)
-
-      // グループが空になったら、グループ自体を削除
-      if (newFilters[groupIndex].filters.length === 0) {
-        newFilters.splice(groupIndex, 1)
+      this.labeledFilters[groupIndex].filters.splice(conditionIndex, 1)
+      // condition が0件になったらグループごと削除
+      if (this.labeledFilters[groupIndex].filters.length === 0) {
+        this.labeledFilters.splice(groupIndex, 1)
+        this.selectedFilterIndex = null
       }
 
-      this.labeledFilters = newFilters
       Electron.send('setLabeledFilters', this.labeledFilters)
     },
     getPropertyDisplayName(property: string): string {
@@ -336,22 +338,23 @@ export default {
       const newFilters = [...this.labeledFilters]
       if (data.filterIndex !== undefined) {
         // 既存のフィルターグループにルールを追加
-        newFilters[data.filterIndex].filters.push(data.filter)
+        this.labeledFilters[data.filterIndex].filters.push(data.filter)
       } else {
         // 新しいフィルターグループを作成
         const newGroupLabel = `カスタムフィルター ${newFilters.length + 1}`
-        newFilters.push({
+        this.labeledFilters.push({
           label: newGroupLabel,
           filters: [data.filter]
         })
+        this.selectedFilterIndex = null
       }
-      this.labeledFilters = newFilters
       Electron.send('setLabeledFilters', this.labeledFilters)
     },
-    updateLabel(index: number, newLabel: string): void {
-      const newFilters = [...this.labeledFilters]
-      newFilters[index].label = newLabel
-      this.labeledFilters = newFilters
+    updateLabel(_index: number, newLabel: string): void {
+      if (this.selectedFilterIndex === null) return
+
+      this.labeledFilters[this.selectedFilterIndex].label = newLabel
+
       Electron.send('setLabeledFilters', this.labeledFilters)
     },
     startEditLabel(index: number): void {
@@ -363,14 +366,9 @@ export default {
         this.editingLabelIndex = null
       }
     },
-    cancelEditLabel(): void {
-      // 編集をキャンセルして元の値に戻す
-      this.labeledFilters = [...window.store.labeledFilters]
-      this.editingLabelIndex = null
-    },
-    updateLabelRealtime(): void {
-      // サイドパネルでのリアルタイムラベル更新
-      Electron.send('setLabeledFilters', this.labeledFilters)
+    selectFilter(index: number): void {
+      this.selectedFilterIndex = index
+      this.editingLabel = this.labeledFilters[this.selectedFilterIndex].label
     }
   }
 }

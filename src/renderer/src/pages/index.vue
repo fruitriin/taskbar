@@ -90,7 +90,6 @@ export default defineComponent({
       debug: true,
       options: window.store.options,
       granted: window.store.granted,
-      filters: window.store.filters,
       headers: window.store.options?.headers,
       footers: window.store.options?.footers,
       displayInfo: {} as {

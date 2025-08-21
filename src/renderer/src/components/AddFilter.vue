@@ -1,5 +1,5 @@
 <template>
-  <div class="add-filter-form" style="margin-top: 16px; max-width: 380px">
+  <div class="add-filter-form" style="margin-top: 16px; max-width: 100%">
     <!-- プラスボタン（フォーム非表示時） -->
     <div v-if="!isExpanded" class="add-button-container">
       <button
@@ -13,41 +13,46 @@
     </div>
 
     <!-- フォーム（展開時） -->
-    <div v-if="isExpanded" class="field has-addons">
-      <div class="control">
-        <div class="select is-small">
-          <select v-model="filter.property">
-            <option value="">プロパティを選択</option>
-            <option value="kCGWindowName">ウィンドウ名</option>
-            <option value="kCGWindowOwnerName">アプリケーション名</option>
-            <option value="kCGWindowOwnerPID">プロセスID</option>
-            <option value="kCGWindowNumber">ウィンドウ番号</option>
-            <option value="kCGWindowLayer">ウィンドウレイヤー</option>
-            <option value="kCGWindowIsOnscreen">画面表示状態</option>
-            <option value="kCGWindowSharingState">共有状態</option>
-            <option value="kCGWindowStoreType">ストアタイプ</option>
-          </select>
+    <div v-if="isExpanded" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 100%">
+      <div class="field has-addons" style="margin-bottom: 0">
+        <div class="control" style="flex: 1">
+          <div class="select is-small" style="width: 100%">
+            <select v-model="filter.property" style="width: 100%">
+              <option value="">プロパティを選択</option>
+              <option value="kCGWindowName">ウィンドウ名</option>
+              <option value="kCGWindowOwnerName">アプリケーション名</option>
+              <option value="kCGWindowOwnerPID">プロセスID</option>
+              <option value="kCGWindowNumber">ウィンドウ番号</option>
+              <option value="kCGWindowLayer">ウィンドウレイヤー</option>
+              <option value="kCGWindowIsOnscreen">画面表示状態</option>
+              <option value="kCGWindowSharingState">共有状態</option>
+              <option value="kCGWindowStoreType">ストアタイプ</option>
+            </select>
+          </div>
+        </div>
+        <div class="control" style="flex: 1">
+          <input
+            v-model="filter.is"
+            class="input is-small"
+            :type="getInputType(filter.property)"
+            :placeholder="getPlaceholder(filter.property)"
+            style="width: 100%"
+          />
         </div>
       </div>
-      <div class="control">
-        <input
-          v-model="filter.is"
-          class="input is-small"
-          :type="getInputType(filter.property)"
-          :placeholder="getPlaceholder(filter.property)"
-        />
-      </div>
-      <div class="control">
-        <button
-          class="button is-small is-primary"
-          :disabled="!filter.property"
-          @click="handleAddFilter"
-        >
-          {{ filterIndex !== undefined ? '追加' : '作成' }}
-        </button>
-      </div>
-      <div class="control">
-        <button class="button is-small" @click="cancelAdd">キャンセル</button>
+      <div class="field has-addons" style="margin-bottom: 0; justify-content: flex-start">
+        <div class="control">
+          <button
+            class="button is-small is-primary"
+            :disabled="!filter.property"
+            @click="handleAddFilter"
+          >
+            {{ filterIndex !== undefined ? '追加' : '作成' }}
+          </button>
+        </div>
+        <div class="control">
+          <button class="button is-small" @click="cancelAdd">キャンセル</button>
+        </div>
       </div>
     </div>
   </div>
