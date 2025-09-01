@@ -274,22 +274,127 @@ class WindowObserver {
     }
 
     @objc func windowDidChange(notification: NSNotification) {
-        // 非同期処理を開始
+        // アクティビティを記録
+        ProcessManager.shared.recordActivity()
+        
+        // 非同期処理を開始（タイムアウト付き）
         DispatchQueue.global(qos: .background).async {
             // わずかに遅延させて非同期処理を実行
             // これがないと開いたウィンドウの変更が反映されない
             let delayTime = DispatchTime.now() + .milliseconds(500)
 
             DispatchQueue.global(qos: .background).asyncAfter(deadline: delayTime) {
+                // タイムアウト付きでウィンドウ情報を取得
+                let semaphore = DispatchSemaphore(value: 0)
+                var windowData: Data?
+                
+                DispatchQueue.global(qos: .utility).async {
+                    defer { semaphore.signal() }
+                    windowData = getWindowInfoListData()
+                }
+                
+                // 2秒でタイムアウト
+                if semaphore.wait(timeout: .now() + 2.0) == .timedOut {
+                    print("Window info retrieval timeout")
+                    return
+                }
+                
                 DispatchQueue.main.async {
-                    if let data = getWindowInfoListData() {
+                    if let data = windowData {
                         let stdOut = FileHandle.standardOutput
                         stdOut.write(data)
                         stdOut.write("\n".data(using: .utf8)!)
+                        ProcessManager.shared.recordActivity()
                     }
                 }
             }
         }
+    }
+}
+
+// MARK: - Process Management
+
+class ProcessManager {
+    static let shared = ProcessManager()
+    private var startTime = Date()
+    private var maxRuntime: TimeInterval = 300 // 5分の最大実行時間
+    private var heartbeatTimer: Timer?
+    private var lastActivity = Date()
+    private var isRunning = false
+    private init() {}
+    
+    func startHeartbeat() {
+        isRunning = true
+        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            self.checkHealth()
+        }
+    }
+    
+    func stopHeartbeat() {
+        isRunning = false
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = nil
+    }
+    
+    var shouldKeepRunning: Bool {
+        return isRunning
+    }
+    
+    func recordActivity() {
+        lastActivity = Date()
+    }
+    
+    private func checkHealth() {
+        let currentTime = Date()
+        let runtime = currentTime.timeIntervalSince(startTime)
+        let idleTime = currentTime.timeIntervalSince(lastActivity)
+        
+        // 最大実行時間を超過した場合
+        if runtime > maxRuntime {
+            print("Maximum runtime exceeded, shutting down gracefully...")
+            self.gracefulShutdown(reason: "max_runtime")
+        }
+        
+        // 30秒間アクティビティがない場合
+        if idleTime > 30 {
+            print("No activity for 30 seconds, shutting down...")
+            self.gracefulShutdown(reason: "idle_timeout")
+        }
+    }
+    
+    func gracefulShutdown(reason: String) {
+        print("Graceful shutdown initiated: \(reason)")
+        
+        // クリーンアップ処理
+        stopHeartbeat()
+        iconCache.removeAll()
+        
+        // 0.1秒後に終了（NSNotificationCenterのクリーンアップ時間を確保）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exit(0)
+        }
+    }
+}
+
+// MARK: - Signal Handling
+
+func setupSignalHandlers() {
+    // SIGTERM ハンドラ
+    signal(SIGTERM) { _ in
+        print("Received SIGTERM, shutting down gracefully...")
+        ProcessManager.shared.gracefulShutdown(reason: "sigterm")
+    }
+    
+    // SIGINT ハンドラ (Ctrl+C)
+    signal(SIGINT) { _ in
+        print("Received SIGINT, shutting down gracefully...")
+        ProcessManager.shared.gracefulShutdown(reason: "sigint")
+    }
+    
+    // SIGKILL は捕捉できないが、SIGUSR1 で緊急停止
+    signal(SIGUSR1) { _ in
+        print("Emergency stop requested")
+        exit(1)
     }
 }
 
@@ -322,17 +427,33 @@ case "debug":
     }
     
 case "list":
+    // シグナルハンドラの設定
+    setupSignalHandlers()
+    
+    // プロセス管理の開始
+    ProcessManager.shared.startHeartbeat()
+    ProcessManager.shared.recordActivity()
+    
     // ウィンドウの変更を監視
     print("ウィンドウ変更の監視を開始しました...")
     WindowObserver.shared.observeWindowChanges()
     
-    // SIGINT (Ctrl+C) でプログラムを終了できるようにする
-    signal(SIGINT) { _ in
-        print("\n監視を終了します...")
-        exit(0)
+    // 初回のウィンドウ情報を出力
+    if let data = getWindowInfoListData() {
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(data)
+        stdOut.write("\n".data(using: .utf8)!)
+        ProcessManager.shared.recordActivity()
     }
     
-    RunLoop.main.run()
+    // RunLoopを制限時間付きで実行
+    let runLoop = RunLoop.main
+    while ProcessManager.shared.shouldKeepRunning {
+        let nextDate = Date().addingTimeInterval(0.5)
+        if !runLoop.run(mode: .default, before: nextDate) {
+            break
+        }
+    }
     
 case "check-permissions":
     // 権限状態をJSONで出力
