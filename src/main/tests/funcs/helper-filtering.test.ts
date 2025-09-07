@@ -62,6 +62,13 @@ describe('Helper filterProcesses with LabeledFilters', () => {
           { property: 'kCGWindowOwnerName', is: 'Finder' },
           { property: 'kCGWindowName', is: '' }
         ]
+      },
+      {
+        label: '空のターミナルウィンドウを除外',
+        filters: [
+          { property: 'kCGWindowOwnerName', is: 'ターミナル' },
+          { property: 'kCGWindowName', is: '' }
+        ]
       }
     ]
 
@@ -167,6 +174,26 @@ describe('Helper filterProcesses with LabeledFilters', () => {
       // 空のFinderウィンドウは除外、名前のあるFinderウィンドウは残る
       expect(result).toHaveLength(1)
       expect(result[0].kCGWindowNumber).toBe(namedFinderWindow.kCGWindowNumber)
+    })
+
+    it('空のターミナルウィンドウを除外する（複合条件）', () => {
+      const emptyTerminalWindow = testHelpers.generateRandomWindow({
+        kCGWindowOwnerName: 'ターミナル',
+        kCGWindowName: '',
+        kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
+      })
+      
+      const namedTerminalWindow = testHelpers.generateRandomWindow({
+        kCGWindowOwnerName: 'ターミナル',
+        kCGWindowName: 'Terminal — zsh — 80×24',
+        kCGWindowBounds: { Height: 100, Width: 200, X: 0, Y: 0 }
+      })
+
+      const result = filterProcesses([emptyTerminalWindow, namedTerminalWindow] as MacWindow[])
+
+      // 空のターミナルウィンドウは除外、名前のあるターミナルウィンドウは残る
+      expect(result).toHaveLength(1)
+      expect(result[0].kCGWindowNumber).toBe(namedTerminalWindow.kCGWindowNumber)
     })
 
     it('一般的なアプリケーションウィンドウは残す', () => {
