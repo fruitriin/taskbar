@@ -142,11 +142,140 @@ func getPermissionStatus() -> Data? {
     ]
     
     do {
-        let jsonData = try JSONSerialization.data(withJSONObject: permissionStatus, options: .prettyPrinted)
+        let jsonData = try JSONSerialization.data(withJSONObject: permissionStatus, options: [])
         return jsonData
     } catch {
         print("Error serializing permission status: \(error)")
         return nil
+    }
+}
+
+// MARK: - Progressive Icon Loading
+
+class ProgressiveIconLoader {
+    private var pendingUpdates: [String: String] = [:]
+    private let updateLock = NSLock()
+    private var updateTimer: Timer?
+    
+    func loadIconsProgressively(for windowList: [[String: AnyObject]], uniquePids: Set<Int>, pidToOwner: [Int: String]) {
+        // 1. 即座にアイコンなしでウィンドウリストを送信
+        let initialData = createWindowListJSON(windowList, icons: [:])
+        sendToStdout(initialData)
+        
+        // 2. アイコン更新タイマーを開始（100ms間隔）
+        startUpdateTimer()
+        
+        // 3. 並列でアイコンを取得
+        let iconQueue = DispatchQueue(label: "icon-processing", qos: .utility, attributes: .concurrent)
+        let iconGroup = DispatchGroup()
+        
+        for pid in uniquePids {
+            guard let owner = pidToOwner[pid] else { continue }
+            
+            iconGroup.enter()
+            iconQueue.async {
+                defer { iconGroup.leave() }
+                
+                if let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: "", size: 32) {
+                    self.queueIconUpdate(owner: owner, icon: iconBase64)
+                }
+            }
+        }
+        
+        // 4. 全アイコン取得完了後にタイマー停止
+        iconGroup.notify(queue: .main) {
+            self.stopUpdateTimer()
+            self.flushPendingUpdates() // 最終更新
+        }
+    }
+    
+    private func queueIconUpdate(owner: String, icon: String) {
+        updateLock.lock()
+        let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
+        pendingUpdates[safeOwner] = icon
+        updateLock.unlock()
+    }
+    
+    private func startUpdateTimer() {
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            self.flushPendingUpdates()
+        }
+    }
+    
+    private func stopUpdateTimer() {
+        updateTimer?.invalidate()
+        updateTimer = nil
+    }
+    
+    private func flushPendingUpdates() {
+        updateLock.lock()
+        guard !pendingUpdates.isEmpty else {
+            updateLock.unlock()
+            return
+        }
+        
+        let updates = pendingUpdates
+        pendingUpdates.removeAll()
+        updateLock.unlock()
+        
+        // アイコン更新通知を送信
+        let iconUpdateNotification: [String: Any] = [
+            "type": "iconUpdate",
+            "icons": updates,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        
+        if let jsonData = try? JSONSerialization.data(withJSONObject: iconUpdateNotification, options: []) {
+            sendToStdout(jsonData)
+        }
+        
+        // アイコンキャッシュファイルも更新
+        saveIconsToCache(updates)
+    }
+    
+    private func createWindowListJSON(_ windowList: [[String: AnyObject]], icons: [String: String]) -> Data? {
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: windowList, options: [])
+            return jsonData
+        } catch {
+            print("Error serializing window list JSON: \(error)")
+            return nil
+        }
+    }
+    
+    private func sendToStdout(_ data: Data?) {
+        guard let data = data else { return }
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(data)
+        stdOut.write("\n".data(using: .utf8)!)
+    }
+    
+    private func saveIconsToCache(_ icons: [String: String]) {
+        let fileManager = FileManager.default
+        let userDataDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("taskbar.fm")
+        
+        if !fileManager.fileExists(atPath: userDataDir.path) {
+            try? fileManager.createDirectory(at: userDataDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        
+        // 既存のアイコンキャッシュを読み込んで更新
+        let iconJsonPath = userDataDir.appendingPathComponent("icons.json")
+        var existingIcons: [String: String] = [:]
+        
+        if fileManager.fileExists(atPath: iconJsonPath.path) {
+            if let existingData = try? Data(contentsOf: iconJsonPath),
+               let existing = try? JSONSerialization.jsonObject(with: existingData) as? [String: String] {
+                existingIcons = existing
+            }
+        }
+        
+        // 新しいアイコンをマージ
+        existingIcons.merge(icons) { _, new in new }
+        
+        // JSONとして保存
+        if let iconJsonData = try? JSONSerialization.data(withJSONObject: existingIcons, options: []) {
+            try? iconJsonData.write(to: iconJsonPath)
+        }
     }
 }
 
@@ -164,7 +293,6 @@ var windowListProvider: () -> [[String: AnyObject]] = {
 func getWindowInfoListData() -> Data? {
     let windowsListInfo = windowListProvider()
     var windowInfoList: [[String: Any]] = []
-    var iconDict: [String: String] = [:]
 
     // 重複するPIDを削除してアイコン取得を効率化
     var uniquePids = Set<Int>()
@@ -184,58 +312,16 @@ func getWindowInfoListData() -> Data? {
             uniquePids.insert(pid)
             pidToOwner[pid] = owner
         }
-        windowInfoList.append(formattedWindowInfo)
+    
     }
     
-    // ユニークなPIDのみからアイコンを取得（並列処理で高速化）
-    let iconQueue = DispatchQueue(label: "icon-processing", qos: .utility, attributes: .concurrent)
-    let iconGroup = DispatchGroup()
-    let iconLock = NSLock()
+    // ProgressiveIconLoaderを使用してアイコンを順次取得・送信
+    let iconLoader = ProgressiveIconLoader()
+    iconLoader.loadIconsProgressively(for: windowsListInfo, uniquePids: uniquePids, pidToOwner: pidToOwner)
     
-    for pid in uniquePids {
-        guard let owner = pidToOwner[pid] else { continue }
-        
-        iconGroup.enter()
-        iconQueue.async {
-            defer { iconGroup.leave() }
-            
-            if let iconBase64 = getIconBase64(pid: pid, owner: owner, windowName: "", size: 32) {
-                let safeOwner = owner.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: " ", with: "")
-                iconLock.lock()
-                iconDict[safeOwner] = iconBase64
-                iconLock.unlock()
-            }
-        }
-    }
-    
-    // アイコン取得完了を最大1秒まで待機
-    if iconGroup.wait(timeout: .now() + 1.0) == .timedOut {
-        standardError.write("Icon processing timeout for \(uniquePids.count) processes\n".data(using: .utf8)!)
-    }
-
-    // アイコンキャッシュディレクトリの作成（非同期でメインスレッドをブロックしない）
-    let fileManager = FileManager.default
-    // JSコードと同じApplication Supportディレクトリのtaskbar.fmフォルダを直接使用
-    let userDataDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("taskbar.fm")
-    if !fileManager.fileExists(atPath: userDataDir.path) {
-        try? fileManager.createDirectory(at: userDataDir, withIntermediateDirectories: true, attributes: nil)
-    }
-    // JSONとして保存
-    do {
-        let iconJsonData = try JSONSerialization.data(withJSONObject: iconDict, options: .prettyPrinted)
-        let iconJsonPath = userDataDir.appendingPathComponent("icons.json")
-        try? iconJsonData.write(to: iconJsonPath)
-    } catch {
-        print("Error serializing icon JSON: \(error)")
-    }
-
-    do {
-        let jsonData = try JSONSerialization.data(withJSONObject: windowInfoList, options: .prettyPrinted)
-        return jsonData
-    } catch {
-        print("Error serializing JSON: \(error)")
-        return nil
-    }
+    // この関数は最初のウィンドウリスト（アイコンなし）を返すだけ
+    // アイコンは後で順次更新される
+    return nil // ProgressiveIconLoaderが直接stdout に送信するため、ここではnilを返す
 }
 
 // MARK: - Window Observer
@@ -300,12 +386,10 @@ class WindowObserver {
                 }
                 
                 DispatchQueue.main.async {
-                    if let data = windowData {
-                        let stdOut = FileHandle.standardOutput
-                        stdOut.write(data)
-                        stdOut.write("\n".data(using: .utf8)!)
-                        ProcessManager.shared.recordActivity()
-                    }
+                    // getWindowInfoListDataは内部でProgressiveIconLoaderを使用して
+                    // 自動的にstdoutに送信するため、ここでは呼び出すだけ
+                    _ = getWindowInfoListData()
+                    ProcessManager.shared.recordActivity()
                 }
             }
         }
@@ -347,7 +431,6 @@ class ProcessManager {
     private func checkHealth() {
         let currentTime = Date()
         let runtime = currentTime.timeIntervalSince(startTime)
-        let idleTime = currentTime.timeIntervalSince(lastActivity)
         
         // 最大実行時間を超過した場合
         if runtime > maxRuntime {
@@ -355,11 +438,8 @@ class ProcessManager {
             self.gracefulShutdown(reason: "max_runtime")
         }
         
-        // 30秒間アクティビティがない場合
-        if idleTime > 30 {
-            print("No activity for 30 seconds, shutting down...")
-            self.gracefulShutdown(reason: "idle_timeout")
-        }
+        // アイドルタイムアウト処理は削除
+        // タスクバーは継続して動作する必要があるため
     }
     
     func gracefulShutdown(reason: String) {
@@ -420,10 +500,18 @@ case "grant":
     
 case "debug":
     // デバッグ用：現在のウィンドウ情報を出力
-    if let data = getWindowInfoListData() {
-        print(String(data: data, encoding: .utf8) ?? "データの変換に失敗しました")
-    } else {
-        print("ウィンドウ情報の取得に失敗しました")
+    let windowsListInfo = windowListProvider()
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: windowsListInfo, options: [])
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(jsonData)
+        stdOut.write("\n".data(using: .utf8)!)
+        // 確実にバッファを flush してデータが即座に送信されるようにする
+        if #available(macOS 10.15, *) {
+            try? stdOut.synchronize()
+        }
+    } catch {
+        print("JSON serialization failed: \(error)")
     }
     
 case "list":
@@ -438,13 +526,9 @@ case "list":
     print("ウィンドウ変更の監視を開始しました...")
     WindowObserver.shared.observeWindowChanges()
     
-    // 初回のウィンドウ情報を出力
-    if let data = getWindowInfoListData() {
-        let stdOut = FileHandle.standardOutput
-        stdOut.write(data)
-        stdOut.write("\n".data(using: .utf8)!)
-        ProcessManager.shared.recordActivity()
-    }
+    // 初回のウィンドウ情報を出力（ProgressiveIconLoader使用）
+    _ = getWindowInfoListData()
+    ProcessManager.shared.recordActivity()
     
     // RunLoopを制限時間付きで実行
     let runLoop = RunLoop.main

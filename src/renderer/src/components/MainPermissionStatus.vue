@@ -38,8 +38,12 @@ const openSettings = (): void => {
 onMounted(() => {
   checkPermissions()
 
-  // 定期的に権限状態をチェック（30秒間隔）
-  setInterval(checkPermissions, 30000)
+  // 権限が不足している場合のみ定期的にチェック（2分間隔）
+  setInterval(() => {
+    if (!allPermissionsGranted.value) {
+      checkPermissions()
+    }
+  }, 120000) // 2分間隔に変更
 })
 </script>
 

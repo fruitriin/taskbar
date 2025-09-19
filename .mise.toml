@@ -34,7 +34,7 @@ run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
 description = "Xcodeヘルパープロジェクトを開く"
 
 [tasks.swiftbuild]
-run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper"
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
 description = "Swiftヘルパーをビルド"
 
 [tasks.build]

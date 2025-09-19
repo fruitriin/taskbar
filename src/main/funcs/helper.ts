@@ -24,6 +24,70 @@ let currentHelperProcess: any = null
 
 export const macWindowProcesses: MacWindow[] = []
 
+// アイコン更新通知を処理する関数
+async function handleIconUpdate(iconUpdateData: {
+  type: string
+  icons: Record<string, string>
+  timestamp: string
+}): Promise<void> {
+  console.log(`Received icon update: ${Object.keys(iconUpdateData.icons).length} icons`)
+
+  // 既存のプロセスリストにアイコンを適用
+  updateProcessIcons(iconUpdateData.icons)
+
+  // レンダラープロセスに更新を通知
+  for (const taskbarKey in taskbars) {
+    if (!taskbars[taskbarKey].isDestroyed()) {
+      taskbars[taskbarKey].webContents.send('iconUpdate', iconUpdateData.icons)
+    }
+  }
+
+  // フルウィンドウリストにも通知
+  if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
+    fullWindowListWindow.webContents.send('iconUpdate', iconUpdateData.icons)
+  }
+
+  // アイコンキャッシュを更新
+  iconCache.saveIcons(iconUpdateData.icons)
+}
+
+// 既存のプロセスリストにアイコンを適用する関数
+function updateProcessIcons(icons: Record<string, string>): void {
+  for (const proc of macWindowProcesses) {
+    if (!proc.appIcon) {
+      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+      if (icons[owner]) {
+        proc.appIcon = `data:image/png;base64,${icons[owner]}`
+      }
+    }
+  }
+}
+
+// JSONラインを処理する関数
+async function processJSONLine(line: string): Promise<void> {
+  try {
+    const jsoned = JSON.parse(line)
+
+    // アイコン更新通知の処理
+    if (jsoned.type === 'iconUpdate') {
+      await handleIconUpdate(jsoned)
+    } else {
+      // 通常のウィンドウリスト処理
+      await applyProcessChange(jsoned)
+    }
+  } catch (parseError) {
+    console.error('Failed to parse JSON line:', parseError)
+    console.log('Problematic line:', line)
+    console.log('Line length:', line.length)
+    console.log('First 100 chars:', line.substring(0, 100))
+    console.log('Last 100 chars:', line.substring(Math.max(0, line.length - 100)))
+
+    // JSONパースエラーが発生した場合、ヘルパーの再起動をスケジュール
+    console.log('JSON parse error detected, scheduling helper restart in 3 seconds')
+    scheduleHelperRestart(3000)
+  }
+}
+
 export async function getAndSubmitProcesses(): Promise<void> {
   if (isHelperRunning) {
     console.log('TaskbarHelper is already running, skipping start')
@@ -48,19 +112,17 @@ export async function getAndSubmitProcesses(): Promise<void> {
     for await (const chunk of taskbarHelper.stdout) {
       rawData += chunk.toString()
 
-      if (rawData.trim().endsWith(']')) {
-        try {
-          const jsoned = JSON.parse(rawData)
-          await applyProcessChange(jsoned)
-          rawData = ''
-        } catch (parseError) {
-          console.error('Failed to parse JSON:', parseError)
-          rawData = '' // Reset rawData to avoid accumulating invalid data
+      // 完全なJSONライン（改行で終わる）のみを処理
+      let newlineIndex = rawData.indexOf('\n')
+      while (newlineIndex !== -1) {
+        const line = rawData.substring(0, newlineIndex)
+        rawData = rawData.substring(newlineIndex + 1)
 
-          // JSONパースエラーが発生した場合、ヘルパーの再起動をスケジュール
-          console.log('JSON parse error detected, scheduling helper restart in 3 seconds')
-          scheduleHelperRestart(3000)
+        if (line.trim()) {
+          await processJSONLine(line.trim())
         }
+
+        newlineIndex = rawData.indexOf('\n')
       }
     }
 
@@ -410,6 +472,10 @@ export function filterProcesses(windows: MacWindow[]): MacWindow[] {
             if (win[filterElement.property] === undefined) {
               match.push(false)
               continue
+            }
+            if (filterElement.property === 'kCGWindowName' && win[filterElement.property] == '') {
+              console.log(win['kCGWindowOwnerName'], '-', win['kCGWindowName'])
+              match.push(true)
             }
 
             // 値が一致するかチェック
