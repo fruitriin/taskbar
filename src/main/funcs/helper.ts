@@ -23,6 +23,7 @@ let helperRestartTimeout: NodeJS.Timeout | null = null
 let currentHelperProcess: any = null
 
 export const macWindowProcesses: MacWindow[] = []
+export let excludedProcesses: MacWindow[] = []
 
 // アイコン更新通知を処理する関数
 async function handleIconUpdate(iconUpdateData: {
@@ -107,6 +108,56 @@ function exportFiltersToSwift(): void {
   } catch (error) {
     console.error('Failed to export filters to Swift:', error)
   }
+}
+
+// 除外されたプロセスを取得する関数
+export async function getExcludedProcesses(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let rawData = ''
+
+    const taskbarHelper = spawn(binaryPath, ['exclude'], {
+      env: {
+        ...process.env,
+        ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
+      }
+    })
+
+    taskbarHelper.stdout.on('data', (chunk) => {
+      rawData += chunk.toString()
+    })
+
+    taskbarHelper.stderr.on('data', (data) => {
+      console.error(`Exclude command error: ${data.toString()}`)
+    })
+
+    taskbarHelper.on('close', (code) => {
+      if (code === 0) {
+        try {
+          if (rawData.trim()) {
+            console.log(rawData)
+            const excludedData = JSON.parse(rawData)
+            excludedProcesses.length = 0
+            excludedProcesses.push(...excludedData)
+            console.log(`取得した除外プロセス数: ${excludedProcesses.length}`)
+          } else {
+            excludedProcesses.length = 0
+            console.log('除外プロセスはありません')
+          }
+        } catch (parseError) {
+          console.error('Failed to parse excluded processes:', parseError)
+          excludedProcesses.length = 0
+        }
+      } else {
+        console.error(`Exclude command exited with code ${code}`)
+      }
+      resolve()
+    })
+
+    taskbarHelper.on('error', (error) => {
+      console.error('Error getting excluded processes:', error)
+      reject(error)
+    })
+  })
 }
 
 export async function getAndSubmitProcesses(): Promise<void> {
@@ -335,28 +386,15 @@ export function cleanupHelperProcess(): void {
   isHelperRunning = false
 }
 
-import { diff } from 'just-diff'
-import { diffApply } from 'just-diff-apply'
+export async function applyProcessChange(newProcesses: typeof macWindowProcesses): Promise<void> {
+  // Swift側でフィルタリング済みのプロセスリストをそのまま採用
+  macWindowProcesses.length = 0
+  macWindowProcesses.push(...newProcesses)
 
-//  なんかごきげん斜め ウィンドウの増減で動かなくなる
-export function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
-  // Swift側でフィルタリングが行われるため、TypeScript側のフィルタリングは無効化
-  // const filteredProcesses = filterProcesses(newProcesses)
-  const filteredProcesses = newProcesses
-
-  // Swift側でフィルタリング済みのため、除外されたウィンドウは存在しない
-  const excludedProcesses: typeof macWindowProcesses = []
-
-  const result = diff(macWindowProcesses, filteredProcesses)
-
-  // アイコンの設定は常に実行
+  // アイコンキャッシュを取得
   const icons = loadIconCache()
 
-  if (result.length > 0) {
-    diffApply(macWindowProcesses, result)
-  }
-
-  // アイコンを設定（フィルター済みプロセス）
+  // フィルター済みプロセスにアイコンを設定
   for (const proc of macWindowProcesses) {
     if (!proc.appIcon) {
       const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
@@ -366,7 +404,7 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
     }
   }
 
-  // 全プロセス（オリジナル）にもアイコンをセット
+  // 全プロセスにもアイコンを設定（FullWindowListウィンドウ用）
   const allProcessesWithIcons = newProcesses.map((proc) => {
     if (!proc.appIcon) {
       const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
@@ -377,24 +415,18 @@ export function applyProcessChange(newProcesses: typeof macWindowProcesses): voi
     return proc
   })
 
-  // 変更があった場合のみタスクバーに送信
-  if (result.length > 0) {
-    for (const taskbarKey in taskbars) {
-      if (!taskbars[taskbarKey].isDestroyed()) {
-        taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
-      }
+  // タスクバーに更新されたプロセスリストを送信
+  for (const taskbarKey in taskbars) {
+    if (!taskbars[taskbarKey].isDestroyed()) {
+      taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
     }
   }
 
-  // FullWindowListウィンドウには全プロセス情報のみ送信
+  // FullWindowListウィンドウには全プロセス情報を送信（除外プロセスは空配列）
   if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
     fullWindowListWindow.webContents.send('allProcesses', {
       all: allProcessesWithIcons,
-      filtered: macWindowProcesses,
-      excluded: excludedProcesses.map((proc) => {
-        const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-        return icons[owner] ? { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` } : proc
-      })
+      filtered: macWindowProcesses
     })
   }
 }
@@ -470,60 +502,4 @@ end tell`
     // console.log(_stderr);
     // console.log(_stdout);
   })
-}
-
-/**
- * 高さ・幅が低すぎるものと、labeledFilters から条件に一致するものを除外する
- */
-export function filterProcesses(windows: MacWindow[]): MacWindow[] {
-  const wins = windows.filter((win) => {
-    // サイズフィルター（従来通り）
-    if (win.kCGWindowBounds?.Height < 40) return false
-    if (win.kCGWindowBounds?.Width < 40) return false
-
-    try {
-      // 新しいlabeledFilters形式での処理
-
-      const labeledFilters = store.get('labeledFilters', []) as LabeledFilters[]
-
-      if (Array.isArray(labeledFilters)) {
-        for (const labeledFilter of labeledFilters) {
-          const match: boolean[] = []
-
-          for (const filterElement of labeledFilter.filters) {
-            // ウィンドウのプロパティが存在しない場合はスキップ
-            if (win[filterElement.property] === undefined) {
-              match.push(false)
-              continue
-            }
-            if (filterElement.property === 'kCGWindowName' && win[filterElement.property] == '') {
-              console.log(win['kCGWindowOwnerName'], '-', win['kCGWindowName'])
-              match.push(true)
-            }
-
-            // 値が一致するかチェック
-            if (win[filterElement.property] == filterElement.is) {
-              match.push(true)
-            } else {
-              match.push(false)
-            }
-          }
-
-          // すべての条件が一致した場合はフィルタリング対象（除外）
-          if (match.length > 0 && match.every((elem) => elem)) {
-            return false
-          }
-        }
-      }
-
-      return true
-    } catch (error) {
-      // ストアアクセスエラーが発生した場合はフィルタリングせずに通す
-      console.error('Filter processing error:', error)
-
-      return true
-    }
-  })
-  // console.log(windows)
-  return wins
 }

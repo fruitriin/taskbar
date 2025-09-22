@@ -1,7 +1,7 @@
 <template>
   <div :class="options.layout">
     <div style="display: flex">
-      <div class="icon-area" @click="openOption">
+      <div class="icon-area" @click="openOption" @contextmenu="openMenu">
         <img :src="icon" style="height: 40px" />
       </div>
       <div class="permissions">
@@ -167,12 +167,12 @@ export default defineComponent({
       }
       this.windows.splice(0, this.windows.length, ...value)
     })
-    
+
     // アイコン更新イベントをリスン
     Electron.listen('iconUpdate', (_event, icons: Record<string, string>) => {
       this.updateWindowIcons(icons)
     })
-    
+
     Electron.send('windowReady')
     Electron.listen('displayInfo', (_event, value) => {
       this.displayInfo = value
@@ -211,6 +211,9 @@ export default defineComponent({
       Electron.send('grantPermission')
       this.granted = true
     },
+    openMenu(): void {
+      Electron.send('contextLogo')
+    },
     openOption(): void {
       Electron.send('openOption')
     },
@@ -220,25 +223,23 @@ export default defineComponent({
     restartHelper(delay?: number): void {
       Electron.send('restartHelper', delay)
     },
-    
+
     // アイコン更新処理
     updateWindowIcons(icons: Record<string, string>): void {
       if (!this.windows) return
-      
+
       console.log(`Updating ${Object.keys(icons).length} icons`)
-      
+
       // 既存のウィンドウリストのアイコンを更新
-      this.windows.forEach(window => {
-        const owner = (window.kCGWindowOwnerName || 'unknown')
-          .replace(/\//g, '_')
-          .replace(/ /g, '')
-        
+      this.windows.forEach((window) => {
+        const owner = (window.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+
         if (icons[owner] && !window.appIcon) {
           window.appIcon = `data:image/png;base64,${icons[owner]}`
           console.log(`Updated icon for ${window.kCGWindowOwnerName}`)
         }
       })
-      
+
       // リアクティブ更新を強制
       this.$forceUpdate()
     }

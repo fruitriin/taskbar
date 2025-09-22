@@ -113,7 +113,7 @@ class FilterManager {
     private init() {
         // Application Support/taskbar.fm/config.json のパスを構築
         guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            print("Warning: Could not access Application Support directory, using default filters")
+            // print("Warning: Could not access Application Support directory, using default filters")
             filtersJsonPath = nil
             cachedFilters = getDefaultFilters()
             return
@@ -122,7 +122,7 @@ class FilterManager {
         let taskbarDir = appSupportDir.appendingPathComponent("taskbar.fm")
         filtersJsonPath = taskbarDir.appendingPathComponent("filter.json")
 
-        print("Filter config path: \(filtersJsonPath?.path ?? "none")")
+        // print("Filter config path: \(filtersJsonPath?.path ?? "none")")
         cachedFilters = loadFiltersFromFile()
         startFileMonitoring()
     }
@@ -141,7 +141,7 @@ class FilterManager {
         }
 
         guard FileManager.default.fileExists(atPath: filtersJsonPath.path) else {
-            print("Warning: config.json not found, using default filters")
+            // print("Warning: config.json not found, using default filters")
             return getDefaultFilters()
         }
 
@@ -159,11 +159,11 @@ class FilterManager {
             let filters = configFile.labeledFilters
 
             lastModificationTime = modificationTime
-            print("Loaded \(filters.count) filter groups from \(filtersJsonPath.path)")
+            // print("Loaded \(filters.count) filter groups from \(filtersJsonPath.path)")
 
             return filters
         } catch {
-            print("Error loading filters: \(error), using default filters")
+            // print("Error loading filters: \(error), using default filters")
             return getDefaultFilters()
         }
     }
@@ -173,7 +173,7 @@ class FilterManager {
 
         let fileDescriptor = open(filtersJsonPath.path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
-            print("Warning: Could not open config.json for monitoring")
+            // print("Warning: Could not open config.json for monitoring")
             return
         }
 
@@ -194,7 +194,7 @@ class FilterManager {
         }
 
         fileMonitor?.resume()
-        print("Started monitoring config.json for changes")
+        // print("Started monitoring config.json for changes")
     }
 
     private func stopFileMonitoring() {
@@ -206,7 +206,7 @@ class FilterManager {
         let newFilters = loadFiltersFromFile()
         if !filtersEqual(cachedFilters, newFilters) {
             cachedFilters = newFilters
-            print("Filter settings updated: \(cachedFilters.count) filter groups loaded")
+            // print("Filter settings updated: \(cachedFilters.count) filter groups loaded")
 
             // フィルター変更時にウィンドウリストを更新
             NotificationCenter.default.post(name: NSNotification.Name("FiltersChanged"), object: nil)
@@ -325,7 +325,7 @@ func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
                     if let windowName = windowValue as? String, windowName.isEmpty {
                         if case .string(let filterString) = filterRule.isValue, filterString.isEmpty {
                             if let ownerName = window["kCGWindowOwnerName"] as? String {
-                                print("\(ownerName) - \(windowName)")
+                                // print("\(ownerName) - \(windowName)")
                             }
                             matches.append(true)
                             continue

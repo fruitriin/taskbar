@@ -12,7 +12,8 @@ import {
   grantPermission,
   macWindowProcesses,
   checkPermissions,
-  scheduleHelperRestart
+  scheduleHelperRestart,
+  getExcludedProcesses
 } from '@/funcs/helper'
 import { app, ipcMain, screen, BrowserWindow } from 'electron'
 import { Options, store } from '@/funcs/store'
@@ -101,6 +102,61 @@ export function setEventHandlers(): void {
   ipcMain.handle('getLabeledFilters', () => {
     return store.get('labeledFilters', [])
   })
+
+  // 除外プロセスの取得
+  ipcMain.handle('getExcludeWindows', async () => {
+    await getExcludedProcesses()
+  })
+
+  // ロゴを右クリックしたときのコンテキストメニュー
+  ipcMain.on('contextLogo', (_event) => {
+    const menu = new Menu()
+
+    menu.append(
+      new MenuItem({
+        label: 'ヘルパー再起動',
+        click(): void {
+          scheduleHelperRestart(100)
+        }
+      })
+    )
+
+    menu.append(
+      new MenuItem({
+        label: 'Taskbar.fm再起動',
+        click(): void {
+          app.relaunch()
+          app.quit()
+        }
+      })
+    )
+
+    menu.append(new MenuItem({ type: 'separator' }))
+
+    menu.append(
+      new MenuItem({
+        label: '設定をクリア',
+        click(): void {
+          store.clear()
+          app.relaunch()
+          app.quit()
+        }
+      })
+    )
+
+    menu.append(
+      new MenuItem({
+        label: '終了',
+        click(): void {
+          app.quit()
+        }
+      })
+    )
+
+    const cursorPoint = screen.getCursorScreenPoint()
+    menu.popup({ x: cursorPoint.x, y: cursorPoint.y })
+  })
+
   // タスクを右クリックしたときのコンテキストメニュー
   // index.vueの@click.right.preventでイベントが発火
   // しかしクリック位置の情報が送られていないため、画面上部に表示される

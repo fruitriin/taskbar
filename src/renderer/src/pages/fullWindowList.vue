@@ -281,7 +281,7 @@ type MacWindow = {
 
 export default {
   data(): {
-    allProcessesData: { all: WindowInfo[]; filtered: WindowInfo[]; excluded: WindowInfo[] } | null
+    allProcessesData: { all: WindowInfo[]; filtered: WindowInfo[]; excluded: WindowInfo[] }
     displayMode: 'filtered' | 'all' | 'excluded'
     searchQuery: string
     sortField: string
@@ -415,11 +415,16 @@ export default {
       return pages
     }
   },
-  mounted(): void {
+  async mounted(): void {
     // IPCイベントリスナーを追加
     Electron.listen('allProcesses', this.handleAllProcessesData)
+
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
+
+    this.allProcessesData.excluded = (await Electron.send(
+      'getExcludeWindows'
+    )) as unknown as WindowInfo[]
   },
   beforeUnmount(): void {
     document.removeEventListener('click', this.handleOutsideClick)
