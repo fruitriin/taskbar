@@ -88,6 +88,21 @@ async function processJSONLine(line: string): Promise<void> {
   }
 }
 
+// フィルター設定をSwiftに渡すためにJSONファイルに書き出す関数
+function exportFiltersToSwift(): void {
+  try {
+    const labeledFilters = store.get('labeledFilters', []) as LabeledFilters[]
+    const filtersJson = JSON.stringify(labeledFilters, null, 2)
+
+    const filtersPath = path.join(iconCache.getCacheDirForSwift(), 'filters.json')
+    require('fs').writeFileSync(filtersPath, filtersJson, 'utf8')
+
+    console.log(`Exported ${labeledFilters.length} filter groups to ${filtersPath}`)
+  } catch (error) {
+    console.error('Failed to export filters to Swift:', error)
+  }
+}
+
 export async function getAndSubmitProcesses(): Promise<void> {
   if (isHelperRunning) {
     console.log('TaskbarHelper is already running, skipping start')
@@ -99,7 +114,10 @@ export async function getAndSubmitProcesses(): Promise<void> {
     isHelperRunning = true
     console.log('Starting TaskbarHelper process')
 
-    const taskbarHelper = spawn(binaryPath, ['list'], {
+    // フィルター設定をエクスポート
+    exportFiltersToSwift()
+
+    const taskbarHelper = spawn(binaryPath, ['watch'], {
       env: {
         ...process.env,
         ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
@@ -316,13 +334,12 @@ import { diffApply } from 'just-diff-apply'
 
 //  なんかごきげん斜め ウィンドウの増減で動かなくなる
 export function applyProcessChange(newProcesses: typeof macWindowProcesses): void {
-  const filteredProcesses = filterProcesses(newProcesses)
+  // Swift側でフィルタリングが行われるため、TypeScript側のフィルタリングは無効化
+  // const filteredProcesses = filterProcesses(newProcesses)
+  const filteredProcesses = newProcesses
 
-  // 除外されたウィンドウを取得
-  const excludedProcesses = newProcesses.filter(
-    (window) =>
-      !filteredProcesses.some((filtered) => filtered.kCGWindowNumber === window.kCGWindowNumber)
-  )
+  // Swift側でフィルタリング済みのため、除外されたウィンドウは存在しない
+  const excludedProcesses: typeof macWindowProcesses = []
 
   const result = diff(macWindowProcesses, filteredProcesses)
 

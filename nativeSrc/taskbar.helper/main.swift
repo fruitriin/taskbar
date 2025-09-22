@@ -10,8 +10,7 @@ import ApplicationServices
 import Cocoa
 import CoreGraphics
 
-// MARK: - Extensions
-
+// データ型についての extention
 extension NSBitmapImageRep {
     func png() -> Data? {
         return representation(using: .png, properties: [:])
@@ -45,6 +44,197 @@ extension NSImage {
         
         image.unlockFocus()
         return image
+    }
+}
+
+// MARK: - Filter Management
+
+// フィルター設定の構造体
+struct FilterRule: Codable {
+    let property: String
+    let isValue: FilterValue
+
+    enum CodingKeys: String, CodingKey {
+        case property
+        case isValue = "is"
+    }
+}
+
+enum FilterValue: Codable {
+    case string(String)
+    case int(Int)
+    case bool(Bool)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let stringValue = try? container.decode(String.self) {
+            self = .string(stringValue)
+        } else if let intValue = try? container.decode(Int.self) {
+            self = .int(intValue)
+        } else if let boolValue = try? container.decode(Bool.self) {
+            self = .bool(boolValue)
+        } else {
+            throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "FilterValue type not supported"))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        case .bool(let value):
+            try container.encode(value)
+        }
+    }
+}
+
+struct LabeledFilter: Codable {
+    let label: String
+    let filters: [FilterRule]
+}
+
+// フィルター設定をロードする関数
+func loadFilterSettings() -> [LabeledFilter] {
+    guard let iconCacheDir = ProcessInfo.processInfo.environment["ICON_CACHE_DIR"] else {
+        print("Warning: ICON_CACHE_DIR not set, using default filters")
+        return getDefaultFilters()
+    }
+
+    let filtersJsonPath = URL(fileURLWithPath: iconCacheDir).appendingPathComponent("filters.json")
+
+    guard FileManager.default.fileExists(atPath: filtersJsonPath.path) else {
+        print("Warning: filters.json not found, using default filters")
+        return getDefaultFilters()
+    }
+
+    do {
+        let data = try Data(contentsOf: filtersJsonPath)
+        let filters = try JSONDecoder().decode([LabeledFilter].self, from: data)
+        return filters
+    } catch {
+        print("Error loading filters: \(error), using default filters")
+        return getDefaultFilters()
+    }
+}
+
+// デフォルトフィルター（store.tsのデフォルト値に基づく）
+func getDefaultFilters() -> [LabeledFilter] {
+    return [
+        LabeledFilter(label: "オフスクリーンウィンドウを除外", filters: [
+            FilterRule(property: "kCGWindowIsOnscreen", isValue: .bool(false))
+        ]),
+        LabeledFilter(label: "名無しを除外", filters: [
+            FilterRule(property: "kCGWindowName", isValue: .string(""))
+        ]),
+        LabeledFilter(label: "Dockを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("Dock"))
+        ]),
+        LabeledFilter(label: "DockHelperを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("DockHelper"))
+        ]),
+        LabeledFilter(label: "スクリーンキャプチャを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("screencapture"))
+        ]),
+        LabeledFilter(label: "スクリーンショットアプリを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("スクリーンショット"))
+        ]),
+        LabeledFilter(label: "通知センターを除外", filters: [
+            FilterRule(property: "kCGWindowName", isValue: .string("Notification Center"))
+        ]),
+        LabeledFilter(label: "通知センター（日本語）を除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("通知センター"))
+        ]),
+        LabeledFilter(label: "Item-0を除外", filters: [
+            FilterRule(property: "kCGWindowName", isValue: .string("Item-0"))
+        ]),
+        LabeledFilter(label: "Window Serverを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("Window Server"))
+        ]),
+        LabeledFilter(label: "コントロールセンターを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("コントロールセンター"))
+        ]),
+        LabeledFilter(label: "Spotlightを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("Spotlight"))
+        ]),
+        LabeledFilter(label: "Google日本語入力を除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("GoogleJapaneseInputRenderer"))
+        ]),
+        LabeledFilter(label: "Taskbar.fmアプリを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("taskbar.fm"))
+        ]),
+        LabeledFilter(label: "Taskbar.fmウィンドウを除外", filters: [
+            FilterRule(property: "kCGWindowName", isValue: .string("taskbar.fm"))
+        ]),
+        LabeledFilter(label: "空のFinderウィンドウを除外", filters: [
+            FilterRule(property: "kCGWindowOwnerName", isValue: .string("Finder")),
+            FilterRule(property: "kCGWindowName", isValue: .string(""))
+        ])
+    ]
+}
+
+// ウィンドウをフィルタリングする関数（helper.tsのfilterProcesses関数に対応）
+func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
+    let labeledFilters = loadFilterSettings()
+
+    return windows.compactMap { window -> [String: AnyObject]? in
+        // サイズフィルター（従来通り）
+        if let bounds = window["kCGWindowBounds"] as? [String: AnyObject] {
+            if let height = bounds["Height"] as? NSNumber, height.intValue < 40 {
+                return nil
+            }
+            if let width = bounds["Width"] as? NSNumber, width.intValue < 40 {
+                return nil
+            }
+        }
+
+        // ラベル付きフィルターの処理
+        for labeledFilter in labeledFilters {
+            var matches: [Bool] = []
+
+            for filterRule in labeledFilter.filters {
+                // ウィンドウのプロパティが存在しない場合はスキップ
+                guard let windowValue = window[filterRule.property] else {
+                    matches.append(false)
+                    continue
+                }
+
+                // 特別処理：kCGWindowNameが空文字列の場合
+                if filterRule.property == "kCGWindowName" {
+                    if let windowName = windowValue as? String, windowName.isEmpty {
+                        if case .string(let filterString) = filterRule.isValue, filterString.isEmpty {
+                            if let ownerName = window["kCGWindowOwnerName"] as? String {
+                                print("\(ownerName) - \(windowName)")
+                            }
+                            matches.append(true)
+                            continue
+                        }
+                    }
+                }
+
+                // 値が一致するかチェック
+                let isMatch: Bool
+                switch filterRule.isValue {
+                case .string(let filterString):
+                    isMatch = (windowValue as? String) == filterString
+                case .int(let filterInt):
+                    isMatch = (windowValue as? NSNumber)?.intValue == filterInt
+                case .bool(let filterBool):
+                    isMatch = (windowValue as? NSNumber)?.boolValue == filterBool
+                }
+
+                matches.append(isMatch)
+            }
+
+            // すべての条件が一致した場合はフィルタリング対象（除外）
+            if !matches.isEmpty && matches.allSatisfy({ $0 }) {
+                return nil
+            }
+        }
+
+        return window
     }
 }
 
@@ -292,32 +482,27 @@ var windowListProvider: () -> [[String: AnyObject]] = {
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
 func getWindowInfoListData() -> Data? {
     let windowsListInfo = windowListProvider()
-    var windowInfoList: [[String: Any]] = []
+
+    // フィルタリングを適用
+    let filteredWindows = filterWindows(windowsListInfo)
 
     // 重複するPIDを削除してアイコン取得を効率化
     var uniquePids = Set<Int>()
     var pidToOwner: [Int: String] = [:]
 
-    for windowInfo in windowsListInfo {
-        var formattedWindowInfo: [String: Any] = [:]
-
-        for (key, value) in windowInfo {
-            formattedWindowInfo[key] = value
-        }
-
+    for windowInfo in filteredWindows {
         // PIDとOwnerの情報を収集（重複削除のため）
-        if let pid = formattedWindowInfo["kCGWindowOwnerPID"] as? Int,
-           let owner = formattedWindowInfo["kCGWindowOwnerName"] as? String,
+        if let pid = windowInfo["kCGWindowOwnerPID"] as? Int,
+           let owner = windowInfo["kCGWindowOwnerName"] as? String,
            !owner.isEmpty {
             uniquePids.insert(pid)
             pidToOwner[pid] = owner
         }
-    
     }
     
     // ProgressiveIconLoaderを使用してアイコンを順次取得・送信
     let iconLoader = ProgressiveIconLoader()
-    iconLoader.loadIconsProgressively(for: windowsListInfo, uniquePids: uniquePids, pidToOwner: pidToOwner)
+    iconLoader.loadIconsProgressively(for: filteredWindows, uniquePids: uniquePids, pidToOwner: pidToOwner)
     
     // この関数は最初のウィンドウリスト（アイコンなし）を返すだけ
     // アイコンは後で順次更新される
@@ -401,7 +586,7 @@ class WindowObserver {
 class ProcessManager {
     static let shared = ProcessManager()
     private var startTime = Date()
-    private var maxRuntime: TimeInterval = 300 // 5分の最大実行時間
+    var maxRuntime: TimeInterval = 300 // 5分の最大実行時間
     private var heartbeatTimer: Timer?
     private var lastActivity = Date()
     private var isRunning = false
@@ -485,7 +670,9 @@ guard arguments.count > 1 else {
     print("使用方法:")
     print("  grant         - スクリーンキャプチャのアクセス権限を要求")
     print("  debug         - 現在のウィンドウ情報をデバッグ出力")
-    print("  list          - ウィンドウ変更を監視してリアルタイム出力")
+    print("  list          - フィルター済みウィンドウ一覧をワンショット出力")
+    print("  exclude       - 除外されたウィンドウ一覧をワンショット出力")
+    print("  watch         - ウィンドウ変更を監視してリアルタイム出力")
     print("  check-permissions - 権限状態をJSON形式で出力")
     exit(1)
 }
@@ -515,21 +702,67 @@ case "debug":
     }
     
 case "list":
+    // ワンショットでフィルター済みウィンドウ一覧を出力
+    let windowsListInfo = windowListProvider()
+    let filteredWindows = filterWindows(windowsListInfo)
+
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: filteredWindows, options: [])
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(jsonData)
+        stdOut.write("\n".data(using: .utf8)!)
+        // 確実にバッファを flush してデータが即座に送信されるようにする
+        if #available(macOS 10.15, *) {
+            try? stdOut.synchronize()
+        }
+    } catch {
+        print("JSON serialization failed: \(error)")
+    }
+
+case "exclude":
+    // ワンショットで除外されたウィンドウ一覧を出力
+    let windowsListInfo = windowListProvider()
+    let filteredWindows = filterWindows(windowsListInfo)
+
+    // 除外されたウィンドウを特定（filteredWindowsに含まれていないもの）
+    let filteredWindowNumbers = Set(filteredWindows.compactMap { $0["kCGWindowNumber"] as? Int })
+    let excludedWindows = windowsListInfo.filter { window in
+        if let windowNumber = window["kCGWindowNumber"] as? Int {
+            return !filteredWindowNumbers.contains(windowNumber)
+        }
+        return false
+    }
+
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: excludedWindows, options: [])
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(jsonData)
+        stdOut.write("\n".data(using: .utf8)!)
+        // 確実にバッファを flush してデータが即座に送信されるようにする
+        if #available(macOS 10.15, *) {
+            try? stdOut.synchronize()
+        }
+    } catch {
+        print("JSON serialization failed: \(error)")
+    }
+
+case "watch":
     // シグナルハンドラの設定
     setupSignalHandlers()
-    
-    // プロセス管理の開始
+
+    // プロセス管理の開始（タイムアウトなし）
+    ProcessManager.shared.maxRuntime = .infinity
     ProcessManager.shared.startHeartbeat()
     ProcessManager.shared.recordActivity()
-    
+
     // ウィンドウの変更を監視
     print("ウィンドウ変更の監視を開始しました...")
     WindowObserver.shared.observeWindowChanges()
-    
+
     // 初回のウィンドウ情報を出力（ProgressiveIconLoader使用）
     _ = getWindowInfoListData()
     ProcessManager.shared.recordActivity()
-    
+
     // RunLoopを制限時間付きで実行
     let runLoop = RunLoop.main
     while ProcessManager.shared.shouldKeepRunning {
