@@ -89,17 +89,18 @@ async function processJSONLine(line: string): Promise<void> {
 }
 
 // フィルター設定をSwiftに渡すためにJSONファイルに書き出す関数
+// 他の構造体もくっついているとSwiftの型にパースするのがしんどい
 function exportFiltersToSwift(): void {
   try {
     const labeledFilters = store.get('labeledFilters', []) as LabeledFilters[]
 
-    // config.jsonの構造に合わせてlabeledFiltersオブジェクトを作成
+    // filter.jsonの構造に合わせてlabeledFiltersオブジェクトを作成
     const configForSwift = {
       labeledFilters: labeledFilters
     }
     const filtersJson = JSON.stringify(configForSwift, null, 2)
 
-    const filtersPath = path.join(iconCache.getCacheDirForSwift(), 'config.json')
+    const filtersPath = path.join(iconCache.getCacheDirForSwift(), 'filter.json')
     require('fs').writeFileSync(filtersPath, filtersJson, 'utf8')
 
     console.log(`Exported ${labeledFilters.length} filter groups to ${filtersPath}`)

@@ -1,5 +1,4 @@
 import ElectronStore from 'electron-store'
-import { migrateLegacyFiltersToLabeled, detectFilterFormat } from './filter-migration'
 
 type NumberFilter = {
   property:
@@ -43,57 +42,11 @@ export const store = new ElectronStore({
       store.set('footers', [])
     },
     '>=2.0.0': (store): void => {
-      // LegacyFilter形式からLabeledFilters形式への移行
-      try {
-        const existingFilters = store.get('filters', [])
-        const existingLabeledFilters = store.get('labeledFilters', [])
+      // ストアを完全に初期化（既存データを削除）
 
-        // すでにLabeledFilters形式が存在する場合はスキップ
-        if (existingLabeledFilters.length > 0) {
-          console.log('LabeledFilters already exist, skipping migration')
-          return
-        }
-
-        // フィルター形式を検出
-        const filterFormat = detectFilterFormat(existingFilters)
-
-        if (filterFormat === 'legacy' && existingFilters.length > 0) {
-          console.log('Migrating legacy filters to labeled format...')
-
-          // バックアップを作成
-          store.set('filters_backup_v1', existingFilters)
-
-          // LegacyFilter形式をLabeledFilters形式に変換
-          const labeledFilters = migrateLegacyFiltersToLabeled(existingFilters)
-
-          // 新しい形式で保存
-          store.set('labeledFilters', labeledFilters)
-
-          // 古い形式を削除
-          store.delete('filters')
-
-          console.log(`Successfully migrated ${labeledFilters.length} filter groups`)
-        } else if (filterFormat === 'unknown' && existingFilters.length > 0) {
-          console.warn('Unknown filter format detected, keeping original data')
-        } else {
-          console.log('No legacy filters to migrate')
-        }
-      } catch (error) {
-        console.error('Filter migration failed:', error)
-
-        // エラー時はバックアップから復元
-        // @ts-ignore - Migration backup key
-        const backup = store.get('filters_backup_v1')
-        if (backup) {
-          // @ts-ignore - Migration backup key
-          store.set('filters', backup)
-          // @ts-ignore - Migration backup key
-          store.delete('filters_backup_v1')
-          console.log('Restored filters from backup due to migration failure')
-        }
-
-        // エラーでもアプリの起動は継続
-      }
+      // ストアを完全にクリア
+      store.clear()
+      store.reset()
     }
   },
   defaults: {

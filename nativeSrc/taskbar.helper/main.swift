@@ -113,16 +113,16 @@ class FilterManager {
     private init() {
         // Application Support/taskbar.fm/config.json のパスを構築
         guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
-            if(debug) print("Warning: Could not access Application Support directory, using default filters")
+            print("Warning: Could not access Application Support directory, using default filters")
             filtersJsonPath = nil
             cachedFilters = getDefaultFilters()
             return
         }
 
         let taskbarDir = appSupportDir.appendingPathComponent("taskbar.fm")
-        filtersJsonPath = taskbarDir.appendingPathComponent("config.json")
+        filtersJsonPath = taskbarDir.appendingPathComponent("filter.json")
 
-        if (debug) print("Filter config path: \(filtersJsonPath?.path ?? "none")")
+        print("Filter config path: \(filtersJsonPath?.path ?? "none")")
         cachedFilters = loadFiltersFromFile()
         startFileMonitoring()
     }
@@ -194,7 +194,7 @@ class FilterManager {
         }
 
         fileMonitor?.resume()
-        if(debug) print("Started monitoring config.json for changes")
+        print("Started monitoring config.json for changes")
     }
 
     private func stopFileMonitoring() {
@@ -300,6 +300,14 @@ func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
                 return nil
             }
         }
+
+// NEXT PLAN:
+// 設定画面でフィルタを追加しても config.tsに書き込んでしまうので、 filter.jsonに書き込むようにする
+// ウィンドウ除外用のAPIが動作しているか確認
+// ウィンドウ一覧画面では 動作中と除外中のウィンドウを取得できるように
+// 権限のウィンドウがちょろちょろでるの辞める
+// アプリ再起動ボタンほしいかも
+
 
         // ラベル付きフィルターの処理
         for labeledFilter in labeledFilters {
