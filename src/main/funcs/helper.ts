@@ -92,9 +92,14 @@ async function processJSONLine(line: string): Promise<void> {
 function exportFiltersToSwift(): void {
   try {
     const labeledFilters = store.get('labeledFilters', []) as LabeledFilters[]
-    const filtersJson = JSON.stringify(labeledFilters, null, 2)
 
-    const filtersPath = path.join(iconCache.getCacheDirForSwift(), 'filters.json')
+    // config.jsonの構造に合わせてlabeledFiltersオブジェクトを作成
+    const configForSwift = {
+      labeledFilters: labeledFilters
+    }
+    const filtersJson = JSON.stringify(configForSwift, null, 2)
+
+    const filtersPath = path.join(iconCache.getCacheDirForSwift(), 'config.json')
     require('fs').writeFileSync(filtersPath, filtersJson, 'utf8')
 
     console.log(`Exported ${labeledFilters.length} filter groups to ${filtersPath}`)

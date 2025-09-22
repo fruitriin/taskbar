@@ -10,6 +10,8 @@ import ApplicationServices
 import Cocoa
 import CoreGraphics
 
+var debug = false
+
 // データ型についての extention
 extension NSBitmapImageRep {
     func png() -> Data? {
@@ -96,28 +98,137 @@ struct LabeledFilter: Codable {
     let filters: [FilterRule]
 }
 
-// フィルター設定をロードする関数
+struct ConfigFile: Codable {
+    let labeledFilters: [LabeledFilter]
+}
+
+// フィルター監視とキャッシュ管理
+class FilterManager {
+    static let shared = FilterManager()
+    private var cachedFilters: [LabeledFilter] = []
+    private var fileMonitor: DispatchSourceFileSystemObject?
+    private var lastModificationTime: Date?
+    private let filtersJsonPath: URL?
+
+    private init() {
+        // Application Support/taskbar.fm/config.json のパスを構築
+        guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            if(debug) print("Warning: Could not access Application Support directory, using default filters")
+            filtersJsonPath = nil
+            cachedFilters = getDefaultFilters()
+            return
+        }
+
+        let taskbarDir = appSupportDir.appendingPathComponent("taskbar.fm")
+        filtersJsonPath = taskbarDir.appendingPathComponent("config.json")
+
+        if (debug) print("Filter config path: \(filtersJsonPath?.path ?? "none")")
+        cachedFilters = loadFiltersFromFile()
+        startFileMonitoring()
+    }
+
+    deinit {
+        stopFileMonitoring()
+    }
+
+    func getFilters() -> [LabeledFilter] {
+        return cachedFilters
+    }
+
+    private func loadFiltersFromFile() -> [LabeledFilter] {
+        guard let filtersJsonPath = filtersJsonPath else {
+            return getDefaultFilters()
+        }
+
+        guard FileManager.default.fileExists(atPath: filtersJsonPath.path) else {
+            print("Warning: config.json not found, using default filters")
+            return getDefaultFilters()
+        }
+
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: filtersJsonPath.path)
+            let modificationTime = attributes[.modificationDate] as? Date
+
+            // ファイルが変更されていない場合はキャッシュを返す
+            if let lastTime = lastModificationTime, let currentTime = modificationTime, lastTime >= currentTime {
+                return cachedFilters
+            }
+
+            let data = try Data(contentsOf: filtersJsonPath)
+            let configFile = try JSONDecoder().decode(ConfigFile.self, from: data)
+            let filters = configFile.labeledFilters
+
+            lastModificationTime = modificationTime
+            print("Loaded \(filters.count) filter groups from \(filtersJsonPath.path)")
+
+            return filters
+        } catch {
+            print("Error loading filters: \(error), using default filters")
+            return getDefaultFilters()
+        }
+    }
+
+    private func startFileMonitoring() {
+        guard let filtersJsonPath = filtersJsonPath else { return }
+
+        let fileDescriptor = open(filtersJsonPath.path, O_EVTONLY)
+        guard fileDescriptor >= 0 else {
+            print("Warning: Could not open config.json for monitoring")
+            return
+        }
+
+        fileMonitor = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fileDescriptor,
+            eventMask: .write,
+            queue: DispatchQueue.global(qos: .utility)
+        )
+
+        fileMonitor?.setEventHandler { [weak self] in
+            DispatchQueue.main.async {
+                self?.reloadFilters()
+            }
+        }
+
+        fileMonitor?.setCancelHandler {
+            close(fileDescriptor)
+        }
+
+        fileMonitor?.resume()
+        if(debug) print("Started monitoring config.json for changes")
+    }
+
+    private func stopFileMonitoring() {
+        fileMonitor?.cancel()
+        fileMonitor = nil
+    }
+
+    private func reloadFilters() {
+        let newFilters = loadFiltersFromFile()
+        if !filtersEqual(cachedFilters, newFilters) {
+            cachedFilters = newFilters
+            print("Filter settings updated: \(cachedFilters.count) filter groups loaded")
+
+            // フィルター変更時にウィンドウリストを更新
+            NotificationCenter.default.post(name: NSNotification.Name("FiltersChanged"), object: nil)
+        }
+    }
+
+    private func filtersEqual(_ lhs: [LabeledFilter], _ rhs: [LabeledFilter]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+
+        for (index, leftFilter) in lhs.enumerated() {
+            let rightFilter = rhs[index]
+            if leftFilter.label != rightFilter.label || leftFilter.filters.count != rightFilter.filters.count {
+                return false
+            }
+        }
+        return true
+    }
+}
+
+// フィルター設定をロードする関数（後方互換性のため）
 func loadFilterSettings() -> [LabeledFilter] {
-    guard let iconCacheDir = ProcessInfo.processInfo.environment["ICON_CACHE_DIR"] else {
-        print("Warning: ICON_CACHE_DIR not set, using default filters")
-        return getDefaultFilters()
-    }
-
-    let filtersJsonPath = URL(fileURLWithPath: iconCacheDir).appendingPathComponent("filters.json")
-
-    guard FileManager.default.fileExists(atPath: filtersJsonPath.path) else {
-        print("Warning: filters.json not found, using default filters")
-        return getDefaultFilters()
-    }
-
-    do {
-        let data = try Data(contentsOf: filtersJsonPath)
-        let filters = try JSONDecoder().decode([LabeledFilter].self, from: data)
-        return filters
-    } catch {
-        print("Error loading filters: \(error), using default filters")
-        return getDefaultFilters()
-    }
+    return FilterManager.shared.getFilters()
 }
 
 // デフォルトフィルター（store.tsのデフォルト値に基づく）
@@ -534,7 +645,7 @@ class WindowObserver {
             name: NSWorkspace.didLaunchApplicationNotification,
             object: nil
         )
-        
+
         // アプリケーションが終了されたイベントを監視
         notificationCenter.addObserver(
             self,
@@ -542,12 +653,20 @@ class WindowObserver {
             name: NSWorkspace.didTerminateApplicationNotification,
             object: nil
         )
+
+        // フィルター変更の監視
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(filtersDidChange(notification:)),
+            name: NSNotification.Name("FiltersChanged"),
+            object: nil
+        )
     }
 
     @objc func windowDidChange(notification: NSNotification) {
         // アクティビティを記録
         ProcessManager.shared.recordActivity()
-        
+
         // 非同期処理を開始（タイムアウト付き）
         DispatchQueue.global(qos: .background).async {
             // わずかに遅延させて非同期処理を実行
@@ -558,18 +677,18 @@ class WindowObserver {
                 // タイムアウト付きでウィンドウ情報を取得
                 let semaphore = DispatchSemaphore(value: 0)
                 var windowData: Data?
-                
+
                 DispatchQueue.global(qos: .utility).async {
                     defer { semaphore.signal() }
                     windowData = getWindowInfoListData()
                 }
-                
+
                 // 2秒でタイムアウト
                 if semaphore.wait(timeout: .now() + 2.0) == .timedOut {
                     print("Window info retrieval timeout")
                     return
                 }
-                
+
                 DispatchQueue.main.async {
                     // getWindowInfoListDataは内部でProgressiveIconLoaderを使用して
                     // 自動的にstdoutに送信するため、ここでは呼び出すだけ
@@ -577,6 +696,16 @@ class WindowObserver {
                     ProcessManager.shared.recordActivity()
                 }
             }
+        }
+    }
+
+    @objc func filtersDidChange(notification: NSNotification) {
+        print("Filter settings changed, updating window list...")
+
+        // フィルター変更時は即座にウィンドウ情報を更新
+        DispatchQueue.global(qos: .utility).async {
+            _ = getWindowInfoListData()
+            ProcessManager.shared.recordActivity()
         }
     }
 }
