@@ -1,7 +1,9 @@
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import { appendFileSync } from 'fs'
 import { scheduleHelperRestart } from './helper'
+import console from 'riinlogger'
 
 class IconCacheStore {
   private iconCacheDir: string
@@ -14,6 +16,38 @@ class IconCacheStore {
 
     // ディレクトリが存在しない場合は作成
     this.ensureCacheDir()
+  }
+
+  // エラーログをファイルに書き出す関数
+  private writeIconLoadErrorLog(error: any, iconsJsonContent: string): void {
+    const logPath = path.join(__dirname, '../../logs', 'icon-load-errors.log')
+
+    const timestamp = new Date().toISOString()
+    const logEntry = `
+========================================
+Timestamp: ${timestamp}
+Error: ${error}
+Error Message: ${error.message || 'N/A'}
+Error Stack: ${error.stack || 'N/A'}
+icons.json Path: ${this.iconJsonPath}
+icons.json Content Length: ${iconsJsonContent.length} chars
+icons.json Content:
+${iconsJsonContent}
+========================================
+
+`
+    try {
+      // logsディレクトリが存在しない場合は作成
+      const logsDir = path.dirname(logPath)
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true })
+      }
+
+      appendFileSync(logPath, logEntry, 'utf8')
+      console.log(`Icon load error logged to ${logPath}`)
+    } catch (writeError) {
+      console.error('Failed to write icon load error log:', writeError)
+    }
   }
 
   private ensureCacheDir(): void {
@@ -48,6 +82,21 @@ class IconCacheStore {
       } catch (error) {
         retryCount++
         console.error(`Failed to load icons.json (attempt ${retryCount}/${maxRetries}):`, error)
+
+        // icons.jsonの内容を読み取ってログに記録
+        let iconsJsonContent = ''
+        try {
+          if (fs.existsSync(this.iconJsonPath)) {
+            iconsJsonContent = fs.readFileSync(this.iconJsonPath, 'utf8')
+          } else {
+            iconsJsonContent = '[File does not exist]'
+          }
+        } catch (readError) {
+          iconsJsonContent = `[Failed to read file: ${readError}]`
+        }
+
+        // エラーログをファイルに書き出し
+        this.writeIconLoadErrorLog(error, iconsJsonContent)
 
         if (retryCount >= maxRetries) {
           // 最大リトライ回数に達した場合、壊れたファイルをバックアップして削除
