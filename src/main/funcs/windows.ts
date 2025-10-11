@@ -2,6 +2,8 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { BrowserWindow, ipcMain, screen, Display } from 'electron'
 import { store } from '@/funcs/store'
+import { getExcludedProcesses } from './helper'
+import console from 'riinlogger'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
@@ -130,7 +132,7 @@ export function createOptionWindow(): void {
 }
 
 export let fullWindowListWindow: BrowserWindow
-export function createFullWindowListWindow(): void {
+export async function createFullWindowListWindow(): Promise<void> {
   // すでにウィンドウを開いているならそれをアクティブにする
   if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
     fullWindowListWindow.show()
@@ -147,6 +149,12 @@ export function createFullWindowListWindow(): void {
       contextIsolation: false
     }
   })
+  fullWindowListWindow.webContents.send(
+    'catchExcludeWindow',
+    setTimeout(async () => {
+      JSON.stringify(await getExcludedProcesses())
+    }, 2000)
+  )
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     fullWindowListWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/fullWindowList.html')
   } else {

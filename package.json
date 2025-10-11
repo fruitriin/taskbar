@@ -100,6 +100,7 @@
     "fast-sort": "^3.4.0",
     "less": "^4.2.0",
     "pinia": "^2.1.7",
+    "riinlogger": "file:../RiinLogger",
     "vitest": "^3.2.4",
     "vue-router": "^4.2.5"
   },

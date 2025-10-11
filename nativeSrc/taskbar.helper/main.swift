@@ -314,16 +314,11 @@ func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
             var matches: [Bool] = []
 
             for filterRule in labeledFilter.filters {
-                // ウィンドウのプロパティが存在しない場合はスキップ
-                guard let windowValue = window[filterRule.property] else {
-                    matches.append(false)
-                    continue
-                }
-
-                // 特別処理：kCGWindowNameが空文字列の場合
+                // 特別処理：kCGWindowNameが空文字列または存在しない場合
                 if filterRule.property == "kCGWindowName" {
-                    if let windowName = windowValue as? String, windowName.isEmpty {
-                        if case .string(let filterString) = filterRule.isValue, filterString.isEmpty {
+                    if case .string(let filterString) = filterRule.isValue, filterString.isEmpty {
+                        let windowName = window["kCGWindowName"] as? String ?? ""
+                        if windowName.isEmpty {
                             if let ownerName = window["kCGWindowOwnerName"] as? String {
                                 // print("\(ownerName) - \(windowName)")
                             }
@@ -331,6 +326,12 @@ func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
                             continue
                         }
                     }
+                }
+
+                // ウィンドウのプロパティが存在しない場合はスキップ
+                guard let windowValue = window[filterRule.property] else {
+                    matches.append(false)
+                    continue
                 }
 
                 // 値が一致するかチェック

@@ -1,7 +1,6 @@
 <template>
   <div class="full-window-list">
     <div class="h1-title">ウィンドウ一覧 - フィルター設定補助</div>
-
     <div class="controls">
       <div class="control-group">
         <div class="field">
@@ -42,8 +41,8 @@
                   <i class="fas fa-eye-slash"></i>
                 </span>
                 <span class="button-text">除外済み</span>
-                <span v-if="allProcessesData" class="tag is-light ml-1">{{
-                  allProcessesData.excluded.length
+                <span v-if="excludedProcess.length > 0" class="tag is-light ml-1">{{
+                  excludedProcess.length
                 }}</span>
               </button>
             </div>
@@ -282,6 +281,7 @@ type MacWindow = {
 export default {
   data(): {
     allProcessesData: { all: WindowInfo[]; filtered: WindowInfo[]; excluded: WindowInfo[] }
+    excludedProcess: WindowInfo[]
     displayMode: 'filtered' | 'all' | 'excluded'
     searchQuery: string
     sortField: string
@@ -292,7 +292,8 @@ export default {
     notification: string | null
   } {
     return {
-      allProcessesData: null,
+      allProcessesData: { all: [], filtered: [], excluded: [] },
+      excludedProcess: [],
       displayMode: 'filtered',
       searchQuery: '',
       sortField: 'owner',
@@ -316,8 +317,8 @@ export default {
           console.log('全プロセス表示モード:', this.allProcessesData.all.length)
           return this.allProcessesData.all
         case 'excluded':
-          console.log('除外プロセス表示モード:', this.allProcessesData.excluded.length)
-          return this.allProcessesData.excluded
+          console.log('除外プロセス表示モード:', this.excludedProcess.length)
+          return this.excludedProcess
         case 'filtered':
         default:
           console.log('フィルター済み表示モード:', this.allProcessesData.filtered.length)
@@ -415,26 +416,33 @@ export default {
       return pages
     }
   },
-  async mounted(): void {
+  async mounted(): Promise<void> {
     // IPCイベントリスナーを追加
     Electron.listen('allProcesses', this.handleAllProcessesData)
 
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
 
-    this.allProcessesData.excluded = (await Electron.send(
-      'getExcludeWindows'
-    )) as unknown as WindowInfo[]
+    Electron.listen('catchExcludeWindow', (res: MacWindow[]) => {
+      console.log('Received excluded processes:', res)
+      this.excludedProcess = res.map((macWindow, index) =>
+        this.convertMacWindowToWindowInfo(macWindow, index)
+      )
+    })
+
+    // 初期読み込み時に除外プロセスを取得
+    await Electron.send('getExcludeWindows')
   },
   beforeUnmount(): void {
     document.removeEventListener('click', this.handleOutsideClick)
     // IPCイベントリスナーを削除
     window.electron.ipcRenderer.removeAllListeners('allProcesses')
+    window.electron.ipcRenderer.removeAllListeners('catchExcludeWindow')
   },
   methods: {
     handleAllProcessesData(
       _event: any,
-      data: { all: MacWindow[]; filtered: MacWindow[]; excluded: MacWindow[] }
+      data: { all: MacWindow[]; filtered: MacWindow[]; excluded?: MacWindow[] }
     ): void {
       // 全プロセスデータを変換して保存
       this.allProcessesData = {
@@ -444,9 +452,9 @@ export default {
         filtered: data.filtered.map((macWindow, index) =>
           this.convertMacWindowToWindowInfo(macWindow, index)
         ),
-        excluded: data.excluded.map((macWindow, index) =>
+        excluded: data.excluded ? data.excluded.map((macWindow, index) =>
           this.convertMacWindowToWindowInfo(macWindow, index)
-        )
+        ) : []
       }
     },
     convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {

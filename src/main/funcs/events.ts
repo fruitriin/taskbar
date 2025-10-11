@@ -20,6 +20,7 @@ import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
 import { applyProcessChange } from '@/funcs/helper'
 import { iconCache } from '@/funcs/icon-cache'
+import console from 'riinlogger'
 
 export function setEventHandlers(): void {
   ipcMain.on('activeWindow', (_event, windowId) => {
@@ -106,6 +107,29 @@ export function setEventHandlers(): void {
   // 除外プロセスの取得
   ipcMain.handle('getExcludeWindows', async () => {
     await getExcludedProcesses()
+
+    // 除外プロセスが取得されたらFullWindowListに送信
+    const { fullWindowListWindow } = require('@/funcs/windows')
+    const { excludedProcesses } = require('@/funcs/helper')
+    const { iconCache } = require('@/funcs/icon-cache')
+
+    if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
+      // アイコンキャッシュを取得
+      const icons = iconCache.loadIcons()
+
+      // 除外プロセスにアイコンを設定
+      const excludedProcessesWithIcons = excludedProcesses.map((proc: any) => {
+        if (!proc.appIcon) {
+          const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+          if (icons[owner]) {
+            return { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
+          }
+        }
+        return proc
+      })
+
+      fullWindowListWindow.webContents.send('catchExcludeWindow', excludedProcessesWithIcons)
+    }
   })
 
   // ロゴを右クリックしたときのコンテキストメニュー

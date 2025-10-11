@@ -2,6 +2,8 @@ import { app } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
+import console from 'riinlogger'
+import { appendFileSync } from 'fs'
 
 // ここでいうキャッシュはswiftからみた場合なのでTypeScript的には頭の良い実装は特にないかも
 function loadIconCache(): Record<string, string> {
@@ -31,10 +33,9 @@ async function handleIconUpdate(iconUpdateData: {
   icons: Record<string, string>
   timestamp: string
 }): Promise<void> {
-  console.log(`Received icon update: ${Object.keys(iconUpdateData.icons).length} icons`)
-
   // 既存のプロセスリストにアイコンを適用
   updateProcessIcons(iconUpdateData.icons)
+  console.log(`Received icon update: ${Object.keys(iconUpdateData.icons).length} icons`)
 
   // レンダラープロセスに更新を通知
   for (const taskbarKey in taskbars) {
@@ -64,6 +65,39 @@ function updateProcessIcons(icons: Record<string, string>): void {
   }
 }
 
+// エラーログをファイルに書き出す関数
+function writeErrorLog(error: any, line: string): void {
+  //   if (app.isPackaged) {
+  //   // packaged (e.g., using electron-builder)
+  //   binaryPath = path.join(process.resourcesPath, 'TaskbarHelper')
+  // } else {
+  //   // development
+  //   binaryPath = path.join(__dirname, '../../resources', 'TaskbarHelper')
+  // }
+  // path.join(app.getPath('appData'), 'taskbar.fm', 'helper-errors.log')
+
+  const logPath = path.join(__dirname, '../../logs', 'helper-errors.log')
+
+  const timestamp = new Date().toISOString()
+  const logEntry = `
+========================================
+Timestamp: ${timestamp}
+Error: ${error}
+Line length: ${line.length}
+Original line: ${line}
+First 100 chars: ${line.substring(0, 100)}
+Last 100 chars: ${line.substring(Math.max(0, line.length - 100))}
+========================================
+
+`
+  try {
+    appendFileSync(logPath, logEntry, 'utf8')
+    console.log(`Error logged to ${logPath}`)
+  } catch (writeError) {
+    console.error('Failed to write error log:', writeError)
+  }
+}
+
 // JSONラインを処理する関数
 async function processJSONLine(line: string): Promise<void> {
   try {
@@ -82,6 +116,9 @@ async function processJSONLine(line: string): Promise<void> {
     console.log('Line length:', line.length)
     console.log('First 100 chars:', line.substring(0, 100))
     console.log('Last 100 chars:', line.substring(Math.max(0, line.length - 100)))
+
+    // エラーログをファイルに書き出し
+    writeErrorLog(parseError, line)
 
     // JSONパースエラーが発生した場合、ヘルパーの再起動をスケジュール
     console.log('JSON parse error detected, scheduling helper restart in 3 seconds')
@@ -190,11 +227,29 @@ export async function getAndSubmitProcesses(): Promise<void> {
       // 完全なJSONライン（改行で終わる）のみを処理
       let newlineIndex = rawData.indexOf('\n')
       while (newlineIndex !== -1) {
+        //  先頭から改行までを取得
         const line = rawData.substring(0, newlineIndex)
-        rawData = rawData.substring(newlineIndex + 1)
+        const trimmedLine = line.trim()
 
-        if (line.trim()) {
-          await processJSONLine(line.trim())
+        // JSONとして妥当な形式かチェック（{ または [ で始まり、} または ] で終わる）
+        const isValidJSON =
+          trimmedLine &&
+          ((trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) ||
+            (trimmedLine.startsWith('[') && trimmedLine.endsWith(']')))
+
+        if (isValidJSON) {
+          //  処理済み部分を削除
+          rawData = rawData.substring(newlineIndex + 1)
+          await processJSONLine(trimmedLine)
+        } else {
+          // 不正な形式の場合はログに記録して次の改行を探す
+          if (trimmedLine) {
+            console.warn(
+              'Invalid JSON format detected, skipping line:',
+              trimmedLine.substring(0, 50)
+            )
+          }
+          rawData = rawData.substring(newlineIndex + 1)
         }
 
         newlineIndex = rawData.indexOf('\n')
@@ -422,11 +477,23 @@ export async function applyProcessChange(newProcesses: typeof macWindowProcesses
     }
   }
 
-  // FullWindowListウィンドウには全プロセス情報を送信（除外プロセスは空配列）
+  // 除外プロセスにもアイコンを設定
+  const excludedProcessesWithIcons = excludedProcesses.map((proc) => {
+    if (!proc.appIcon) {
+      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+      if (icons[owner]) {
+        return { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
+      }
+    }
+    return proc
+  })
+
+  // FullWindowListウィンドウには全プロセス情報を送信
   if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
     fullWindowListWindow.webContents.send('allProcesses', {
       all: allProcessesWithIcons,
-      filtered: macWindowProcesses
+      filtered: macWindowProcesses,
+      excluded: excludedProcessesWithIcons
     })
   }
 }

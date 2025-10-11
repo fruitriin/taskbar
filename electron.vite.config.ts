@@ -7,6 +7,7 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      sourcemap: true,
       watch: {},
       rollupOptions: {
         input: {
@@ -23,6 +24,7 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      sourcemap: true,
       watch: {},
       rollupOptions: {
         input: {
@@ -38,6 +40,7 @@ export default defineConfig({
       port: 6234
     },
     build: {
+      sourcemap: true,
       watch: {},
       rollupOptions: {
         input: {
