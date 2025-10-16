@@ -563,28 +563,29 @@ class ProgressiveIconLoader {
     private func saveIconsToCache(_ icons: [String: String]) {
         let fileManager = FileManager.default
         let userDataDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent("taskbar.fm")
-        
+
         if !fileManager.fileExists(atPath: userDataDir.path) {
             try? fileManager.createDirectory(at: userDataDir, withIntermediateDirectories: true, attributes: nil)
         }
-        
+
         // 既存のアイコンキャッシュを読み込んで更新
         let iconJsonPath = userDataDir.appendingPathComponent("icons.json")
         var existingIcons: [String: String] = [:]
-        
+
         if fileManager.fileExists(atPath: iconJsonPath.path) {
             if let existingData = try? Data(contentsOf: iconJsonPath),
                let existing = try? JSONSerialization.jsonObject(with: existingData) as? [String: String] {
                 existingIcons = existing
             }
         }
-        
+
         // 新しいアイコンをマージ
         existingIcons.merge(icons) { _, new in new }
-        
-        // JSONとして保存
+
+        // JSONとして保存（アトミックに書き込みしないと書き出したjsonファイルが破損することがある）
+        // 書き出しが重複すると片方は失われるが許容する
         if let iconJsonData = try? JSONSerialization.data(withJSONObject: existingIcons, options: []) {
-            try? iconJsonData.write(to: iconJsonPath)
+            try? iconJsonData.write(to: iconJsonPath, options: .atomic)
         }
     }
 }
