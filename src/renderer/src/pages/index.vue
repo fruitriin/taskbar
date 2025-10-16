@@ -10,6 +10,10 @@
       <div v-if="visibleWindows.length == 0" class="helper-restart">
         <button class="button is-small" @click="restartHelper()">Helper再起動</button>
       </div>
+      <div v-if="visibleWindows.length == 0" style="width: 100%">
+        What display call this bar: {{ displayInfo }}
+        <button @click="dumpTaskbarInfo" class="button">dumpTaskbarInfo</button>
+      </div>
     </div>
     <div
       class="tasks"
@@ -60,6 +64,7 @@
   <div style="height: calc(100% - 56px); overflow-y: auto">
     <hr />
     <pre>{{ options }}</pre>
+    <pre>{{ displayInfo }}</pre>
 
     <h2 class="block">見えているもの</h2>
     <Debug v-if="debug" :windows="visibleWindows" />
@@ -206,6 +211,9 @@ export default defineComponent({
     test(ev): void {
       Electron.send('contextTask', ev)
       console.log('test')
+    },
+    dumpTaskbarInfo(): void {
+      Electron.send('dumpTaskbarInfo')
     },
     grant(): void {
       Electron.send('grantPermission')

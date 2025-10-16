@@ -33,6 +33,15 @@ export function setEventHandlers(): void {
     createFullWindowListWindow()
   })
 
+  ipcMain.on('dumpTaskbarInfo', () => {
+    console.log({ taskbars: Object.keys(taskbars) })
+    console.log({
+      allScreens: screen.getAllDisplays().map((d) => {
+        return { id: d.id, label: d.label }
+      })
+    })
+  })
+
   ipcMain.on('windowReady', () => {
     // ウィンドウの準備ができたらプロセスリストを破棄
     // ホットリロードフロントのdataが破棄されても
