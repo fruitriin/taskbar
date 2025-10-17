@@ -1,11 +1,6 @@
 // レンダラープロセスからのメッセージを受信する
-import {
-  createOptionWindow,
-  createFullWindowListWindow,
-  createWindow,
-  taskbars,
-  windowPosition
-} from '@/funcs/windows'
+import { createWindow, taskbars, windowPosition, initializeDisplayEvents } from '@/funcs/windows'
+import { createOptionWindow, createFullWindowListWindow } from '@/funcs/optionWindows'
 import {
   activateWindow,
   closeWindow,
@@ -100,6 +95,7 @@ export function setEventHandlers(): void {
     })
 
   ipcMain.on('restartHelper', (_event, delay?: number) => {
+    initializeDisplayEvents()
     scheduleHelperRestart(delay)
   })
 

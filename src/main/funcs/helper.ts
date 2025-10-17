@@ -501,7 +501,8 @@ export async function applyProcessChange(newProcesses: typeof macWindowProcesses
 import { escape } from 'html-escaper'
 import { store } from './store'
 import type { LabeledFilters } from './store'
-import { taskbars, fullWindowListWindow } from './windows'
+import { taskbars } from './windows'
+import { fullWindowListWindow } from './optionWindows'
 
 // ウィンドウをアクティブにする関数
 export function activateWindow(window: MacWindow): void {

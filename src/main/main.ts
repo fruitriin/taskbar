@@ -1,12 +1,10 @@
 import { app, BrowserWindow, powerMonitor, globalShortcut } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-import {
-  createAllWindows,
-  initializeDisplayEvents,
-  createFullWindowListWindow
-} from '@/funcs/windows'
+import { createAllWindows, initializeDisplayEvents } from '@/funcs/windows'
+import { createFullWindowListWindow } from '@/funcs/optionWindows'
 import { setEventHandlers } from '@/funcs/events'
+
 import {
   getAndSubmitProcesses,
   restartHelperAfterSleep,
