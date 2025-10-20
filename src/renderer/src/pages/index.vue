@@ -12,7 +12,7 @@
       </div>
       <div v-if="visibleWindows.length == 0" style="width: 100%">
         What display call this bar: {{ displayInfo }}
-        <button @click="dumpTaskbarInfo" class="button">dumpTaskbarInfo</button>
+        <button class="button" @click="dumpTaskbarInfo">dumpTaskbarInfo</button>
       </div>
     </div>
     <div

@@ -12,7 +12,7 @@ type Taskbar = {
   displayId: number
   browserWindow: BrowserWindow
 }
-export let taskbars: Record<BrowserWindow['id'], Taskbar> = {}
+export const taskbars: Record<BrowserWindow['id'], Taskbar> = {}
 export type Taskbars = typeof taskbars
 
 // チェック項目

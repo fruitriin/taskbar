@@ -1,7 +1,8 @@
 {
   "files": [],
   "references": [{ "path": "src/main/tsconfig.node.json" }, { "path": "src/renderer/tsconfig.web.json" }],
-  "include": [    "src/renderer/typed-router.d.ts"],
+  "include": [  "src/renderer",  "src/renderer/typed-router.d.ts"],
+  "exclude": ["**/node_modules", "**/.*/"],
   "compilerOptions": {
     "esModuleInterop": true,
   }

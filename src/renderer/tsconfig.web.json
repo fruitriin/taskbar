@@ -9,6 +9,7 @@
     "./typed-router.d.ts",
     "../main/type.d.ts"
   ],
+  "exclude": ["**/node_modules", "**/.*/"],
   "compilerOptions": {
     "composite": true,
     "esModuleInterop": true,

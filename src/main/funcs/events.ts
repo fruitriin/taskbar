@@ -18,7 +18,7 @@ import { applyProcessChange } from '@/funcs/helper'
 import { iconCache } from '@/funcs/icon-cache'
 // import console from 'riinlogger'
 
-export function dumpTaskbarInfo(caller: string) {
+export function dumpTaskbarInfo(caller: string): void {
   if (!is.dev) return
   try {
     console.log({

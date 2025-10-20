@@ -2,7 +2,7 @@ import { app as App } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
-// import console from 'riinlogger'
+import console from 'riinlogger'
 import { appendFileSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
 
@@ -26,7 +26,7 @@ let helperRestartTimeout: NodeJS.Timeout | null = null
 let currentHelperProcess: any = null
 
 export const macWindowProcesses: MacWindow[] = []
-export let excludedProcesses: MacWindow[] = []
+export const excludedProcesses: MacWindow[] = []
 
 // アイコン更新通知を処理する関数
 async function handleIconUpdate(iconUpdateData: {
@@ -201,6 +201,7 @@ export async function getExcludedProcesses(): Promise<void> {
 }
 
 export async function getAndSubmitProcesses(): Promise<void> {
+  console.log('getAndSubmitProcess')
   if (isHelperRunning) {
     console.log('TaskbarHelper is already running, skipping start')
     return

@@ -452,9 +452,11 @@ export default {
         filtered: data.filtered.map((macWindow, index) =>
           this.convertMacWindowToWindowInfo(macWindow, index)
         ),
-        excluded: data.excluded ? data.excluded.map((macWindow, index) =>
-          this.convertMacWindowToWindowInfo(macWindow, index)
-        ) : []
+        excluded: data.excluded
+          ? data.excluded.map((macWindow, index) =>
+              this.convertMacWindowToWindowInfo(macWindow, index)
+            )
+          : []
       }
     },
     convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
