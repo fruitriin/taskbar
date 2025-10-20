@@ -2,8 +2,9 @@ import { app } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
-import console from 'riinlogger'
+// import console from 'riinlogger'
 import { appendFileSync } from 'fs'
+import { is } from '@electron-toolkit/utils'
 
 // ここでいうキャッシュはswiftからみた場合なのでTypeScript的には頭の良い実装は特にないかも
 function loadIconCache(): Record<string, string> {
@@ -35,12 +36,13 @@ async function handleIconUpdate(iconUpdateData: {
 }): Promise<void> {
   // 既存のプロセスリストにアイコンを適用
   updateProcessIcons(iconUpdateData.icons)
-  console.log(`Received icon update: ${Object.keys(iconUpdateData.icons).length} icons`)
+  // FIXME: handleIconUpdateが呼び出される回数が頻繁すぎる気がする
+  // console.log(`Received icon update: ${Object.keys(iconUpdateData.icons).length} icons`)
 
   // レンダラープロセスに更新を通知
   for (const taskbarKey in taskbars) {
-    if (!taskbars[taskbarKey].isDestroyed()) {
-      taskbars[taskbarKey].webContents.send('iconUpdate', iconUpdateData.icons)
+    if (!taskbars[taskbarKey].browserWindow.isDestroyed()) {
+      taskbars[taskbarKey].browserWindow.webContents.send('iconUpdate', iconUpdateData.icons)
     }
   }
 
@@ -67,6 +69,7 @@ function updateProcessIcons(icons: Record<string, string>): void {
 
 // エラーログをファイルに書き出す関数
 function writeErrorLog(error: any, line: string): void {
+  if (!is.dev) return
   //   if (app.isPackaged) {
   //   // packaged (e.g., using electron-builder)
   //   binaryPath = path.join(process.resourcesPath, 'TaskbarHelper')
@@ -239,6 +242,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
 
         if (isValidJSON) {
           //  処理済み部分を削除
+          // FIXME: 始まりがJSONではない可能性について考慮する？
           rawData = rawData.substring(newlineIndex + 1)
           await processJSONLine(trimmedLine)
         } else {
@@ -248,6 +252,7 @@ export async function getAndSubmitProcesses(): Promise<void> {
               'Invalid JSON format detected, skipping line:',
               trimmedLine.substring(0, 50)
             )
+            writeErrorLog('Invalid JSON format detected, skipping line:', trimmedLine)
           }
           rawData = rawData.substring(newlineIndex + 1)
         }
@@ -472,8 +477,8 @@ export async function applyProcessChange(newProcesses: typeof macWindowProcesses
 
   // タスクバーに更新されたプロセスリストを送信
   for (const taskbarKey in taskbars) {
-    if (!taskbars[taskbarKey].isDestroyed()) {
-      taskbars[taskbarKey].webContents.send('process', macWindowProcesses)
+    if (!taskbars[taskbarKey].browserWindow.isDestroyed()) {
+      taskbars[taskbarKey].browserWindow.webContents.send('process', macWindowProcesses)
     }
   }
 

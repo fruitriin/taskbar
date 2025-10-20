@@ -3,7 +3,8 @@ import path from 'path'
 import fs from 'fs'
 import { appendFileSync } from 'fs'
 import { scheduleHelperRestart } from './helper'
-import console from 'riinlogger'
+// import console from 'riinlogger'
+import { is } from '@electron-toolkit/utils'
 
 class IconCacheStore {
   private iconCacheDir: string
@@ -20,6 +21,7 @@ class IconCacheStore {
 
   // エラーログをファイルに書き出す関数
   private writeIconLoadErrorLog(error: any, iconsJsonContent: string): void {
+    if (!is.dev) return
     const logPath = path.join(__dirname, '../../logs', 'icon-load-errors.log')
 
     const timestamp = new Date().toISOString()

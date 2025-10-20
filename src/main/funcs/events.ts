@@ -1,5 +1,5 @@
 // レンダラープロセスからのメッセージを受信する
-import { createWindow, taskbars, windowPosition, initializeDisplayEvents } from '@/funcs/windows'
+import { taskbars, windowPosition, recreateAllWindows } from '@/funcs/windows'
 import { createOptionWindow, createFullWindowListWindow } from '@/funcs/optionWindows'
 import {
   activateWindow,
@@ -10,14 +10,40 @@ import {
   scheduleHelperRestart,
   getExcludedProcesses
 } from '@/funcs/helper'
-import { app, ipcMain, screen, BrowserWindow } from 'electron'
+import { app, ipcMain, screen as Screen, BrowserWindow } from 'electron'
+import { is } from '@electron-toolkit/utils'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
 import { applyProcessChange } from '@/funcs/helper'
 import { iconCache } from '@/funcs/icon-cache'
-import console from 'riinlogger'
+// import console from 'riinlogger'
+
+export function dumpTaskbarInfo(caller: string) {
+  if (!is.dev) return
+  try {
+    console.log({
+      caller,
+      taskbars: taskbars,
+      browserWindows: BrowserWindow.getAllWindows().map((b) => {
+        return {
+          browserId: b.id
+        }
+      }),
+      allScreens: Screen.getAllDisplays().map((d) => {
+        return { id: d.id, label: d.label }
+      })
+    })
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 export function setEventHandlers(): void {
+  // 各種ディスプレイイベントで全ウィンドウを作り直し
+  Screen.on('display-removed', () => recreateAllWindows('display-removed'))
+  Screen.on('display-added', () => recreateAllWindows('display-added'))
+  Screen.on('display-metrics-changed', () => recreateAllWindows('display-metrics-changed'))
+
   ipcMain.on('activeWindow', (_event, windowId) => {
     activateWindow(windowId)
   })
@@ -29,12 +55,7 @@ export function setEventHandlers(): void {
   })
 
   ipcMain.on('dumpTaskbarInfo', () => {
-    console.log({ taskbars: Object.keys(taskbars) })
-    console.log({
-      allScreens: screen.getAllDisplays().map((d) => {
-        return { id: d.id, label: d.label }
-      })
-    })
+    dumpTaskbarInfo('ui event')
   })
 
   ipcMain.on('windowReady', () => {
@@ -49,18 +70,20 @@ export function setEventHandlers(): void {
 
   ipcMain.on('setOptions', (_event, value: Options) => {
     const layout = store.get('options.layout')
-    const displays = screen.getAllDisplays()
+    const displays = Screen.getAllDisplays()
 
     store.set('options', value)
-    for (const displayId in taskbars) {
-      if (!taskbars[displayId].isDestroyed()) {
-        taskbars[displayId].webContents.send('updateOptions', value)
+    for (const browserId in taskbars) {
+      if (!taskbars[browserId].browserWindow.isDestroyed()) {
+        taskbars[browserId].browserWindow.webContents.send('updateOptions', value)
 
         // メインプロセスに作用するものを別途処理
         if (layout != value.layout) {
-          const targetDisplay = displays.find((display) => display.id.toString() === displayId)
+          const targetDisplay = displays.find(
+            (display) => display.id === taskbars[browserId].displayId
+          )
           if (targetDisplay)
-            taskbars[displayId].setBounds(windowPosition(targetDisplay, value.layout))
+            taskbars[browserId].browserWindow.setBounds(windowPosition(targetDisplay, value.layout))
         }
       }
     }
@@ -95,7 +118,7 @@ export function setEventHandlers(): void {
     })
 
   ipcMain.on('restartHelper', (_event, delay?: number) => {
-    initializeDisplayEvents()
+    recreateAllWindows('restartHelper')
     scheduleHelperRestart(delay)
   })
 
@@ -182,7 +205,7 @@ export function setEventHandlers(): void {
       })
     )
 
-    const cursorPoint = screen.getCursorScreenPoint()
+    const cursorPoint = Screen.getCursorScreenPoint()
     menu.popup({ x: cursorPoint.x, y: cursorPoint.y })
   })
 
@@ -219,8 +242,8 @@ export function setEventHandlers(): void {
     let clickedTaskbar: BrowserWindow | undefined
     for (const taskbarId in taskbars) {
       const taskbar = taskbars[taskbarId]
-      const bounds = taskbar.getBounds()
-      const cursorPos = screen.getCursorScreenPoint()
+      const bounds = taskbar.browserWindow.getBounds()
+      const cursorPos = Screen.getCursorScreenPoint()
 
       // タスクバーの範囲内にマウスカーソルがあるか確認
       if (
@@ -229,13 +252,13 @@ export function setEventHandlers(): void {
         cursorPos.y >= bounds.y &&
         cursorPos.y <= bounds.y + bounds.height
       ) {
-        clickedTaskbar = taskbar
+        clickedTaskbar = taskbar.browserWindow
         break
       }
     }
 
-    const cursorPoint = screen.getCursorScreenPoint()
-    const display = screen.getDisplayNearestPoint(cursorPoint)
+    const cursorPoint = Screen.getCursorScreenPoint()
+    const display = Screen.getDisplayNearestPoint(cursorPoint)
     const mousePosition = {
       x: cursorPoint.x + display.bounds.x,
       y: cursorPoint.y - display.bounds.y
@@ -245,14 +268,6 @@ export function setEventHandlers(): void {
       window: clickedTaskbar,
       ...mousePosition
     })
-  })
-  screen.on('display-added', (_, newDisplay) => {
-    createWindow(newDisplay)
-  })
-  screen.on('display-removed', (_, oldDisplay) => {
-    if (taskbars[oldDisplay.id]) {
-      taskbars[oldDisplay.id].close()
-    }
   })
 }
 
@@ -281,8 +296,8 @@ function moveAreaMenu(kCGWindowOwnerName: string, area: 'headers' | 'footers'): 
 }
 function updateOptions(): void {
   for (const taskbarsKey in taskbars) {
-    if (!taskbars[taskbarsKey].isDestroyed()) {
-      taskbars[taskbarsKey].webContents.send('updateOptions', store.store.options)
+    if (!taskbars[taskbarsKey].browserWindow.isDestroyed()) {
+      taskbars[taskbarsKey].browserWindow.webContents.send('updateOptions', store.store.options)
     }
   }
 }

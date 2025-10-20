@@ -2,53 +2,65 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { BrowserWindow, ipcMain, screen, Display } from 'electron'
 import { store } from '@/funcs/store'
-import console from 'riinlogger'
+// import console from 'riinlogger'
+import { dumpTaskbarInfo } from '@/funcs/events'
 
 type LayoutType = 'right' | 'left' | 'bottom'
 
-type Taskbar = BrowserWindow
-type displayId = Display['id']
-export const taskbars: Record<displayId, Taskbar> = {}
+type Taskbar = {
+  browserWindowId: number
+  displayId: number
+  browserWindow: BrowserWindow
+}
+export let taskbars: Record<BrowserWindow['id'], Taskbar> = {}
 export type Taskbars = typeof taskbars
 
-export function initializeDisplayEvents(): void {
-  // ディスプレイ構成が変わったら全部作り直し
-  const recreateAllWindows = (): void => {
-    // 既存のウィンドウを全て閉じる
-    for (const key in taskbars) {
-      // think: このコード追加すれば解決するだろうか？
-      // taskbars[key].close()
-      taskbars[key].destroy()
-      delete taskbars[key]
-    }
-    const allBrowserWindow = BrowserWindow.getAllWindows()
-    allBrowserWindow.forEach((window) => {
-      window.close()
-    })
-    // 新しくウィンドウを作り直す
-    createAllWindows()
-  }
+// チェック項目
+// 解像度を変えた
+// モニターを増やした
+// モニターを減らした
+// Macがスリープした
+// Macを長時間放置した = スタンバイ（なぜかモニターの電源が落ちると？変なモニターを識別する）
+//
+// Macの3種類のスリープモード
+//  スリープ: hibernatemode=0,
+//  セーフスリープ: hibernatemode=3
+// ディープスリープ: hibernatemode=25
 
-  // 各種ディスプレイイベントで全ウィンドウを作り直し
-  screen.on('display-removed', recreateAllWindows)
-  screen.on('display-added', recreateAllWindows)
-  screen.on('display-metrics-changed', recreateAllWindows)
-}
+// 変更するには sudo pmset -a hibernatemode X
+// 現在のモードの確認 sudo pmset -g
+// スリープに入るには sudo  pmset sleepnow
+//
 
-export function createAllWindows(): void {
+/**
+ * BrowserWindowで開いているものがあれば全部閉じて screenからBrowserWindowを作成し直す
+ */
+export function recreateAllWindows(ev: string): void {
+  // Displayに対応したウィンドウを作る
+  const newWindowIdPaiers: { browserId: number; displayId: number }[] = []
   const allDisplays = screen.getAllDisplays()
   allDisplays.forEach((display) => {
-    createWindow(display)
+    const newId = createWindow(display)
+    newWindowIdPaiers.push({ browserId: newId, displayId: display.id })
   })
-  console.log('[NEW]', {
-    displays: allDisplays.map((d) => {
-      return { id: d.id, label: d.label }
-    }),
-    taskbars: taskbars
-  })
+
+  const allBrowserWindows = BrowserWindow.getAllWindows()
+  for (const browserWindow of allBrowserWindows) {
+    // 作成したウィンドウが入った newWindowIds にないウィンドウが browserWindowにあればそれをすべて閉じる
+    if (!newWindowIdPaiers.map((w) => w.browserId).includes(browserWindow.id)) {
+      console.log('close window id:' + browserWindow.id)
+      browserWindow.close()
+      browserWindow.destroy()
+      // taskbars変数も後始末する
+      delete taskbars[browserWindow.id.toString()]
+    }
+  }
+
+  // scheduleHelperRestart(100)
+  dumpTaskbarInfo(ev)
 }
 
-export function createWindow(display: Display): void {
+export function createWindow(display: Display): number {
   const taskbarWindow = new BrowserWindow({
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -66,17 +78,6 @@ export function createWindow(display: Display): void {
     ...windowPosition(display, store.store.options.layout as LayoutType)
   })
 
-  // ウィンドウを閉じるときのイベントを設定
-  taskbarWindow.on('close', () => {
-    taskbarWindow.destroy()
-    // ウィンドウが閉じられたらtaskbarsから削除
-    delete taskbars[display.id]
-  })
-
-  // ウィンドウを閉じるサンプル
-  // taskbarWindow.close() // 通常の閉じる処理
-  // taskbarWindow.destroy() // 強制的に閉じる
-
   // 準備ができたら表示
   taskbarWindow.on('ready-to-show', () => {
     taskbarWindow.show()
@@ -92,7 +93,11 @@ export function createWindow(display: Display): void {
     taskbarWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  taskbars[display.id] = taskbarWindow
+  taskbars[taskbarWindow.id] = {
+    browserWindow: taskbarWindow,
+    browserWindowId: taskbarWindow.id,
+    displayId: display.id
+  }
 
   // windowReadyイベントのリスナーを設定
   const windowReadyListener = (): void => {
@@ -110,6 +115,8 @@ export function createWindow(display: Display): void {
   taskbarWindow.on('closed', (): void => {
     ipcMain.removeListener('windowReady', windowReadyListener)
   })
+
+  return taskbarWindow.id
 }
 
 export function windowPosition(

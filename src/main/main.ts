@@ -1,15 +1,11 @@
-import { app, BrowserWindow, powerMonitor, globalShortcut } from 'electron'
+import { app, BrowserWindow, globalShortcut } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
-import { createAllWindows, initializeDisplayEvents } from '@/funcs/windows'
+import { recreateAllWindows } from '@/funcs/windows'
 import { createFullWindowListWindow } from '@/funcs/optionWindows'
 import { setEventHandlers } from '@/funcs/events'
 
-import {
-  getAndSubmitProcesses,
-  restartHelperAfterSleep,
-  cleanupHelperProcess
-} from '@/funcs/helper'
+import { getAndSubmitProcesses, cleanupHelperProcess } from '@/funcs/helper'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -28,21 +24,12 @@ app.whenReady().then(() => {
   app.setAccessibilitySupportEnabled(true)
 
   // ディスプレイイベントの初期化
-  initializeDisplayEvents()
-  // ウィンドウの作成
-  createAllWindows()
+  recreateAllWindows('initial')
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createAllWindows()
-  })
-
-  powerMonitor.on('resume', () => {
-    setTimeout(() => {
-      initializeDisplayEvents()
-      restartHelperAfterSleep()
-    }, 5000)
+    if (BrowserWindow.getAllWindows().length === 0) recreateAllWindows('non-window')
   })
 
   // イベントハンドラーを設定する
