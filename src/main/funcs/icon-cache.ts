@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app as App } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { appendFileSync } from 'fs'
@@ -12,7 +12,7 @@ class IconCacheStore {
 
   constructor() {
     // taskbar.fmアプリのユーザーデータディレクトリを直接使用
-    this.iconCacheDir = path.join(app.getPath('appData'), 'taskbar.fm')
+    this.iconCacheDir = path.join(App.getPath('appData'), 'taskbar.fm')
     this.iconJsonPath = path.join(this.iconCacheDir, 'icons.json')
 
     // ディレクトリが存在しない場合は作成

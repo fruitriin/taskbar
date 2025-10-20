@@ -10,7 +10,7 @@ import {
   scheduleHelperRestart,
   getExcludedProcesses
 } from '@/funcs/helper'
-import { app, ipcMain, screen as Screen, BrowserWindow } from 'electron'
+import { app as App, ipcMain, screen as Screen, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { Options, store } from '@/funcs/store'
 import { Menu, MenuItem } from 'electron'
@@ -106,15 +106,15 @@ export function setEventHandlers(): void {
   })
   ipcMain.on('clearSetting', () => {
     store.clear()
-    app.relaunch()
-    app.quit()
+    App.relaunch()
+    App.quit()
   })
   ipcMain.on('restart', () => {
-    app.relaunch()
-    app.quit()
+    App.relaunch()
+    App.quit()
   }),
     ipcMain.on('exit', () => {
-      app.quit()
+      App.quit()
     })
 
   ipcMain.on('restartHelper', (_event, delay?: number) => {
@@ -177,8 +177,8 @@ export function setEventHandlers(): void {
       new MenuItem({
         label: 'Taskbar.fm再起動',
         click(): void {
-          app.relaunch()
-          app.quit()
+          App.relaunch()
+          App.quit()
         }
       })
     )
@@ -190,8 +190,8 @@ export function setEventHandlers(): void {
         label: '設定をクリア',
         click(): void {
           store.clear()
-          app.relaunch()
-          app.quit()
+          App.relaunch()
+          App.quit()
         }
       })
     )
@@ -200,7 +200,7 @@ export function setEventHandlers(): void {
       new MenuItem({
         label: '終了',
         click(): void {
-          app.quit()
+          App.quit()
         }
       })
     )

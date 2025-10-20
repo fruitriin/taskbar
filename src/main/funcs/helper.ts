@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app as App } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
@@ -12,7 +12,7 @@ function loadIconCache(): Record<string, string> {
 }
 
 let binaryPath = ''
-if (app.isPackaged) {
+if (App.isPackaged) {
   // packaged (e.g., using electron-builder)
   binaryPath = path.join(process.resourcesPath, 'TaskbarHelper')
 } else {

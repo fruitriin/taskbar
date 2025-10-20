@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { BrowserWindow, ipcMain, screen, Display } from 'electron'
+import { BrowserWindow, ipcMain, screen as Screen, Display } from 'electron'
 import { store } from '@/funcs/store'
 // import console from 'riinlogger'
 import { dumpTaskbarInfo } from '@/funcs/events'
@@ -38,7 +38,7 @@ export type Taskbars = typeof taskbars
 export function recreateAllWindows(ev: string): void {
   // Displayに対応したウィンドウを作る
   const newWindowIdPaiers: { browserId: number; displayId: number }[] = []
-  const allDisplays = screen.getAllDisplays()
+  const allDisplays = Screen.getAllDisplays()
   allDisplays.forEach((display) => {
     const newId = createWindow(display)
     newWindowIdPaiers.push({ browserId: newId, displayId: display.id })
