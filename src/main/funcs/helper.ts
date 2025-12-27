@@ -2,7 +2,7 @@ import { app as App } from 'electron'
 import path from 'path'
 const { spawn, exec } = require('child_process')
 import { iconCache } from '@/funcs/icon-cache'
-import console from 'riinlogger'
+// import console from 'riinlogger'
 import { appendFileSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
 

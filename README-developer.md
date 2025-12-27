@@ -1,5 +1,10 @@
 ## 開発者向け情報
 
+### 開発ツール
+
+- **タスクランナー**: mise - すべての開発・ビルドタスクの実行に使用
+- **パッケージマネージャ**: bun - 依存関係管理とスクリプト実行に使用
+
 ### ディレクトリ構成
 
 - .github
@@ -16,10 +21,10 @@
 ### 開発方法
 
 ```bash
-npm run helper    # TaskbarHelperをビルドする
-npm run dev       # 開発環境が立ち上がる
-npm run build:mac # mac用のバイナリができる
-npm run install-app # /Applications ディレクトリに放り込む
+mise run helper    # TaskbarHelperをビルドする
+mise run dev       # 開発環境が立ち上がる
+mise run build:mac # mac用のバイナリができる
+mise run install-app # /Applications ディレクトリに放り込む
 ```
 
 build:win と build:linuxはあるけどTaskbarHelper相当のものがないので実質ビルドできない
