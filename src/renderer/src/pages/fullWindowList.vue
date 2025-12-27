@@ -28,9 +28,7 @@
                   <i class="fas fa-list"></i>
                 </span>
                 <span class="button-text">全ウィンドウ</span>
-                <span v-if="allProcesses" class="tag is-light ml-1">{{
-                  allProcesses.length
-                }}</span>
+                <span v-if="allProcesses" class="tag is-light ml-1">{{ allProcesses.length }}</span>
               </button>
               <button
                 class="button"
@@ -155,7 +153,7 @@
               </span>
             </td>
             <td>
-              <div class="filter-actions">
+              <div v-if="getWindowStatus(window.id).label !== 'フィルター除外'" class="filter-actions">
                 <div class="dropdown" :class="{ 'is-active': activeDropdown === window.id }">
                   <div class="dropdown-trigger">
                     <button class="button is-small is-primary" @click="toggleDropdown(window.id)">
@@ -437,6 +435,12 @@ export default {
     // IPCイベントリスナーを削除
     window.electron.ipcRenderer.removeAllListeners('allProcesses')
     window.electron.ipcRenderer.removeAllListeners('catchExcludeWindow')
+  },
+  watch: {
+    currentPage(): void {
+      // ページ変更時にスクロールを一番上に戻す
+      window.scrollTo({ top: 0 })
+    }
   },
   methods: {
     handleAllProcessesData(_event: any, data: MacWindow[]): void {
