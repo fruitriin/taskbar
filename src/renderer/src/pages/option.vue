@@ -305,6 +305,16 @@ export default {
   methods: {
     removeFilter(index: number): void {
       this.labeledFilters.splice(index, 1)
+
+      // 選択中のフィルターインデックスを調整
+      if (this.selectedFilterIndex === index) {
+        // 削除したグループが選択中だった場合、選択を解除
+        this.selectedFilterIndex = null
+      } else if (this.selectedFilterIndex !== null && this.selectedFilterIndex > index) {
+        // 削除したグループより後ろが選択されていた場合、インデックスを調整
+        this.selectedFilterIndex -= 1
+      }
+
       Electron.send('setLabeledFilters', this.labeledFilters)
     },
     removeCondition(groupIndex: number, conditionIndex: number): void {
