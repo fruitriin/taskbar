@@ -4,7 +4,8 @@ import {
   createOptionWindow,
   createFullWindowListWindow,
   createMenuWindow,
-  closeMenuWindow
+  closeMenuWindow,
+  fullWindowListWindow
 } from '@/funcs/optionWindows'
 import {
   activateWindow,
@@ -13,7 +14,8 @@ import {
   macWindowProcesses,
   checkPermissions,
   scheduleHelperRestart,
-  getExcludedProcesses
+  getExcludedProcesses,
+  excludedProcesses
 } from '@/funcs/helper'
 import { app as App, ipcMain, screen as Screen, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
@@ -156,14 +158,10 @@ export function setEventHandlers(): void {
   })
 
   // 除外プロセスの取得
-  ipcMain.handle('getExcludeWindows', async () => {
+  ipcMain.on('getExcludeWindows', async () => {
     await getExcludedProcesses()
 
     // 除外プロセスが取得されたらFullWindowListに送信
-    const { fullWindowListWindow } = require('@/funcs/windows')
-    const { excludedProcesses } = require('@/funcs/helper')
-    const { iconCache } = require('@/funcs/icon-cache')
-
     if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
       // アイコンキャッシュを取得
       const icons = iconCache.loadIcons()

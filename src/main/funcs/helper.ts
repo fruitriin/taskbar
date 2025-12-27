@@ -432,6 +432,8 @@ export async function checkPermissions(): Promise<{
   return new Promise((resolve) => {
     let rawData = ''
 
+    console.log('Checking permissions using TaskbarHelper...')
+
     const taskbarHelper = spawn(binaryPath, ['check-permissions'], {
       env: {
         ...process.env,
@@ -448,21 +450,31 @@ export async function checkPermissions(): Promise<{
     })
 
     taskbarHelper.on('close', (code) => {
+      console.log(`Permission check process exited with code ${code}`)
+      console.log(`Raw data received: ${rawData}`)
+
       if (code === 0) {
         try {
-          const result = JSON.parse(rawData)
+          const result = JSON.parse(rawData.trim())
+          console.log('Parsed permission result:', result)
           resolve({
             accessibility: result.accessibility,
             screenRecording: result.screenRecording
           })
         } catch (parseError) {
           console.error('Failed to parse permission status:', parseError)
+          console.error('Raw data was:', rawData)
           resolve(null)
         }
       } else {
         console.error(`Permission check process exited with code ${code}`)
         resolve(null)
       }
+    })
+
+    taskbarHelper.on('error', (error) => {
+      console.error('Error spawning permission check process:', error)
+      resolve(null)
     })
   })
 }
@@ -516,17 +528,6 @@ export async function applyProcessChange(newProcesses: typeof macWindowProcesses
     }
   }
 
-  // 全プロセスにもアイコンを設定（FullWindowListウィンドウ用）
-  const allProcessesWithIcons = newProcesses.map((proc) => {
-    if (!proc.appIcon) {
-      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-      if (icons[owner]) {
-        return { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
-      }
-    }
-    return proc
-  })
-
   // タスクバーに更新されたプロセスリストを送信
   for (const taskbarKey in taskbars) {
     if (!taskbars[taskbarKey].browserWindow.isDestroyed()) {
@@ -534,24 +535,9 @@ export async function applyProcessChange(newProcesses: typeof macWindowProcesses
     }
   }
 
-  // 除外プロセスにもアイコンを設定
-  const excludedProcessesWithIcons = excludedProcesses.map((proc) => {
-    if (!proc.appIcon) {
-      const owner = (proc.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-      if (icons[owner]) {
-        return { ...proc, appIcon: `data:image/png;base64,${icons[owner]}` }
-      }
-    }
-    return proc
-  })
-
-  // FullWindowListウィンドウには全プロセス情報を送信
+  // FullWindowListウィンドウにもフィルター済みプロセス情報を送信
   if (fullWindowListWindow && !fullWindowListWindow.isDestroyed()) {
-    fullWindowListWindow.webContents.send('allProcesses', {
-      all: allProcessesWithIcons,
-      filtered: macWindowProcesses,
-      excluded: excludedProcessesWithIcons
-    })
+    fullWindowListWindow.webContents.send('allProcesses', macWindowProcesses)
   }
 }
 

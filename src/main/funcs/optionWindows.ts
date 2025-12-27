@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { getExcludedProcesses, updateProcessList } from '@/funcs/helper'
+import { updateProcessList } from '@/funcs/helper'
 
 // オプション画面
 export let optionWindow: BrowserWindow
@@ -46,12 +46,6 @@ export async function createFullWindowListWindow(): Promise<void> {
       contextIsolation: false
     }
   })
-  fullWindowListWindow.webContents.send(
-    'catchExcludeWindow',
-    setTimeout(async () => {
-      JSON.stringify(await getExcludedProcesses())
-    }, 2000)
-  )
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     fullWindowListWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/fullWindowList.html')
   } else {

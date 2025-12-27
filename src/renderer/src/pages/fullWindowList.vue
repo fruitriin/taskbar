@@ -15,8 +15,8 @@
                   <i class="fas fa-filter"></i>
                 </span>
                 <span class="button-text">フィルター済み</span>
-                <span v-if="allProcessesData" class="tag is-light ml-1">{{
-                  allProcessesData.filtered.length
+                <span v-if="filteredProcesses" class="tag is-light ml-1">{{
+                  filteredProcesses.length
                 }}</span>
               </button>
               <button
@@ -28,8 +28,8 @@
                   <i class="fas fa-list"></i>
                 </span>
                 <span class="button-text">全ウィンドウ</span>
-                <span v-if="allProcessesData" class="tag is-light ml-1">{{
-                  allProcessesData.all.length
+                <span v-if="allProcesses" class="tag is-light ml-1">{{
+                  allProcesses.length
                 }}</span>
               </button>
               <button
@@ -280,7 +280,7 @@ type MacWindow = {
 
 export default {
   data(): {
-    allProcessesData: { all: WindowInfo[]; filtered: WindowInfo[]; excluded: WindowInfo[] }
+    filteredProcesses: WindowInfo[]
     excludedProcess: WindowInfo[]
     displayMode: 'filtered' | 'all' | 'excluded'
     searchQuery: string
@@ -292,7 +292,7 @@ export default {
     notification: string | null
   } {
     return {
-      allProcessesData: { all: [], filtered: [], excluded: [] },
+      filteredProcesses: [],
       excludedProcess: [],
       displayMode: 'filtered',
       searchQuery: '',
@@ -305,24 +305,23 @@ export default {
     }
   },
   computed: {
+    allProcesses(): WindowInfo[] {
+      // フィルター済みと除外を合成して全プロセスを作成
+      return [...this.filteredProcesses, ...this.excludedProcess]
+    },
     displayWindowsList(): WindowInfo[] {
-      // allProcessesDataが利用できない場合は空配列
-      if (!this.allProcessesData) {
-        return []
-      }
-
       // 表示モードに応じてデータを切り替え
       switch (this.displayMode) {
         case 'all':
-          console.log('全プロセス表示モード:', this.allProcessesData.all.length)
-          return this.allProcessesData.all
+          console.log('全プロセス表示モード:', this.allProcesses.length)
+          return this.allProcesses
         case 'excluded':
           console.log('除外プロセス表示モード:', this.excludedProcess.length)
           return this.excludedProcess
         case 'filtered':
         default:
-          console.log('フィルター済み表示モード:', this.allProcessesData.filtered.length)
-          return this.allProcessesData.filtered
+          console.log('フィルター済み表示モード:', this.filteredProcesses.length)
+          return this.filteredProcesses
       }
     },
     filteredWindows(): WindowInfo[] {
@@ -416,14 +415,14 @@ export default {
       return pages
     }
   },
-  async mounted(): Promise<void> {
+  mounted(): void {
     // IPCイベントリスナーを追加
     Electron.listen('allProcesses', this.handleAllProcessesData)
 
     // 外部クリックでドロップダウンを閉じる
     document.addEventListener('click', this.handleOutsideClick)
 
-    Electron.listen('catchExcludeWindow', (res: MacWindow[]) => {
+    Electron.listen('catchExcludeWindow', (_event: any, res: MacWindow[]) => {
       console.log('Received excluded processes:', res)
       this.excludedProcess = res.map((macWindow, index) =>
         this.convertMacWindowToWindowInfo(macWindow, index)
@@ -431,7 +430,7 @@ export default {
     })
 
     // 初期読み込み時に除外プロセスを取得
-    await Electron.send('getExcludeWindows')
+    Electron.send('getExcludeWindows')
   },
   beforeUnmount(): void {
     document.removeEventListener('click', this.handleOutsideClick)
@@ -440,24 +439,11 @@ export default {
     window.electron.ipcRenderer.removeAllListeners('catchExcludeWindow')
   },
   methods: {
-    handleAllProcessesData(
-      _event: any,
-      data: { all: MacWindow[]; filtered: MacWindow[]; excluded?: MacWindow[] }
-    ): void {
-      // 全プロセスデータを変換して保存
-      this.allProcessesData = {
-        all: data.all.map((macWindow, index) =>
-          this.convertMacWindowToWindowInfo(macWindow, index)
-        ),
-        filtered: data.filtered.map((macWindow, index) =>
-          this.convertMacWindowToWindowInfo(macWindow, index)
-        ),
-        excluded: data.excluded
-          ? data.excluded.map((macWindow, index) =>
-              this.convertMacWindowToWindowInfo(macWindow, index)
-            )
-          : []
-      }
+    handleAllProcessesData(_event: any, data: MacWindow[]): void {
+      // フィルター済みプロセスデータを変換して保存
+      this.filteredProcesses = data.map((macWindow, index) =>
+        this.convertMacWindowToWindowInfo(macWindow, index)
+      )
     },
     convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
       return {
@@ -484,17 +470,8 @@ export default {
       target.style.display = 'none'
     },
     getWindowStatus(windowId: number): { label: string; class: string; tooltip: string } {
-      // allProcessesDataが利用できない場合
-      if (!this.allProcessesData) {
-        return {
-          label: 'データ待機中',
-          class: 'is-light',
-          tooltip: 'プロセスデータを読み込み中です'
-        }
-      }
-
       // フィルター済みリストに含まれているかで判定
-      const isInFiltered = this.allProcessesData.filtered.some((w) => w.id === windowId)
+      const isInFiltered = this.filteredProcesses.some((w) => w.id === windowId)
 
       if (isInFiltered) {
         return {
@@ -504,8 +481,8 @@ export default {
         }
       } else {
         // 除外された理由を特定
-        const isInAll = this.allProcessesData.all.some((w) => w.id === windowId)
-        const isInExcluded = this.allProcessesData.excluded.some((w) => w.id === windowId)
+        const isInAll = this.allProcesses.some((w) => w.id === windowId)
+        const isInExcluded = this.excludedProcess.some((w) => w.id === windowId)
 
         if (isInExcluded) {
           return {
@@ -553,7 +530,7 @@ export default {
         this.activeDropdown = null
       }
     },
-    createFilter(property: string, value: string | number, window: WindowInfo): void {
+    createFilter(property: string, value: string | number, _window: WindowInfo): void {
       // フィルター作成ロジック（設定ウィンドウにフィルターを追加）
       const filterData = {
         property,
