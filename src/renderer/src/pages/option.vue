@@ -79,10 +79,10 @@
         <div class="field-label">
           <label class="label">フィルター</label>
         </div>
-        <div class="field-body" style="width: 100%; display: flex; gap: 0.5rem">
+        <div class="field-body" style="width: 100%">
           <!-- メインエリア：フィルターピル -->
           <div
-            style="flex: 1; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start"
+            style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start"
           >
             <div
               v-for="(filterGroup, i) in labeledFilters"
@@ -103,7 +103,7 @@
                 borderColor: selectedFilterIndex === i ? '#4a90e2' : '#444',
                 background: selectedFilterIndex === i ? '#1a3a5a' : '#2a2a2a'
               }"
-              @click="selectFilter(i)"
+              @click="selectFilter(i, $event)"
             >
               <span
                 :style="{
@@ -134,95 +134,114 @@
               <AddFilter @add-filter="handleAddFilter" />
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- サイドパネル：詳細編集 -->
-          <div
-            v-if="selectedFilterIndex !== null"
+      <!-- フローティング編集パネル -->
+      <div
+        v-if="selectedFilterIndex !== null && panelPosition"
+        class="floating-edit-panel"
+        :style="{
+          position: 'fixed',
+          top: panelPosition.top,
+          left: panelPosition.left,
+          width: '320px',
+          background: '#1a1a1a',
+          padding: '1rem',
+          borderRadius: '8px',
+          border: '1px solid #4a90e2',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          zIndex: 1000,
+          maxHeight: '80vh',
+          overflowY: 'auto'
+        }"
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+          "
+        >
+          <span style="color: #4a90e2; font-weight: 600; font-size: 0.9rem">編集中</span>
+          <button
             style="
-              width: 280px;
-              background: #1a1a1a;
-              padding: 0.8rem;
-              border-radius: 6px;
-              border: 1px solid #4a90e2;
-              flex-shrink: 0;
+              background: none;
+              border: none;
+              color: #888;
+              cursor: pointer;
+              font-size: 1.2rem;
+              padding: 0.5rem 0.5rem 0.5rem 1rem;
+              margin: -0.5rem -0.5rem -0.5rem -1rem;
+              line-height: 1;
+            "
+            @click="
+              selectedFilterIndex = null;
+              panelPosition = null;
             "
           >
+            ✕
+          </button>
+        </div>
+
+        <!-- ラベル編集（コンパクト） -->
+        <div style="margin-bottom: 0.6rem">
+          <label
+            style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.2rem"
+            >ラベル</label
+          >
+          <input
+            v-model="editingLabel"
+            class="input is-small"
+            style="width: 100%; font-size: 0.8rem"
+            @input="updateLabel(selectedFilterIndex, editingLabel)"
+          />
+        </div>
+
+        <!-- フィルター条件（コンパクト） -->
+        <div>
+          <label
+            style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.3rem"
+          >
+            条件 ({{ labeledFilters[selectedFilterIndex].filters.length }}件)
+          </label>
+          <div
+            style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem"
+          >
             <div
+              v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters"
+              :key="k"
               style="
+                font-size: 0.7rem;
+                background: #2a2a2a;
+                padding: 0.3rem 0.4rem;
+                border-radius: 4px;
                 display: flex;
-                align-items: center;
                 justify-content: space-between;
-                margin-bottom: 0.8rem;
+                align-items: center;
               "
             >
-              <span style="color: #4a90e2; font-weight: 600; font-size: 0.9rem">編集中</span>
-              <button
-                style="background: none; border: none; color: #888; cursor: pointer"
-                @click="selectedFilterIndex = null"
+              <span style="color: #ccc"
+                >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
               >
-                ✕
+              <button
+                style="
+                  background: none;
+                  border: none;
+                  color: #ef4444;
+                  cursor: pointer;
+                  font-size: 0.7rem;
+                "
+                @click="removeCondition(selectedFilterIndex, k)"
+              >
+                ×
               </button>
             </div>
-
-            <!-- ラベル編集（コンパクト） -->
-            <div style="margin-bottom: 0.6rem">
-              <label
-                style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.2rem"
-                >ラベル</label
-              >
-              <input
-                v-model="editingLabel"
-                class="input is-small"
-                style="width: 100%; font-size: 0.8rem"
-                @input="updateLabel(selectedFilterIndex, editingLabel)"
-              />
-            </div>
-
-            <!-- フィルター条件（コンパクト） -->
-            <div>
-              <label
-                style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.3rem"
-              >
-                条件 ({{ labeledFilters[selectedFilterIndex].filters.length }}件)
-              </label>
-              <div
-                style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem"
-              >
-                <div
-                  v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters"
-                  :key="k"
-                  style="
-                    font-size: 0.7rem;
-                    background: #2a2a2a;
-                    padding: 0.3rem 0.4rem;
-                    border-radius: 4px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                  "
-                >
-                  <span style="color: #ccc"
-                    >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
-                  >
-                  <button
-                    style="
-                      background: none;
-                      border: none;
-                      color: #ef4444;
-                      cursor: pointer;
-                      font-size: 0.7rem;
-                    "
-                    @click="removeCondition(selectedFilterIndex, k)"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <AddFilter :filter-index="selectedFilterIndex" @add-filter="handleAddFilter" />
           </div>
         </div>
+
+        <AddFilter :filter-index="selectedFilterIndex" @add-filter="handleAddFilter" />
       </div>
 
       <div class="init field is-horizontal">
@@ -233,9 +252,6 @@
           <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
           <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
           <button class="button ml-4" @click="Electron.send('exit')">終了</button>
-          <button class="button is-info ml-4" @click="Electron.send('openFullWindowList')">
-            ウィンドウ一覧
-          </button>
         </div>
       </div>
     </div>
@@ -269,6 +285,7 @@ export default {
     editingLabel: string
     editingLabelIndex: number | null
     selectedFilterIndex: number | null
+    panelPosition: { top: string; left: string } | null
   } {
     return {
       drag: false,
@@ -286,7 +303,8 @@ export default {
       },
       editingLabel: '',
       editingLabelIndex: null,
-      selectedFilterIndex: null
+      selectedFilterIndex: null,
+      panelPosition: null
     }
   },
   computed: {
@@ -376,9 +394,57 @@ export default {
         this.editingLabelIndex = null
       }
     },
-    selectFilter(index: number): void {
+    selectFilter(index: number, event: MouseEvent): void {
       this.selectedFilterIndex = index
       this.editingLabel = this.labeledFilters[this.selectedFilterIndex].label
+
+      // クリックされたボタン要素の位置を取得
+      const button = event.currentTarget as HTMLElement
+      const buttonRect = button.getBoundingClientRect()
+
+      // パネルのサイズ（概算）
+      const panelWidth = 320
+      const panelHeight = 300 // 最大高さの概算（max-height: 80vhも考慮）
+
+      // ビューポートのサイズ
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+
+      const offset = 8 // ボタンとパネルの間のマージン
+      let left = buttonRect.left
+      let top: number
+
+      // 第一候補：パネルの上端をボタンの下端に配置
+      top = buttonRect.bottom + offset
+
+      // ボタンの下に表示するスペースがあるかチェック
+      const spaceBelow = viewportHeight - buttonRect.bottom - offset - 20 // 20pxはマージン
+
+      // はみ出る場合：パネルの下端をボタンの上端に配置
+      if (spaceBelow < panelHeight) {
+        // パネルの下端がボタンの上端に来るように計算
+        top = buttonRect.top - panelHeight - offset
+      }
+
+      // 右端のチェック：パネルが画面からはみ出る場合は左にずらす
+      if (left + panelWidth > viewportWidth - 10) {
+        left = viewportWidth - panelWidth - 10
+      }
+
+      // 左端のチェック
+      if (left < 10) {
+        left = 10
+      }
+
+      // 上端のチェック（ボタンの上に表示した場合でもはみ出る場合）
+      if (top < 10) {
+        top = 10
+      }
+
+      this.panelPosition = {
+        top: `${top}px`,
+        left: `${left}px`
+      }
     }
   },
   mounted(): void {
