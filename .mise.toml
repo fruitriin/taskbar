@@ -5,6 +5,30 @@ bun = "latest"
 [env]
 NODE_ENV = "development"
 
+[tasks.dev]
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
+description = "開発サーバーを起動"
+
+[tasks.build]
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build"
+description = "アプリケーションをビルド"
+
+[tasks.swiftbuild]
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
+description = "Swiftヘルパーをビルド"
+
+[tasks."build:mac"]
+run = "mise run build && npx electron-builder --mac --universal"
+description = "macOSユニバーサルバイナリをビルド"
+
+[tasks."install-app"]
+run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
+description = "アプリをApplicationsフォルダにインストール"
+
+[tasks.helper]
+run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
+description = "Xcodeヘルパープロジェクトを開く"
+
 [tasks.format]
 run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 description = "Prettierでコードをフォーマット"
@@ -24,30 +48,6 @@ description = "メインプロセスの型チェックを実行"
 [tasks."typecheck:web"]
 run = "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false"
 description = "レンダラープロセスの型チェックを実行"
-
-[tasks.dev]
-run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
-description = "開発サーバーを起動"
-
-[tasks.helper]
-run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
-description = "Xcodeヘルパープロジェクトを開く"
-
-[tasks.swiftbuild]
-run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
-description = "Swiftヘルパーをビルド"
-
-[tasks.build]
-run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build"
-description = "アプリケーションをビルド"
-
-[tasks."build:mac"]
-run = "mise run build && npx electron-builder --mac --universal"
-description = "macOSユニバーサルバイナリをビルド"
-
-[tasks."install-app"]
-run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
-description = "アプリをApplicationsフォルダにインストール"
 
 [tasks.test]
 run = "npx vitest tests/"
