@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import { getExcludedProcesses } from '@/funcs/helper'
+import { getExcludedProcesses, updateProcessList } from '@/funcs/helper'
 
 // オプション画面
 export let optionWindow: BrowserWindow
@@ -57,8 +57,10 @@ export async function createFullWindowListWindow(): Promise<void> {
   } else {
     fullWindowListWindow.loadFile(join(__dirname, '../renderer/fullWindowList.html'))
   }
-  fullWindowListWindow.on('ready-to-show', () => {
+  fullWindowListWindow.on('ready-to-show', async () => {
     fullWindowListWindow.show()
+    // プロセスリストを最新の状態に更新
+    await updateProcessList()
   })
 }
 

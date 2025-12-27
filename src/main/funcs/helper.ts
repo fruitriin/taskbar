@@ -200,6 +200,57 @@ export async function getExcludedProcesses(): Promise<void> {
   })
 }
 
+// プロセスリストを取得して更新する関数
+export async function updateProcessList(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let rawData = ''
+
+    // フィルター設定をエクスポート
+    exportFiltersToSwift()
+
+    const taskbarHelper = spawn(binaryPath, ['list'], {
+      env: {
+        ...process.env,
+        ICON_CACHE_DIR: iconCache.getCacheDirForSwift()
+      }
+    })
+
+    taskbarHelper.stdout.on('data', (chunk) => {
+      rawData += chunk.toString()
+    })
+
+    taskbarHelper.stderr.on('data', (data) => {
+      console.error(`List command error: ${data.toString()}`)
+    })
+
+    taskbarHelper.on('close', async (code) => {
+      if (code === 0) {
+        try {
+          if (rawData.trim()) {
+            const processData = JSON.parse(rawData)
+            await applyProcessChange(processData)
+            console.log(`プロセスリストを更新しました: ${macWindowProcesses.length}個`)
+          } else {
+            macWindowProcesses.length = 0
+            console.log('プロセスリストは空です')
+          }
+        } catch (parseError) {
+          console.error('Failed to parse process list:', parseError)
+          console.log('Problematic data:', rawData)
+        }
+      } else {
+        console.error(`List command exited with code ${code}`)
+      }
+      resolve()
+    })
+
+    taskbarHelper.on('error', (error) => {
+      console.error('Error updating process list:', error)
+      reject(error)
+    })
+  })
+}
+
 export async function getAndSubmitProcesses(): Promise<void> {
   console.log('getAndSubmitProcess')
   if (isHelperRunning) {
