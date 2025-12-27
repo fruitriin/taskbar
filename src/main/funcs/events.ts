@@ -132,6 +132,24 @@ export function setEventHandlers(): void {
     return store.get('labeledFilters', [])
   })
 
+  // 新しいフィルターグループを追加
+  ipcMain.on('addFilter', (_event, data: { filter: any; label: string }) => {
+    const currentFilters = store.get('labeledFilters', [])
+    currentFilters.push({
+      label: data.label,
+      filters: [data.filter]
+    })
+    store.set('labeledFilters', currentFilters)
+
+    // 全てのオプションウィンドウに更新を通知
+    const optionWindows = BrowserWindow.getAllWindows().filter((win) => win.getTitle() === 'taskbar.fm')
+    optionWindows.forEach((win) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('labeledFiltersUpdated', currentFilters)
+      }
+    })
+  })
+
   // 除外プロセスの取得
   ipcMain.handle('getExcludeWindows', async () => {
     await getExcludedProcesses()

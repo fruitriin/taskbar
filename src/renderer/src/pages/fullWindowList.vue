@@ -560,15 +560,16 @@ export default {
         is: value
       }
 
-      // 新しいフィルターグループを作成
+      // 新しいフィルターグループを作成（option.vueと同じラベル形式）
+      const propertyName = this.getPropertyDisplayName(property)
+      const label = `${propertyName}:${value}を除外`
+
       Electron.send('addFilter', {
         filter: filterData,
-        label: `${window.owner} - ${this.getPropertyDisplayName(property)}`
+        label: label
       })
 
-      this.showNotification(
-        `フィルターを作成しました: ${this.getPropertyDisplayName(property)} = ${value}`
-      )
+      this.showNotification(`フィルターを作成しました: ${label}`)
       this.activeDropdown = null
     },
     getPropertyDisplayName(property: string): string {

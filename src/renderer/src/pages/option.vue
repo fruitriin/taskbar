@@ -380,6 +380,16 @@ export default {
       this.selectedFilterIndex = index
       this.editingLabel = this.labeledFilters[this.selectedFilterIndex].label
     }
+  },
+  mounted(): void {
+    // fullWindowListからのフィルター追加を受け取る
+    Electron.listen('labeledFiltersUpdated', (_event: any, updatedFilters: any) => {
+      this.labeledFilters = [...updatedFilters]
+    })
+  },
+  beforeUnmount(): void {
+    // リスナーをクリーンアップ
+    window.electron.ipcRenderer.removeAllListeners('labeledFiltersUpdated')
   }
 }
 </script>
