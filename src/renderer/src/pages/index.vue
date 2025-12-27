@@ -1,7 +1,7 @@
 <template>
   <div :class="options.layout">
     <div style="display: flex">
-      <div class="icon-area" @click="openOption" @contextmenu="openMenu">
+      <div class="icon-area" @click="openMenu">
         <img :src="icon" style="height: 40px" />
       </div>
       <div class="permissions">

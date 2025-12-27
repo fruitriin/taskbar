@@ -1,6 +1,11 @@
 // レンダラープロセスからのメッセージを受信する
 import { taskbars, windowPosition, recreateAllWindows } from '@/funcs/windows'
-import { createOptionWindow, createFullWindowListWindow } from '@/funcs/optionWindows'
+import {
+  createOptionWindow,
+  createFullWindowListWindow,
+  createMenuWindow,
+  closeMenuWindow
+} from '@/funcs/optionWindows'
 import {
   activateWindow,
   closeWindow,
@@ -178,53 +183,25 @@ export function setEventHandlers(): void {
     }
   })
 
-  // ロゴを右クリックしたときのコンテキストメニュー
-  ipcMain.on('contextLogo', (_event) => {
-    const menu = new Menu()
+  // ロゴをクリックしたときのメニューウィンドウを表示
+  ipcMain.on('contextLogo', (event) => {
+    // イベント送信元のタスクバーを特定
+    const senderWindow = BrowserWindow.fromWebContents(event.sender)
+    if (!senderWindow) {
+      createMenuWindow()
+      return
+    }
 
-    menu.append(
-      new MenuItem({
-        label: 'ヘルパー再起動',
-        click(): void {
-          scheduleHelperRestart(100)
-        }
-      })
-    )
+    // タスクバーの位置とサイズを取得
+    const taskbarBounds = senderWindow.getBounds()
+    const layout = store.get('options.layout')
 
-    menu.append(
-      new MenuItem({
-        label: 'Taskbar.fm再起動',
-        click(): void {
-          App.relaunch()
-          App.quit()
-        }
-      })
-    )
+    createMenuWindow(taskbarBounds, layout)
+  })
 
-    menu.append(new MenuItem({ type: 'separator' }))
-
-    menu.append(
-      new MenuItem({
-        label: '設定をクリア',
-        click(): void {
-          store.clear()
-          App.relaunch()
-          App.quit()
-        }
-      })
-    )
-
-    menu.append(
-      new MenuItem({
-        label: '終了',
-        click(): void {
-          App.quit()
-        }
-      })
-    )
-
-    const cursorPoint = Screen.getCursorScreenPoint()
-    menu.popup({ x: cursorPoint.x, y: cursorPoint.y })
+  // メニューウィンドウを閉じる
+  ipcMain.on('closeMenu', () => {
+    closeMenuWindow()
   })
 
   // タスクを右クリックしたときのコンテキストメニュー
