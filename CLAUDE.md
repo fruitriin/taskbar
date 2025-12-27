@@ -11,6 +11,11 @@ Taskbar.fm is an Electron application that brings Windows-like taskbar functiona
 - **Renderer Process** (src/renderer/): Vue.js-based UI layer
 - **Native Helper** (nativeSrc/): Swift application for system integration
 
+### Development Tools
+
+- **Task Runner**: mise - Used for running all development and build tasks
+- **Package Manager**: bun - Used for dependency management and script execution
+
 ## Development Commands
 
 ### Essential Commands (use `mise run` prefix)
