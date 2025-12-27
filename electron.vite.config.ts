@@ -37,7 +37,7 @@ export default defineConfig({
   },
   renderer: {
     server: {
-      port: 6234
+      port: 10234
     },
     build: {
       sourcemap: true,
