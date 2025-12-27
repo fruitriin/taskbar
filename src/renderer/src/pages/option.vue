@@ -340,7 +340,8 @@ export default {
         this.labeledFilters[data.filterIndex].filters.push(data.filter)
       } else {
         // 新しいフィルターグループを作成
-        const newGroupLabel = `カスタムフィルター ${newFilters.length + 1}`
+        const propertyName = this.getPropertyDisplayName(data.filter.property)
+        const newGroupLabel = `${propertyName}:${data.filter.is}を除外`
         this.labeledFilters.push({
           label: newGroupLabel,
           filters: [data.filter]
