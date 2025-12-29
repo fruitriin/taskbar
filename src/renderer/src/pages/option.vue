@@ -337,7 +337,6 @@ export default {
       filter: { property: string; is: string }
       filterIndex?: number
     }): void {
-      const newFilters = [...this.labeledFilters]
       if (data.filterIndex !== undefined) {
         // 既存のフィルターグループにルールを追加
         this.labeledFilters[data.filterIndex].filters.push(data.filter)

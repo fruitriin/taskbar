@@ -451,7 +451,7 @@ export default {
         owner: macWindow.kCGWindowOwnerName || '不明',
         pid: macWindow.kCGWindowOwnerPID,
         layer: macWindow.kCGWindowLayer,
-        isOnscreen: macWindow.kCGWindowIsOnscreen > 0,
+        isOnscreen: macWindow.kCGWindowIsOnscreen ? macWindow.kCGWindowIsOnscreen > 0 : false,
         appIcon: macWindow.appIcon || undefined,
         bounds: macWindow.kCGWindowBounds
           ? {
