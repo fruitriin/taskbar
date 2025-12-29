@@ -467,7 +467,7 @@ export default {
     convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
       return {
         id: macWindow.kCGWindowNumber || index,
-        name: macWindow.kCGWindowName || '(無題)',
+        name: macWindow.kCGWindowName || '',
         owner: macWindow.kCGWindowOwnerName || '不明',
         pid: macWindow.kCGWindowOwnerPID,
         layer: macWindow.kCGWindowLayer,
