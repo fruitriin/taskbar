@@ -3,6 +3,17 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 ユーザーへの返事は日本語でお願いします
 
+## Documentation Structure
+
+このプロジェクトは、各コンポーネントごとに詳細なドキュメントを持っています：
+
+- **このファイル** (`CLAUDE.md`) - プロジェクト全体の概要と開発コマンド
+- **`src/main/CLAUDE.md`** - Electron メインプロセスの詳細実装
+- **`src/renderer/CLAUDE.md`** - Vue.js レンダラープロセスの詳細実装
+- **`nativeSrc/taskbar.helper/CLAUDE.md`** - Swift Helper の詳細実装と UE トラブルシューティング
+
+各ドキュメントは独立しており、作業対象のコンポーネントに応じて参照してください。
+
 ## Project Overview
 
 Taskbar.fm is an Electron application that brings Windows-like taskbar functionality to macOS. It consists of three main components:
@@ -41,30 +52,14 @@ Taskbar.fm is an Electron application that brings Windows-like taskbar functiona
 - `mise run swiftbuild` - Build Swift helper via command line
 - Native helper binary must be built before running `dev` or `build`
 
-#### Troubleshooting: UE (Unexpected Error/Unresponsive Execution)
+#### Troubleshooting
 
-If the TaskbarHelper process becomes unresponsive or causes UE errors:
+If the TaskbarHelper process becomes unresponsive (UE: Unresponsive Execution):
 
-1. **Check Code Signing Configuration** (CRITICAL):
+- **Most common cause**: Code signing misconfiguration
+- **Quick fix**: `mise run helper` → Signing & Capabilities → Select valid certificate → `mise run swiftbuild`
 
-   - Open the Xcode project: `mise run helper`
-   - Navigate to: **taskbar.helper target** → **Signing & Capabilities** tab
-   - Verify that a valid **Signing Certificate** is selected
-   - Ensure the certificate is not expired or invalid
-   - Common issue: Wrong certificate selected (e.g., distribution cert instead of development cert)
-   - Recommended: Use "Sign to Run Locally" or a valid development certificate
-
-2. **Verify Entitlements**:
-
-   - Check that `taskbar.helper.entitlements` exists and has proper permissions
-   - Required entitlements: Screen Recording, Accessibility
-
-3. **Rebuild Helper Binary**:
-   ```bash
-   mise run swiftbuild
-   ```
-
-**Note**: Code signing issues are a common cause of UE errors. The helper binary may fail to launch or hang if signing is misconfigured.
+**詳細なトラブルシューティング、UEリスク分析、デバッグ方法は `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
 
 ### Installation
 
@@ -131,6 +126,8 @@ Playwright MCPを使用して、ブラウザ上でのUI動作を自動的にテ�
   - `store.ts` - Electron-store configuration management
   - `icon-cache.ts` - Application icon caching system
 
+**詳細な実装、テスト、IPC通信パターンは `src/main/CLAUDE.md` を参照してください。**
+
 ### Renderer Process Structure
 
 - `src/renderer/` - Vue.js application with multiple entry points:
@@ -140,11 +137,15 @@ Playwright MCPを使用して、ブラウザ上でのUI動作を自動的にテ�
 - State management with Pinia
 - Styling with Bulma CSS framework and Less preprocessor
 
+**詳細な実装、Vue.js パターン、ブラウザテストは `src/renderer/CLAUDE.md` を参照してください。**
+
 ### Native Helper
 
 - `nativeSrc/taskbar.helper/` - Swift application for macOS system integration
 - Provides window information, screen capture permissions, and system-level taskbar functionality
 - Must be built separately and copied to `resources/TaskbarHelper`
+
+**詳細な実装、アーキテクチャ、コマンド一覧、UEトラブルシューティングは `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
 
 ## Testing
 
