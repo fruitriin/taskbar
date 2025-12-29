@@ -1,27 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, mock, beforeEach } from 'bun:test'
 import { store } from '@/funcs/store'
-
-// electron-storeのモックを個別に設定
-vi.mock('electron-store', () => ({
-  default: vi.fn(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    clear: vi.fn(),
-    store: {
-      options: {
-        layout: 'bottom',
-        windowSortByPositionInApp: false,
-        headers: [],
-        footers: []
-      },
-      filters: []
-    }
-  }))
-}))
 
 describe('store', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // モックはsetup.tsで設定されています
   })
 
   it('storeオブジェクトが正しく初期化される', () => {
@@ -38,12 +20,12 @@ describe('store', () => {
   })
 
   it('設定の読み書きが正しく動作する', () => {
-    const mockGet = vi.fn().mockReturnValue('right')
-    const mockSet = vi.fn()
+    const mockGet = mock().mockReturnValue('right')
+    const mockSet = mock()
 
     // モックを再設定
-    vi.mocked(store.get).mockImplementation(mockGet)
-    vi.mocked(store.set).mockImplementation(mockSet)
+    store.get = mockGet as any
+    store.set = mockSet as any
 
     // 読み取りテスト
     const layout = store.get('options.layout')

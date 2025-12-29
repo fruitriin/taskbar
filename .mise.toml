@@ -51,37 +51,15 @@ run = "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false"
 
 [tasks.test]
 description = "メインプロセスのテストを実行"
-dir = "src/main"
-run = "npx vitest tests/"
+run = "cd src/main && bun test tests/ --preload ./tests/setup.ts"
 
 [tasks."test:renderer"]
 description = "レンダラープロセスのテストを実行"
-dir = "src/renderer"
-run = "npx vitest src/renderer/tests/"
+run = "cd src/renderer && bun test tests/ --preload ./tests/setup.ts --env happy-dom"
 
 [tasks."test:all"]
 description = "すべてのテストを実行"
 run = ["mise run test", "mise run test:renderer"]
-
-[tasks."test:ui"]
-description = "メインプロセスのテストをUI付きで実行"
-dir = "src/main"
-run = "npm run test:ui"
-
-[tasks."test:ui:renderer"]
-description = "レンダラープロセスのテストをUI付きで実行"
-dir = "src/renderer"
-run = "npm run test:ui"
-
-[tasks."test:coverage"]
-description = "メインプロセスのテストをカバレッジ付きで実行"
-dir = "src/main"
-run = "npm run test:coverage"
-
-[tasks."test:coverage:renderer"]
-description = "レンダラープロセスのテストをカバレッジ付きで実行"
-dir = "src/renderer"
-run = "npm run test:coverage"
 
 [tasks."test:swift"]
 description = "Swiftヘルパーの単体テストを実行"

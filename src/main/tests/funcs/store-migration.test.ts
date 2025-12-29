@@ -1,5 +1,5 @@
 /* eslint-disable no-prototype-builtins */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
 import type { LegacyFilter, LabeledFilters, Options } from '@/funcs/store'
 import type ElectronStore from 'electron-store'
 
@@ -21,7 +21,7 @@ const createMockStore = (
   let storeData = { ...initialData }
 
   return {
-    get: vi.fn(
+    get: mock(
       <K extends keyof StoreSchema>(
         key: K,
         defaultValue?: StoreSchema[K]
@@ -39,7 +39,7 @@ const createMockStore = (
       }
     ),
     // @ts-ignore - Mock type compatibility
-    set: vi.fn(<K extends keyof StoreSchema>(key: K, value: StoreSchema[K]): void => {
+    set: mock(<K extends keyof StoreSchema>(key: K, value: StoreSchema[K]): void => {
       const keys = (key as string).split('.')
       let current: any = storeData
       for (let i = 0; i < keys.length - 1; i++) {
@@ -51,7 +51,7 @@ const createMockStore = (
       }
       current[keys[keys.length - 1]] = value
     }),
-    delete: vi.fn(<K extends keyof StoreSchema>(key: K): void => {
+    delete: mock(<K extends keyof StoreSchema>(key: K): void => {
       const keys = (key as string).split('.')
       let current: any = storeData
       for (let i = 0; i < keys.length - 1; i++) {
@@ -63,7 +63,7 @@ const createMockStore = (
       }
       delete current[keys[keys.length - 1]]
     }),
-    has: vi.fn(<K extends keyof StoreSchema>(key: K): boolean => {
+    has: mock(<K extends keyof StoreSchema>(key: K): boolean => {
       const keys = (key as string).split('.')
       let current: any = storeData
       for (const k of keys) {
@@ -75,7 +75,7 @@ const createMockStore = (
       }
       return true
     }),
-    clear: vi.fn((): void => {
+    clear: mock((): void => {
       storeData = {}
     }),
     store: storeData
@@ -86,11 +86,11 @@ describe('Store Migration', () => {
   let mockStore: ReturnType<typeof createMockStore>
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mock.restore()
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    mock.restore()
   })
 
   describe('Legacy filters detection', () => {

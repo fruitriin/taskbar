@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import type { Filter, LegacyFilter, LabeledFilters } from '@/funcs/store'
 import {
   convertLegacyToFilter,

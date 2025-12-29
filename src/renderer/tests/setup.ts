@@ -1,7 +1,13 @@
-import { vi } from 'vitest'
+import { mock } from 'bun:test'
+
+// グローバルwindowオブジェクトの作成（テスト環境用）
+if (typeof window === 'undefined') {
+  // @ts-ignore
+  globalThis.window = globalThis
+}
 
 // Electron APIのモック (renderer側)
-vi.mock('@electron-toolkit/preload', () => ({
+mock.module('@electron-toolkit/preload', () => ({
   ElectronAPI: {},
   IpcRendererEvent: {}
 }))
@@ -10,9 +16,9 @@ vi.mock('@electron-toolkit/preload', () => ({
 Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
-      on: vi.fn(),
-      send: vi.fn(),
-      removeListener: vi.fn()
+      on: mock(),
+      send: mock(),
+      removeListener: mock()
     }
   },
   writable: true

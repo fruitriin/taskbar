@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'bun:test'
 import { windowPosition } from '@/funcs/windows'
 import type { Display } from 'electron'
 

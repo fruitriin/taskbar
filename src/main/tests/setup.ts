@@ -1,91 +1,96 @@
-import { vi } from 'vitest'
+import { mock } from 'bun:test'
 
 // @electron-toolkit/utilsのモック
-vi.mock('@electron-toolkit/utils', () => ({
+mock.module('@electron-toolkit/utils', () => ({
   is: {
     dev: false
   }
 }))
 
 // Electron APIのモック
-vi.mock('electron', () => ({
-  BrowserWindow: vi.fn(() => ({
-    isDestroyed: vi.fn(() => false),
-    destroy: vi.fn(),
-    close: vi.fn(),
-    show: vi.fn(),
-    setBounds: vi.fn(),
-    setWindowButtonVisibility: vi.fn(),
+mock.module('electron', () => ({
+  BrowserWindow: mock(() => ({
+    isDestroyed: mock(() => false),
+    destroy: mock(),
+    close: mock(),
+    show: mock(),
+    setBounds: mock(),
+    setWindowButtonVisibility: mock(),
     webContents: {
-      send: vi.fn()
+      send: mock()
     },
-    on: vi.fn()
+    on: mock()
   })),
   ipcMain: {
-    on: vi.fn(),
-    removeListener: vi.fn()
+    on: mock(),
+    removeListener: mock()
   },
   screen: {
-    getAllDisplays: vi.fn(),
-    on: vi.fn(),
-    getCursorScreenPoint: vi.fn()
+    getAllDisplays: mock(),
+    on: mock(),
+    getCursorScreenPoint: mock()
   },
   app: {
-    quit: vi.fn(),
-    relaunch: vi.fn(),
+    quit: mock(),
+    relaunch: mock(),
     isPackaged: false,
-    getPath: vi.fn((name: string) => {
+    getPath: mock((name: string) => {
       if (name === 'userData') return '/mock/userData'
       return '/mock/path'
     })
   },
-  Menu: vi.fn(() => ({
-    append: vi.fn()
+  Menu: mock(() => ({
+    append: mock()
   })),
-  MenuItem: vi.fn(() => ({
+  MenuItem: mock(() => ({
     label: '',
-    click: vi.fn()
+    click: mock()
   }))
 }))
 
 // ネイティブプロセスのモック
-vi.mock('child_process', () => ({
-  spawn: vi.fn(() => ({
+mock.module('child_process', () => ({
+  spawn: mock(() => ({
     stdout: {
-      on: vi.fn(),
-      [Symbol.asyncIterator]: vi.fn()
+      on: mock(),
+      [Symbol.asyncIterator]: mock()
     },
-    stderr: { on: vi.fn() },
-    on: vi.fn()
+    stderr: { on: mock() },
+    on: mock()
   })),
-  exec: vi.fn()
+  exec: mock()
 }))
 
 // ファイルシステムのモック
-vi.mock('fs', () => ({
+mock.module('fs', () => ({
   default: {
-    existsSync: vi.fn(),
-    readFileSync: vi.fn(),
-    writeFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    watch: vi.fn()
+    existsSync: mock(),
+    readFileSync: mock(),
+    writeFileSync: mock(),
+    appendFileSync: mock(),
+    mkdirSync: mock(),
+    watch: mock()
   },
-  existsSync: vi.fn(),
-  readFileSync: vi.fn(),
-  writeFileSync: vi.fn(),
-  mkdirSync: vi.fn(),
-  watch: vi.fn()
+  existsSync: mock(),
+  readFileSync: mock(),
+  writeFileSync: mock(),
+  appendFileSync: mock(),
+  mkdirSync: mock(),
+  watch: mock()
 }))
 
 // electron-storeのモック
-vi.mock('electron-store', () => ({
-  default: vi.fn(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    clear: vi.fn(),
-    store: {
+mock.module('electron-store', () => ({
+  default: class {
+    get = mock()
+    set = mock()
+    clear = mock()
+    store = {
       options: {
-        layout: 'bottom'
+        layout: 'bottom',
+        windowSortByPositionInApp: false,
+        headers: [],
+        footers: []
       },
       filters: [
         [{ property: 'kCGWindowOwnerName', is: 'Dock' }],
@@ -95,14 +100,14 @@ vi.mock('electron-store', () => ({
         [{ property: 'kCGWindowOwnerName', is: 'Spotlight' }]
       ]
     }
-  }))
+  }
 }))
 
 // just-diffのモック
-vi.mock('just-diff', () => ({
-  diff: vi.fn()
+mock.module('just-diff', () => ({
+  diff: mock()
 }))
 
-vi.mock('just-diff-apply', () => ({
-  diffApply: vi.fn()
+mock.module('just-diff-apply', () => ({
+  diffApply: mock()
 }))
