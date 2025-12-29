@@ -1,92 +1,92 @@
 [tools]
-node = "20.10.0"
 bun = "latest"
+node = "20.10.0"
 
 [env]
 NODE_ENV = "development"
 
 [tasks.dev]
-run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
 description = "開発サーバーを起動"
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev"
 
 [tasks.build]
-run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build"
 description = "アプリケーションをビルド"
+run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build"
 
 [tasks.swiftbuild]
-run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
 description = "Swiftヘルパーをビルド"
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && echo [COPY]binary copry to resouces && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
 
 [tasks."build:mac"]
-run = "mise run build && npx electron-builder --mac --universal"
 description = "macOSユニバーサルバイナリをビルド"
+run = "mise run build && npx electron-builder --mac --universal"
 
 [tasks."install-app"]
-run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
 description = "アプリをApplicationsフォルダにインストール"
+run = "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app"
 
 [tasks.helper]
-run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
 description = "Xcodeヘルパープロジェクトを開く"
+run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
 
 [tasks.format]
-run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 description = "Prettierでコードをフォーマット"
+run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 
 [tasks.lint]
-run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue"
 description = "ESLintでコードをリント"
+run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue"
 
 [tasks.typecheck]
-run = ["mise typecheck:node", "mise typecheck:web"]
 description = "TypeScriptの型チェックを実行"
+run = ["mise typecheck:node", "mise typecheck:web"]
 
 [tasks."typecheck:node"]
-run = "npx tsc --noEmit -p src/main/tsconfig.node.json --composite false"
 description = "メインプロセスの型チェックを実行"
+run = "npx tsc --noEmit -p src/main/tsconfig.node.json --composite false"
 
 [tasks."typecheck:web"]
-run = "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false"
 description = "レンダラープロセスの型チェックを実行"
+run = "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false"
 
 [tasks.test]
-run = "npx vitest tests/"
-dir = "src/main"
 description = "メインプロセスのテストを実行"
+dir = "src/main"
+run = "npx vitest tests/"
 
 [tasks."test:renderer"]
-run = "npx vitest src/renderer/tests/"
-dir = "src/renderer"
 description = "レンダラープロセスのテストを実行"
+dir = "src/renderer"
+run = "npx vitest src/renderer/tests/"
 
 [tasks."test:all"]
-run = ["mise run test", "mise run test:renderer"]
 description = "すべてのテストを実行"
+run = ["mise run test", "mise run test:renderer"]
 
 [tasks."test:ui"]
-run = "npm run test:ui"
-dir = "src/main"
 description = "メインプロセスのテストをUI付きで実行"
+dir = "src/main"
+run = "npm run test:ui"
 
 [tasks."test:ui:renderer"]
-run = "npm run test:ui"
-dir = "src/renderer"
 description = "レンダラープロセスのテストをUI付きで実行"
+dir = "src/renderer"
+run = "npm run test:ui"
 
 [tasks."test:coverage"]
-run = "npm run test:coverage"
-dir = "src/main"
 description = "メインプロセスのテストをカバレッジ付きで実行"
+dir = "src/main"
+run = "npm run test:coverage"
 
 [tasks."test:coverage:renderer"]
-run = "npm run test:coverage"
-dir = "src/renderer"
 description = "レンダラープロセスのテストをカバレッジ付きで実行"
+dir = "src/renderer"
+run = "npm run test:coverage"
 
 [tasks."test:swift"]
-run = "swift test"
-dir = "nativeSrc"
 description = "Swiftヘルパーの単体テストを実行"
+dir = "nativeSrc"
+run = "swift test"
 
 [tasks."afterSign"]
 run = "node scripts/notarize.js"
