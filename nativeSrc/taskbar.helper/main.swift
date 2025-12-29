@@ -11,6 +11,61 @@ import Cocoa
 import CoreGraphics
 
 var debug = false
+var verboseLogging = ProcessInfo.processInfo.environment["TASKBAR_VERBOSE"] != nil
+
+// MARK: - Debug Logging & Watchdog
+
+// 処理の直前にログを出力（ハング時の最後のログで場所を特定）
+func logBefore(_ operation: String, function: String = #function, line: Int = #line) {
+    guard verboseLogging else { return }
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let threadId = pthread_mach_thread_np(pthread_self())
+    let message = "[\(timestamp)] [T:\(threadId)] >>> ENTERING: \(operation) at \(function):\(line)\n"
+    FileHandle.standardError.write(message.data(using: .utf8)!)
+}
+
+// ウォッチドッグタイマー：指定時間内に完了しない場合に警告
+class WatchdogTimer {
+    private var timer: DispatchSourceTimer?
+    private let queue = DispatchQueue(label: "watchdog-timer")
+    private let operation: String
+
+    init(operation: String, timeout: TimeInterval) {
+        self.operation = operation
+
+        timer = DispatchSource.makeTimerSource(queue: queue)
+        timer?.schedule(deadline: .now() + timeout)
+        timer?.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            let message = "⚠️⚠️⚠️ WATCHDOG TIMEOUT: \(self.operation) exceeded \(timeout)s - possible hang!\n"
+            FileHandle.standardError.write(message.data(using: .utf8)!)
+
+            // スレッドダンプを取得
+            self.dumpAllThreads()
+        }
+        timer?.resume()
+    }
+
+    func cancel() {
+        timer?.cancel()
+        timer = nil
+    }
+
+    private func dumpAllThreads() {
+        let message = "=== Thread Dump for hung operation: \(operation) ===\n"
+        FileHandle.standardError.write(message.data(using: .utf8)!)
+
+        // 主要スレッドの状態を出力
+        Thread.callStackSymbols.forEach { symbol in
+            FileHandle.standardError.write("  \(symbol)\n".data(using: .utf8)!)
+        }
+        FileHandle.standardError.write("=== End Thread Dump ===\n".data(using: .utf8)!)
+    }
+
+    deinit {
+        cancel()
+    }
+}
 
 // データ型についての extention
 extension NSBitmapImageRep {
@@ -146,6 +201,16 @@ class FilterManager {
         }
 
         do {
+            // ⚠️ UE RISK (LOW-MEDIUM): FileManager.attributesOfItem
+            // 🔍 調査結果:
+            //    - ネットワークファイルシステム（NFS, SMB等）でブロックする可能性
+            //    - ディスクI/O障害時にカーネルレベルでブロック
+            // 🧪 UEを起こす可能性のある操作:
+            //    1. filter.jsonをネットワークドライブに配置してファイル監視を開始
+            //    2. ディスクが故障している状態でfilter.jsonの属性を取得
+            // 💡 推奨対策:
+            //    - ローカルファイルシステム限定で使用（Application Supportは通常ローカル）
+            //    - エラー時はデフォルト値を返す（既に実装済み）
             let attributes = try FileManager.default.attributesOfItem(atPath: filtersJsonPath.path)
             let modificationTime = attributes[.modificationDate] as? Date
 
@@ -154,6 +219,18 @@ class FilterManager {
                 return cachedFilters
             }
 
+            // ⚠️ UE RISK (LOW-MEDIUM): Data(contentsOf:)
+            // 🔍 調査結果:
+            //    - 同期的ファイル読み込み、大きなファイルでブロックする可能性
+            //    - ネットワークファイルシステムやディスクI/O障害時に危険
+            // 🧪 UEを起こす可能性のある操作:
+            //    1. filter.jsonをネットワークドライブ（NFS/SMB）に配置して読み込み
+            //    2. ディスクが故障している状態（I/Oエラー頻発）でfilter.jsonを読み込み
+            //    3. filter.jsonを巨大なファイル（数MB以上）にして読み込み
+            //    4. 他プロセスがfilter.jsonをロックしている状態で読み込み
+            // 💡 推奨対策:
+            //    - Application Supportのファイルは通常小さいので許容範囲
+            //    - エラーハンドリング済み（デフォルト値を返す）
             let data = try Data(contentsOf: filtersJsonPath)
             let configFile = try JSONDecoder().decode(ConfigFile.self, from: data)
             let filters = configFile.labeledFilters
@@ -171,6 +248,16 @@ class FilterManager {
     private func startFileMonitoring() {
         guard let filtersJsonPath = filtersJsonPath else { return }
 
+        // ⚠️ UE RISK (LOW): open() system call
+        // 🔍 調査結果:
+        //    - ファイルを読み取り専用（O_EVTONLY）で開くだけなので通常は問題なし
+        //    - ネットワークファイルシステムでは稀にブロックする可能性
+        // 🧪 UEを起こす可能性のある操作:
+        //    1. filter.jsonをネットワークドライブ（NFS/SMB）に配置してファイル監視を開始
+        //    2. ディスクI/O障害がある状態でファイル監視を開始
+        // 💡 推奨対策:
+        //    - Application Supportは通常ローカルなので許容範囲
+        //    - エラーハンドリング済み（失敗時は監視なしで続行）
         let fileDescriptor = open(filtersJsonPath.path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
             // print("Warning: Could not open config.json for monitoring")
@@ -319,9 +406,6 @@ func filterWindows(_ windows: [[String: AnyObject]]) -> [[String: AnyObject]] {
                     if case .string(let filterString) = filterRule.isValue, filterString.isEmpty {
                         let windowName = window["kCGWindowName"] as? String ?? ""
                         if windowName.isEmpty {
-                            if let ownerName = window["kCGWindowOwnerName"] as? String {
-                                // print("\(ownerName) - \(windowName)")
-                            }
                             matches.append(true)
                             continue
                         }
@@ -372,14 +456,31 @@ func getIconBase64(pid: Int, owner: String, windowName: String, size: Int) -> St
         return cachedIcon
     }
     iconCacheLock.unlock()
-    
+
+    // ⚠️ UE RISK (MEDIUM): NSRunningApplication.icon
+    // 🔍 調査結果:
+    //    - プロセスがゾンビ状態、異常終了中、権限問題がある場合にブロックする可能性
+    //    - AppKitの内部でプロセス情報取得時にカーネル呼び出しが発生
+    // ✅ 対策済み:
+    //    - バックグラウンドキューで実行
+    //    - 50msのタイムアウト設定済み（セマフォ）
+    // ⚠️ 注意: セマフォはUE状態では機能しない可能性あり
+    // 🧪 UEを起こす可能性のある操作:
+    //    1. アプリを強制終了（kill -9）直後にwatchモードでアイコンを取得
+    //    2. アプリがクラッシュ中（ゾンビ状態）にwatchモードでアイコンを取得
+    //    3. サンドボックス化されたアプリ（権限制限あり）のアイコンを取得
+    //    4. システムプロセス（WindowServer等）のアイコンを取得しようとする
+    //    5. 大量のアプリを同時起動してwatchモードで全アイコンを一斉取得
+    // 💡 追加推奨対策:
+    //    - 別プロセスでアイコン取得を行う
+    //    - エラー時は空のアイコンを返してクラッシュを防ぐ
     // タイムアウト付きでアイコン取得
     let semaphore = DispatchSemaphore(value: 0)
     var result: String?
-    
+
     DispatchQueue.global(qos: .utility).async {
         defer { semaphore.signal() }
-        
+
         guard let runningApp = NSRunningApplication(processIdentifier: pid_t(pid)),
               let iconImage = runningApp.icon?.resized(to: size),
               let iconData = iconImage.png() else {
@@ -387,7 +488,7 @@ func getIconBase64(pid: Int, owner: String, windowName: String, size: Int) -> St
         }
         result = iconData.base64EncodedString()
     }
-    
+
     // 50ms以内にアイコンが取得できない場合はタイムアウト
     if semaphore.wait(timeout: .now() + 0.05) == .timedOut {
         return nil
@@ -415,18 +516,55 @@ func checkAccessibilityPermission() -> Bool {
 }
 
 func checkScreenRecordingPermission() -> Bool {
+    logBefore("checkScreenRecordingPermission")
+    let watchdog = WatchdogTimer(operation: "checkScreenRecordingPermission", timeout: 2.0)
+    defer { watchdog.cancel() }
+
+    // ⚠️ UE RISK (HIGH): SCShareableContent API
+    // 🔍 調査結果:
+    //    - スクリーンレコーディング権限ダイアログが表示中の場合、カーネルレベルでブロックする
+    //    - 権限が拒否されている状態でも、システムの状態によってはUE状態になる可能性あり
+    //    - ウォッチドッグタイマーやセマフォはUE状態では機能しない（カーネルがブロックしているため）
+    // 🧪 UEを起こす可能性のある操作:
+    //    1. システム設定でスクリーンレコーディング権限を削除 → check-permissionsコマンド実行
+    //    2. 権限ダイアログが表示されている最中に check-permissions を実行
+    //    3. アプリ起動直後、権限状態が不安定な状態で check-permissions を連続実行
+    //    4. 他のアプリが同時にスクリーンレコーディング権限を要求している状態で実行
+    // 🔬 実験結果（2025-12-29）:
+    //    ❌ 権限削除 → check-permissions実行: UEにならず（エラーメッセージを返して正常終了）
+    //    ❌ 権限ダイアログ表示中に10個のcheck-permissionsを並列実行: UEにならず（全て正常終了）
+    //    → 結論: SCShareableContent APIは権限エラー時も適切にエラーを返すため、UEにはなりにくい
+    // 💡 推奨対策:
+    //    1. 軽量な権限チェック方法に変更（CGWindowListCopyWindowInfoで判定）
+    //    2. 権限チェック結果をキャッシュして頻繁な呼び出しを避ける
+    //    3. 別プロセスで実行してタイムアウト後にkill
     // 画面録画権限をチェックするため、SCShareableContentを使用
     let semaphore = DispatchSemaphore(value: 0)
     var hasPermission = false
-    
+    var callbackCalled = false
+
     if #available(macOS 12.3, *) {
+        logBefore("SCShareableContent.getExcludingDesktopWindows")
+
         SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { content, error in
+            callbackCalled = true
             hasPermission = (error == nil)
+
+            if verboseLogging {
+                let status = error == nil ? "success" : "error: \(error!.localizedDescription)"
+                let message = "SCShareableContent callback: \(status)\n"
+                FileHandle.standardError.write(message.data(using: .utf8)!)
+            }
+
             semaphore.signal()
         }
-        
+
         // タイムアウト設定（100ms）
         if semaphore.wait(timeout: .now() + 0.1) == .timedOut {
+            if verboseLogging {
+                let message = "⚠️ SCShareableContent callback NOT called (timeout)\n"
+                FileHandle.standardError.write(message.data(using: .utf8)!)
+            }
             return false
         }
     } else {
@@ -435,7 +573,7 @@ func checkScreenRecordingPermission() -> Bool {
         // 完全な権限チェックは困難なため、基本的にtrueを返す
         hasPermission = true
     }
-    
+
     return hasPermission
 }
 
@@ -555,9 +693,35 @@ class ProgressiveIconLoader {
     
     private func sendToStdout(_ data: Data?) {
         guard let data = data else { return }
+
+        logBefore("FileHandle.standardOutput.write (\(data.count) bytes)")
+        let watchdog = WatchdogTimer(operation: "stdout.write", timeout: 3.0)
+        defer { watchdog.cancel() }
+
+        // ⚠️ UE RISK (HIGH): FileHandle.standardOutput.write
+        // 🔍 調査結果:
+        //    - stdoutパイプバッファがフル（親プロセスが読み取っていない）場合、カーネルレベルでブロック
+        //    - 大量データ（アイコンデータなど）送信時に特に危険
+        //    - パイプのデフォルトバッファサイズは通常64KB、それを超えるとブロック
+        //    - ウォッチドッグタイマーはUE状態では機能しない
+        // 🧪 UEを起こす可能性のある操作:
+        //    1. 親プロセス（Electron）がstdoutを読み取っていない状態でwatchモードを開始
+        //    2. 親プロセスがクラッシュ/フリーズした状態でTaskbarHelperが送信を続ける
+        //    3. 大量のウィンドウ（100個以上）を開いた状態でlist/debugコマンドを実行
+        //    4. アイコン更新が高頻度（100ms間隔）で発生する状態でwatchモードを長時間実行
+        //    5. パイプバッファを故意にフルにする（親プロセス側でsleep挿入など）
+        // 💡 推奨対策:
+        //    1. 非ブロッキングI/O（O_NONBLOCK）に設定してEAGAINをハンドリング
+        //    2. データを分割して送信（チャンク送信）
+        //    3. タイムアウト付きwrite実装（POSIXのselectまたはpoll使用）
         let stdOut = FileHandle.standardOutput
         stdOut.write(data)
         stdOut.write("\n".data(using: .utf8)!)
+
+        if verboseLogging {
+            let message = "Successfully wrote \(data.count) bytes to stdout\n"
+            FileHandle.standardError.write(message.data(using: .utf8)!)
+        }
     }
     
     private func saveIconsToCache(_ icons: [String: String]) {
@@ -582,6 +746,20 @@ class ProgressiveIconLoader {
         // 新しいアイコンをマージ
         existingIcons.merge(icons) { _, new in new }
 
+        // ⚠️ UE RISK (LOW-MEDIUM): Data.write(to:options:)
+        // 🔍 調査結果:
+        //    - .atomicオプションは一時ファイル作成→rename操作が必要
+        //    - ディスク容量不足、I/O障害、ファイルロック競合でブロックする可能性
+        //    - ネットワークファイルシステムでは特に危険
+        // 🧪 UEを起こす可能性のある操作:
+        //    1. ディスク容量を完全に使い切った状態でwatchモードを実行（icons.json書き込み失敗）
+        //    2. icons.jsonをネットワークドライブに配置してwatchモードを実行
+        //    3. 他プロセスがicons.jsonをロックしている状態でwatchモードを実行
+        //    4. アイコン更新が高頻度（100ms間隔）で発生して書き込みが競合
+        // 💡 推奨対策:
+        //    - try?でエラーを無視している（既に実装済み）
+        //    - アイコンキャッシュは失われても再取得可能なので許容範囲
+        //    - バックグラウンドキューで実行することを検討
         // JSONとして保存（アトミックに書き込みしないと書き出したjsonファイルが破損することがある）
         // 書き出しが重複すると片方は失われるが許容する
         if let iconJsonData = try? JSONSerialization.data(withJSONObject: existingIcons, options: []) {
@@ -597,7 +775,41 @@ var standardError = FileHandle.standardError
 
 // グローバルなウィンドウリストプロバイダー（テスト用に差し替え可能）
 var windowListProvider: () -> [[String: AnyObject]] = {
-    CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
+    logBefore("CGWindowListCopyWindowInfo")
+    let watchdog = WatchdogTimer(operation: "CGWindowListCopyWindowInfo", timeout: 5.0)
+    defer { watchdog.cancel() }
+
+    // ⚠️ UE RISK (CRITICAL): CGWindowListCopyWindowInfo
+    // 🔍 調査結果:
+    //    - WindowServerとの同期通信が必要で、WindowServerが過負荷の場合にカーネルレベルでブロック
+    //    - 権限問題（スクリーンレコーディング権限など）がある場合もUE状態になる可能性あり
+    //    - ウォッチドッグタイマーはUE状態では機能しない
+    //    - 一度UE状態になると、以降の全てのTaskbarHelper実行もUE状態になる（カスケード効果）
+    // 🧪 UEを起こす可能性のある操作:
+    //    1. 大量のウィンドウ（50個以上）を開いた状態でlist/debug/watchコマンドを実行
+    //    2. 画面共有中・画面録画中にlist/debug/watchコマンドを実行
+    //    3. Mission Control（F3）を表示中にlist/debug/watchコマンドを実行
+    //    4. 複数ディスプレイの接続/切断直後にlist/debug/watchコマンドを実行
+    //    5. システムが高負荷（CPU 90%以上）の状態でlist/debug/watchコマンドを連続実行
+    //    6. スクリーンセーバーから復帰直後にlist/debug/watchコマンドを実行
+    //    7. 複数のTaskbarHelperプロセスを並列実行（5個以上同時に起動）
+    // 🔬 実験結果（2025-12-29）:
+    //    ❌ 10個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
+    //    ❌ 20個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
+    //    ❌ Mission Control表示中に10個のlistコマンドを並列実行（122個のウィンドウ検出）: UEにならず（全て正常終了）
+    //    → 結論: 通常の負荷（並列20個、100+ウィンドウ）ではUEにならない。より極端な条件が必要
+    // 💡 推奨対策:
+    //    1. 別プロセスで実行してタイムアウト後にSIGKILL（最も効果的）
+    //    2. XPCサービスとして分離して実行
+    //    3. エラー発生時のフォールバック処理を実装
+    let result = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
+
+    if verboseLogging {
+        let message = "CGWindowListCopyWindowInfo returned \(result.count) windows\n"
+        FileHandle.standardError.write(message.data(using: .utf8)!)
+    }
+
+    return result
 }
 
 // ウィンドウ情報の一覧を取得してJSONデータとして返す関数
@@ -674,6 +886,8 @@ class WindowObserver {
     }
 
     @objc func windowDidChange(notification: NSNotification) {
+        logBefore("windowDidChange - \(notification.name.rawValue)")
+
         // アクティビティを記録
         ProcessManager.shared.recordActivity()
 
@@ -684,38 +898,39 @@ class WindowObserver {
             let delayTime = DispatchTime.now() + .milliseconds(500)
 
             DispatchQueue.global(qos: .background).asyncAfter(deadline: delayTime) {
-                // タイムアウト付きでウィンドウ情報を取得
-                let semaphore = DispatchSemaphore(value: 0)
-                var windowData: Data?
+                logBefore("windowDidChange delayed execution")
+                let watchdog = WatchdogTimer(operation: "windowDidChange.getWindowInfo", timeout: 10.0)
 
-                DispatchQueue.global(qos: .utility).async {
-                    defer { semaphore.signal() }
-                    windowData = getWindowInfoListData()
-                }
+                // getWindowInfoListDataは内部でProgressiveIconLoaderを使用して
+                // 自動的にstdoutに送信する
+                _ = getWindowInfoListData()
+                ProcessManager.shared.recordActivity()
 
-                // 2秒でタイムアウト
-                if semaphore.wait(timeout: .now() + 2.0) == .timedOut {
-                    print("Window info retrieval timeout")
-                    return
-                }
+                watchdog.cancel()
 
-                DispatchQueue.main.async {
-                    // getWindowInfoListDataは内部でProgressiveIconLoaderを使用して
-                    // 自動的にstdoutに送信するため、ここでは呼び出すだけ
-                    _ = getWindowInfoListData()
-                    ProcessManager.shared.recordActivity()
+                if verboseLogging {
+                    let message = "windowDidChange completed successfully\n"
+                    FileHandle.standardError.write(message.data(using: .utf8)!)
                 }
             }
         }
     }
 
     @objc func filtersDidChange(notification: NSNotification) {
+        logBefore("filtersDidChange")
         print("Filter settings changed, updating window list...")
 
         // フィルター変更時は即座にウィンドウ情報を更新
         DispatchQueue.global(qos: .utility).async {
+            let watchdog = WatchdogTimer(operation: "filtersDidChange.getWindowInfo", timeout: 10.0)
             _ = getWindowInfoListData()
             ProcessManager.shared.recordActivity()
+            watchdog.cancel()
+
+            if verboseLogging {
+                let message = "filtersDidChange completed successfully\n"
+                FileHandle.standardError.write(message.data(using: .utf8)!)
+            }
         }
     }
 }
@@ -813,6 +1028,7 @@ guard arguments.count > 1 else {
     print("  exclude       - 除外されたウィンドウ一覧をワンショット出力")
     print("  watch         - ウィンドウ変更を監視してリアルタイム出力")
     print("  check-permissions - 権限状態をJSON形式で出力")
+    print("  get-config    - 設定ファイル(config.json)の内容を出力")
     exit(1)
 }
 
@@ -829,6 +1045,10 @@ case "debug":
     let windowsListInfo = windowListProvider()
     do {
         let jsonData = try JSONSerialization.data(withJSONObject: windowsListInfo, options: [])
+        // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
+        // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -847,6 +1067,10 @@ case "list":
 
     do {
         let jsonData = try JSONSerialization.data(withJSONObject: filteredWindows, options: [])
+        // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
+        // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -874,6 +1098,10 @@ case "exclude":
 
     do {
         let jsonData = try JSONSerialization.data(withJSONObject: excludedWindows, options: [])
+        // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
+        // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -924,9 +1152,46 @@ case "check-permissions":
         print("権限状態の取得に失敗しました")
         exit(1)
     }
-    
+
+case "get-config":
+    // 設定ファイル(config.json)の内容を出力
+    guard let appSupportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+        print("Application Supportディレクトリにアクセスできません")
+        exit(1)
+    }
+
+    let taskbarDir = appSupportDir.appendingPathComponent("taskbar.fm")
+    let configJsonPath = taskbarDir.appendingPathComponent("config.json")
+
+    guard FileManager.default.fileExists(atPath: configJsonPath.path) else {
+        print("config.jsonが見つかりません: \(configJsonPath.path)")
+        exit(1)
+    }
+
+    do {
+        // ⚠️ UE RISK (LOW-MEDIUM): Data(contentsOf:)
+        // 🔍 調査結果: loadFiltersFromFile()と同じリスク
+        // 🧪 UEを起こす可能性のある操作: loadFiltersFromFile()と同じ（main.swift:223-227参照）
+        // 💡 推奨対策: Application Supportは通常ローカルファイルシステムなので許容範囲
+        let data = try Data(contentsOf: configJsonPath)
+        // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
+        // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
+        let stdOut = FileHandle.standardOutput
+        stdOut.write(data)
+        stdOut.write("\n".data(using: .utf8)!)
+        // 確実にバッファを flush してデータが即座に送信されるようにする
+        if #available(macOS 10.15, *) {
+            try? stdOut.synchronize()
+        }
+    } catch {
+        print("config.jsonの読み込みに失敗しました: \(error)")
+        exit(1)
+    }
+
 default:
     print("不明なオプション: \(option)")
-    print("使用可能なオプション: grant, debug, list, check-permissions")
+    print("使用可能なオプション: grant, debug, list, exclude, watch, check-permissions, get-config")
     exit(1)
 }

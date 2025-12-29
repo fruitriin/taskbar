@@ -126,6 +126,7 @@ UE (Uninterruptible Sleep) state occurs because **there is code in the source th
 - This cascading behavior is expected and self-evident - don't waste time testing other subcommands
 - `kill -9` **cannot** terminate processes in UE state
 - The only solution is to restart the computer
+- **IMPORTANT: "再起動" (restart) means a full OS reboot** - not just restarting the application or TaskbarHelper process. You must restart macOS itself to clear the UE state.
 
 **Investigation Goal:**
 The goal is to identify **which code is causing the UE state**, not to test if other commands work.
@@ -158,3 +159,31 @@ The goal is to identify **which code is causing the UE state**, not to test if o
 - All potentially blocking operations in main.swift have watchdog timers
 - Verbose logging can be enabled with: `TASKBAR_VERBOSE=1 resources/TaskbarHelper <command>`
 - Check permissions before running: `resources/TaskbarHelper check-permissions`
+
+### UE Hunting Procedure
+
+**Systematic approach to identify and fix UE-causing code:**
+
+1. **Reproduce UE State**
+   - Perform specific operations that intentionally trigger UE state
+   - Document the exact steps that cause the UE state
+   - Verify UE state with `ps aux | grep TaskbarHelper | grep -v grep` (look for `UE` or `UE+` in STAT column)
+   - Capture verbose logs if possible: `TASKBAR_VERBOSE=1 resources/TaskbarHelper <command> 2>ue-debug.log`
+   - Note: Once UE occurs, you must restart macOS before proceeding
+
+2. **Modify Source Code**
+   - Based on investigation, apply fixes to the identified problematic system calls in nativeSrc/taskbar.helper/main.swift
+   - Rebuild the helper: `mise run swiftbuild`
+   - Copy the new binary: `cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper`
+
+3. **Verify Fix**
+   - After restarting macOS (to clear any UE state)
+   - Perform the exact same operation that previously caused UE state
+   - Confirm that UE state does NOT occur
+   - Check process state remains in `S` or `S+` (normal sleep states)
+   - Run for extended period to ensure stability
+
+**Important Notes:**
+- Each iteration requires a full macOS restart
+- Document all changes and test results
+- If UE still occurs, return to step 1 with additional logging/investigation
