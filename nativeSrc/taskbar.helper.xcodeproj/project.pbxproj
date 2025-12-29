@@ -258,12 +258,14 @@
 		B6B575682B00EE8F00D09CC8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 4Z474DZ677;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 4Z474DZ677;
 				ENABLE_HARDENED_RUNTIME = YES;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = taskbar.helper;
+				PRODUCT_BUNDLE_IDENTIFIER = taskbar.helper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -272,12 +274,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development: Rin Nakashima (2GU627Y6N9)";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 4Z474DZ677;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = 4Z474DZ677;
 				ENABLE_HARDENED_RUNTIME = YES;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = taskbar.helper;
+				PRODUCT_BUNDLE_IDENTIFIER = taskbar.helper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(resources/TaskbarHelper:*)"
+      "Bash(resources/TaskbarHelper:*)",
+      "Bash(mise:run swiftbuild)",
+      "Bash(mise:run build)",
+      "Bash(mise:run typecheck)",
+      "Bash(mise:run typecheck:node)",
+      "Bash(mise:run typecheck:renderer)",
+      
+      "Bash(mise:run lint)",
+      "Bash(mise:run format)",
+
+      "Bash(mise:run format)",
+
+      "Bash(codesign:*)"
+
     ]
   }
 }

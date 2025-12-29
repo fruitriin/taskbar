@@ -41,6 +41,29 @@ Taskbar.fm is an Electron application that brings Windows-like taskbar functiona
 - `mise run swiftbuild` - Build Swift helper via command line
 - Native helper binary must be built before running `dev` or `build`
 
+#### Troubleshooting: UE (Unexpected Error/Unresponsive Execution)
+
+If the TaskbarHelper process becomes unresponsive or causes UE errors:
+
+1. **Check Code Signing Configuration** (CRITICAL):
+   - Open the Xcode project: `mise run helper`
+   - Navigate to: **taskbar.helper target** → **Signing & Capabilities** tab
+   - Verify that a valid **Signing Certificate** is selected
+   - Ensure the certificate is not expired or invalid
+   - Common issue: Wrong certificate selected (e.g., distribution cert instead of development cert)
+   - Recommended: Use "Sign to Run Locally" or a valid development certificate
+
+2. **Verify Entitlements**:
+   - Check that `taskbar.helper.entitlements` exists and has proper permissions
+   - Required entitlements: Screen Recording, Accessibility
+
+3. **Rebuild Helper Binary**:
+   ```bash
+   mise run swiftbuild
+   ```
+
+**Note**: Code signing issues are a common cause of UE errors. The helper binary may fail to launch or hang if signing is misconfigured.
+
 ### Installation
 
 - `mise run install-app` - Install built app to /Applications
