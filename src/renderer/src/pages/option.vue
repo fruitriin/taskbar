@@ -209,34 +209,108 @@
           <div
             style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem"
           >
-            <div
-              v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters"
-              :key="k"
-              style="
-                font-size: 0.7rem;
-                background: #2a2a2a;
-                padding: 0.3rem 0.4rem;
-                border-radius: 4px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-              "
-            >
-              <span style="color: #ccc"
-                >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
-              >
-              <button
-                style="
-                  background: none;
-                  border: none;
-                  color: #ef4444;
-                  cursor: pointer;
-                  font-size: 0.7rem;
+            <div v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters" :key="k">
+              <!-- 通常表示 -->
+              <div
+                v-if="
+                  !editingCondition ||
+                  editingCondition.groupIndex !== selectedFilterIndex ||
+                  editingCondition.conditionIndex !== k
                 "
-                @click="removeCondition(selectedFilterIndex, k)"
+                style="
+                  font-size: 0.7rem;
+                  background: #2a2a2a;
+                  padding: 0.3rem 0.4rem;
+                  border-radius: 4px;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  cursor: pointer;
+                  transition: background 0.2s;
+                "
+                @click="startEditCondition(selectedFilterIndex, k, filter)"
+                @mouseenter="$event.currentTarget.style.background = '#333'"
+                @mouseleave="$event.currentTarget.style.background = '#2a2a2a'"
               >
-                ×
-              </button>
+                <span style="color: #ccc"
+                  >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
+                >
+                <button
+                  style="
+                    background: none;
+                    border: none;
+                    color: #ef4444;
+                    cursor: pointer;
+                    font-size: 0.7rem;
+                  "
+                  @click.stop="removeCondition(selectedFilterIndex, k)"
+                >
+                  ×
+                </button>
+              </div>
+
+              <!-- 編集フォーム -->
+              <div
+                v-else
+                style="
+                  font-size: 0.7rem;
+                  background: #1a3a5a;
+                  padding: 0.5rem;
+                  border-radius: 4px;
+                  border: 1px solid #4a90e2;
+                "
+              >
+                <div style="display: flex; flex-direction: column; gap: 0.4rem">
+                  <!-- Property選択 -->
+                  <div>
+                    <label style="color: #999; font-size: 0.65rem; display: block; margin-bottom: 0.1rem">
+                      プロパティ
+                    </label>
+                    <select
+                      v-model="editingConditionData.property"
+                      class="input is-small"
+                      style="width: 100%; font-size: 0.75rem; padding: 0.3rem"
+                    >
+                      <option value="kCGWindowName">ウィンドウ名</option>
+                      <option value="kCGWindowOwnerName">アプリ名</option>
+                      <option value="kCGWindowOwnerPID">プロセスID</option>
+                      <option value="kCGWindowLayer">レイヤー</option>
+                      <option value="kCGWindowNumber">ウィンドウ番号</option>
+                    </select>
+                  </div>
+
+                  <!-- 値入力 -->
+                  <div>
+                    <label style="color: #999; font-size: 0.65rem; display: block; margin-bottom: 0.1rem">
+                      値
+                    </label>
+                    <input
+                      v-model="editingConditionData.is"
+                      class="input is-small"
+                      style="width: 100%; font-size: 0.75rem; padding: 0.3rem"
+                      type="text"
+                    />
+                  </div>
+
+                  <!-- ボタン -->
+                  <div style="display: flex; gap: 0.3rem; justify-content: flex-end">
+                    <button
+                      class="button is-small"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.5rem"
+                      @click="cancelEditCondition"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      class="button is-small is-primary"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.5rem"
+                      @click="saveEditCondition"
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -286,6 +360,8 @@ export default {
     editingLabelIndex: number | null
     selectedFilterIndex: number | null
     panelPosition: { top: string; left: string } | null
+    editingCondition: { groupIndex: number; conditionIndex: number } | null
+    editingConditionData: { property: string; is: string | number | boolean }
   } {
     return {
       drag: false,
@@ -304,7 +380,9 @@ export default {
       editingLabel: '',
       editingLabelIndex: null,
       selectedFilterIndex: null,
-      panelPosition: null
+      panelPosition: null,
+      editingCondition: null,
+      editingConditionData: { property: '', is: '' }
     }
   },
   computed: {
@@ -334,6 +412,8 @@ export default {
       }
 
       Electron.send('setLabeledFilters', this.labeledFilters)
+      // フィルターリストを更新
+      Electron.send('getExcludeWindows')
     },
     removeCondition(groupIndex: number, conditionIndex: number): void {
       this.labeledFilters[groupIndex].filters.splice(conditionIndex, 1)
@@ -344,6 +424,8 @@ export default {
       }
 
       Electron.send('setLabeledFilters', this.labeledFilters)
+      // フィルターリストを更新
+      Electron.send('getExcludeWindows')
     },
     getPropertyDisplayName(property: string): string {
       const displayNames: Record<string, string> = {
@@ -377,6 +459,8 @@ export default {
         this.selectedFilterIndex = null
       }
       Electron.send('setLabeledFilters', this.labeledFilters)
+      // フィルターリストを更新
+      Electron.send('getExcludeWindows')
     },
     updateLabel(_index: number, newLabel: string): void {
       if (this.selectedFilterIndex === null) return
@@ -397,6 +481,7 @@ export default {
     selectFilter(index: number, event: MouseEvent): void {
       this.selectedFilterIndex = index
       this.editingLabel = this.labeledFilters[this.selectedFilterIndex].label
+      this.editingCondition = null // フィルターグループを切り替えた時は条件編集をクリア
 
       // クリックされたボタン要素の位置を取得
       const button = event.currentTarget as HTMLElement
@@ -445,6 +530,33 @@ export default {
         top: `${top}px`,
         left: `${left}px`
       }
+    },
+    startEditCondition(
+      groupIndex: number,
+      conditionIndex: number,
+      filter: { property: string; is: string | number | boolean }
+    ): void {
+      this.editingCondition = { groupIndex, conditionIndex }
+      this.editingConditionData = { property: filter.property, is: filter.is }
+    },
+    cancelEditCondition(): void {
+      this.editingCondition = null
+      this.editingConditionData = { property: '', is: '' }
+    },
+    saveEditCondition(): void {
+      if (this.editingCondition === null) return
+
+      const { groupIndex, conditionIndex } = this.editingCondition
+      this.labeledFilters[groupIndex].filters[conditionIndex] = {
+        property: this.editingConditionData.property,
+        is: this.editingConditionData.is
+      }
+
+      Electron.send('setLabeledFilters', this.labeledFilters)
+      // フィルターリストを更新
+      Electron.send('getExcludeWindows')
+      this.editingCondition = null
+      this.editingConditionData = { property: '', is: '' }
     }
   },
   mounted(): void {
