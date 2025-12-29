@@ -106,3 +106,84 @@ Taskbar.fm is an Electron application that brings Windows-like taskbar functiona
 - Uses electron-store for persistent configuration
 - Settings structure managed in `src/main/funcs/store.ts`
 - Icon caching system stores app icons in Application Support directory
+
+## Debugging TaskbarHelper (Native Swift Helper)
+
+### Handling Hangs and UE (Uninterruptible Sleep) State
+
+**Root Cause:**
+UE (Uninterruptible Sleep) state occurs because **there is code in the source that calls uninterruptible kernel-level system calls**. This is not a runtime issue but a code issue that must be identified and fixed.
+
+**Detection:**
+1. If a TaskbarHelper command doesn't respond within 30 seconds, check process state:
+   ```bash
+   ps aux | grep TaskbarHelper | grep -v grep
+   ```
+2. Look for `UE` or `UE+` in the STAT column - this indicates uninterruptible sleep state
+
+**UE State Characteristics:**
+- Once ANY TaskbarHelper process enters UE state, **ALL subsequent executions** (any subcommand) will also enter UE state immediately
+- This cascading behavior is expected and self-evident - don't waste time testing other subcommands
+- `kill -9` **cannot** terminate processes in UE state
+- The only solution is to restart the computer
+- **IMPORTANT: "再起動" (restart) means a full OS reboot** - not just restarting the application or TaskbarHelper process. You must restart macOS itself to clear the UE state.
+
+**Investigation Goal:**
+The goal is to identify **which code is causing the UE state**, not to test if other commands work.
+
+**When UE State is Detected:**
+
+1. **DO NOT** execute any more TaskbarHelper commands - they will also hang immediately
+2. **DO NOT** attempt to test other subcommands to see if they work - this is pointless
+3. **Investigate the source code** to find the problematic system call:
+   - Check debug logs (stderr output) to identify the last successful operation:
+     - Look for `logBefore()` messages to see what was executing
+     - Check for watchdog timeout warnings
+     - Identify which function/system call didn't complete
+   - Review the source code around the last logged operation
+   - Identify which system call immediately follows the last successful log entry
+   - That system call is likely causing the UE state
+4. Report findings to the user:
+   - Which operation/subcommand was being attempted
+   - Last successful log entry (file:line from `logBefore()`)
+   - Which system call or API is suspected to cause UE (e.g., file I/O, CGWindowListCopyWindowInfo, SCShareableContent APIs)
+   - Specific code location (file and line number) where the problematic call exists
+5. **Inform the user that a system restart is required** to clear the UE state and test fixes
+
+**Common Causes:**
+- macOS system calls that require screen recording permissions can hang if permissions are misconfigured
+- `CGWindowListCopyWindowInfo` can hang when the WindowServer is overloaded
+- `SCShareableContent` APIs can hang when screen recording permission dialogs are pending
+
+**Prevention:**
+- All potentially blocking operations in main.swift have watchdog timers
+- Verbose logging can be enabled with: `TASKBAR_VERBOSE=1 resources/TaskbarHelper <command>`
+- Check permissions before running: `resources/TaskbarHelper check-permissions`
+
+### UE Hunting Procedure
+
+**Systematic approach to identify and fix UE-causing code:**
+
+1. **Reproduce UE State**
+   - Perform specific operations that intentionally trigger UE state
+   - Document the exact steps that cause the UE state
+   - Verify UE state with `ps aux | grep TaskbarHelper | grep -v grep` (look for `UE` or `UE+` in STAT column)
+   - Capture verbose logs if possible: `TASKBAR_VERBOSE=1 resources/TaskbarHelper <command> 2>ue-debug.log`
+   - Note: Once UE occurs, you must restart macOS before proceeding
+
+2. **Modify Source Code**
+   - Based on investigation, apply fixes to the identified problematic system calls in nativeSrc/taskbar.helper/main.swift
+   - Rebuild the helper: `mise run swiftbuild`
+   - Copy the new binary: `cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper`
+
+3. **Verify Fix**
+   - After restarting macOS (to clear any UE state)
+   - Perform the exact same operation that previously caused UE state
+   - Confirm that UE state does NOT occur
+   - Check process state remains in `S` or `S+` (normal sleep states)
+   - Run for extended period to ensure stability
+
+**Important Notes:**
+- Each iteration requires a full macOS restart
+- Document all changes and test results
+- If UE still occurs, return to step 1 with additional logging/investigation
