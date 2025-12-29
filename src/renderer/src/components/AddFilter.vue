@@ -1,125 +1,55 @@
 <template>
-  <div class="add-filter-form" style="margin-top: 0.5rem; max-width: 100%">
+  <div class="add-filter-form">
     <!-- プラスボタン（フォーム非表示時） -->
     <div v-if="!isExpanded" class="add-button-container">
       <button
-        class="button is-small is-rounded"
-        :style="{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          width: filterIndex !== undefined ? '100%' : 'auto',
-          background: '#059669',
-          borderColor: '#059669',
-          color: 'white',
-          fontWeight: '600',
-          transition: 'all 0.2s'
-        }"
+        class="button is-small is-rounded add-button"
+        :class="{ 'full-width': filterIndex !== undefined }"
         @click="isExpanded = true"
-        @mouseenter="(e) => (e.currentTarget.style.background = '#047857')"
-        @mouseleave="(e) => (e.currentTarget.style.background = '#059669')"
       >
-        <span style="font-size: 1.1rem; line-height: 1">+</span>
+        <span class="plus-icon">+</span>
         <span v-if="filterIndex === undefined">新しいグループを作成</span>
         <span v-else>条件を追加</span>
       </button>
     </div>
 
     <!-- フォーム（展開時） -->
-    <div
-      v-if="isExpanded"
-      style="
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        max-width: 100%;
-        background: #2a2a2a;
-        padding: 0.75rem;
-        border-radius: 6px;
-        border: 1px solid #444;
-      "
-    >
-      <div style="display: flex; flex-direction: column; gap: 0.5rem">
+    <div v-if="isExpanded" class="form-container">
+      <div class="form-fields">
         <div class="control">
-          <div class="select is-small" style="width: 100%">
-            <select
-              v-model="filter.property"
-              style="
-                width: 100%;
-                background: #1a1a1a;
-                border-color: #444;
-                color: #e0e0e0;
-                font-size: 0.8rem;
-              "
-            >
-              <option value="" style="background: #1a1a1a; color: #888">
-                プロパティを選択
-              </option>
-              <option value="kCGWindowName" style="background: #1a1a1a; color: #e0e0e0">
-                ウィンドウ名
-              </option>
-              <option value="kCGWindowOwnerName" style="background: #1a1a1a; color: #e0e0e0">
-                アプリケーション名
-              </option>
-              <option value="kCGWindowOwnerPID" style="background: #1a1a1a; color: #e0e0e0">
-                プロセスID
-              </option>
-              <option value="kCGWindowNumber" style="background: #1a1a1a; color: #e0e0e0">
-                ウィンドウ番号
-              </option>
-              <option value="kCGWindowLayer" style="background: #1a1a1a; color: #e0e0e0">
-                ウィンドウレイヤー
-              </option>
-              <option value="kCGWindowIsOnscreen" style="background: #1a1a1a; color: #e0e0e0">
-                画面表示状態
-              </option>
-              <option value="kCGWindowSharingState" style="background: #1a1a1a; color: #e0e0e0">
-                共有状態
-              </option>
-              <option value="kCGWindowStoreType" style="background: #1a1a1a; color: #e0e0e0">
-                ストアタイプ
-              </option>
+          <div class="select is-small select-wrapper">
+            <select v-model="filter.property" class="filter-select">
+              <option value="" class="placeholder-option">プロパティを選択</option>
+              <option value="kCGWindowName" class="filter-option">ウィンドウ名</option>
+              <option value="kCGWindowOwnerName" class="filter-option">アプリケーション名</option>
+              <option value="kCGWindowOwnerPID" class="filter-option">プロセスID</option>
+              <option value="kCGWindowNumber" class="filter-option">ウィンドウ番号</option>
+              <option value="kCGWindowLayer" class="filter-option">ウィンドウレイヤー</option>
+              <option value="kCGWindowIsOnscreen" class="filter-option">画面表示状態</option>
+              <option value="kCGWindowSharingState" class="filter-option">共有状態</option>
+              <option value="kCGWindowStoreType" class="filter-option">ストアタイプ</option>
             </select>
           </div>
         </div>
         <div class="control">
           <input
             v-model="filter.is"
-            class="input is-small"
+            class="input is-small filter-input"
             :type="getInputType(filter.property)"
             :placeholder="getPlaceholder(filter.property)"
-            style="
-              width: 100%;
-              background: #1a1a1a;
-              border-color: #444;
-              color: #e0e0e0;
-              font-size: 0.8rem;
-            "
           />
         </div>
       </div>
-      <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem">
+      <div class="action-buttons">
         <button
-          class="button is-small"
+          class="button is-small submit-button"
+          :class="{ disabled: !filter.property }"
           :disabled="!filter.property"
-          :style="{
-            flex: 1,
-            background: filter.property ? '#059669' : '#333',
-            borderColor: filter.property ? '#059669' : '#444',
-            color: filter.property ? 'white' : '#888',
-            fontWeight: '600',
-            cursor: filter.property ? 'pointer' : 'not-allowed'
-          }"
           @click="handleAddFilter"
         >
           {{ filterIndex !== undefined ? '追加' : '作成' }}
         </button>
-        <button
-          class="button is-small"
-          style="flex: 1; background: #2a2a2a; border-color: #444; color: #b0b0b0"
-          @click="cancelAdd"
-        >
+        <button class="button is-small cancel-button" @click="cancelAdd">
           キャンセル
         </button>
       </div>
@@ -209,6 +139,112 @@ export default {
 }
 </script>
 
-<style lang="sass" scoped>
-@import 'bulma/css/bulma.css'
+<style lang="scss" scoped>
+@import 'bulma/css/bulma.css';
+
+.add-filter-form {
+  margin-top: 0.5rem;
+  max-width: 100%;
+}
+
+.add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #047857;
+  }
+
+  &.full-width {
+    width: 100%;
+  }
+}
+
+.plus-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 100%;
+  background: #2a2a2a;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #444;
+}
+
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.select-wrapper {
+  width: 100%;
+}
+
+.filter-select {
+  width: 100%;
+  background: #1a1a1a;
+  border-color: #444;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+}
+
+.placeholder-option {
+  background: #1a1a1a;
+  color: #888;
+}
+
+.filter-option {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.filter-input {
+  width: 100%;
+  background: #1a1a1a;
+  border-color: #444;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.submit-button {
+  flex: 1;
+  background: #059669;
+  border-color: #059669;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+
+  &.disabled {
+    background: #333;
+    border-color: #444;
+    color: #888;
+    cursor: not-allowed;
+  }
+}
+
+.cancel-button {
+  flex: 1;
+  background: #2a2a2a;
+  border-color: #444;
+  color: #b0b0b0;
+}
 </style>

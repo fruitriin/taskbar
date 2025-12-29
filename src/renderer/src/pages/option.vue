@@ -42,7 +42,7 @@
         <div class="field-label">
           <label class="label">並べ替えルール</label>
         </div>
-        <div class="field-body" style="display: block">
+        <div class="field-body sort-rule-body">
           <div v-for="rule in sortRule" :key="rule.name" class="sort-rule">
             <div class="field is-normal">
               <label class="label">{{ rule.name }}</label>
@@ -65,7 +65,7 @@
                 @end="drag = false"
               >
                 <template #item="{ element }">
-                  <li :key="element" class="button" style="cursor: pointer">
+                  <li :key="element" class="button draggable-item">
                     {{ element }}
                   </li>
                 </template>
@@ -79,58 +79,29 @@
         <div class="field-label">
           <label class="label">フィルター</label>
         </div>
-        <div class="field-body" style="width: 100%">
+        <div class="field-body filter-body">
           <!-- メインエリア：フィルターピル -->
-          <div
-            style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start"
-          >
+          <div class="filter-pills-container">
             <div
               v-for="(filterGroup, i) in labeledFilters"
               :key="i"
-              style="
-                display: inline-flex;
-                align-items: center;
-                background: #2a2a2a;
-                border: 1px solid #444;
-                border-radius: 20px;
-                padding: 0.3rem 0.6rem;
-                font-size: 0.8rem;
-                margin: 0.1rem;
-                cursor: pointer;
-                transition: all 0.2s;
-              "
-              :style="{
-                borderColor: selectedFilterIndex === i ? '#4a90e2' : '#444',
-                background: selectedFilterIndex === i ? '#1a3a5a' : '#2a2a2a'
-              }"
+              class="filter-pill"
+              :class="{ selected: selectedFilterIndex === i }"
               @click="selectFilter(i, $event)"
             >
               <span
-                :style="{
-                  color: filterGroup.filters.length > 1 ? '#4a90e2' : '#059669',
-                  fontWeight: '600'
+                class="filter-label"
+                :class="{
+                  'multi-filter': filterGroup.filters.length > 1,
+                  'single-filter': filterGroup.filters.length === 1
                 }"
-                style="margin-right: 0.3rem"
               >
                 {{ filterGroup.label }}
               </span>
-              <span style="color: #888; margin-right: 0.3rem"
-                >({{ filterGroup.filters.length }})</span
-              >
-              <button
-                style="
-                  background: none;
-                  border: none;
-                  color: #ef4444;
-                  cursor: pointer;
-                  font-size: 0.7rem;
-                "
-                @click.stop="removeFilter(i)"
-              >
-                ×
-              </button>
+              <span class="filter-count">({{ filterGroup.filters.length }})</span>
+              <button class="filter-remove-btn" @click.stop="removeFilter(i)">×</button>
             </div>
-            <div style="display: inline-flex; margin-left: 0.5rem">
+            <div class="add-filter-wrapper">
               <AddFilter @add-filter="handleAddFilter" />
             </div>
           </div>
@@ -142,40 +113,14 @@
         v-if="selectedFilterIndex !== null && panelPosition"
         class="floating-edit-panel"
         :style="{
-          position: 'fixed',
           top: panelPosition.top,
-          left: panelPosition.left,
-          width: '320px',
-          background: '#1a1a1a',
-          padding: '1rem',
-          borderRadius: '8px',
-          border: '1px solid #4a90e2',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-          zIndex: 1000,
-          maxHeight: '80vh',
-          overflowY: 'auto'
+          left: panelPosition.left
         }"
       >
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.8rem;
-          "
-        >
-          <span style="color: #4a90e2; font-weight: 600; font-size: 0.9rem">編集中</span>
+        <div class="panel-header">
+          <span class="panel-title">編集中</span>
           <button
-            style="
-              background: none;
-              border: none;
-              color: #888;
-              cursor: pointer;
-              font-size: 1.2rem;
-              padding: 0.5rem 0.5rem 0.5rem 1rem;
-              margin: -0.5rem -0.5rem -0.5rem -1rem;
-              line-height: 1;
-            "
+            class="panel-close-btn"
             @click="
               selectedFilterIndex = null;
               panelPosition = null;
@@ -186,29 +131,21 @@
         </div>
 
         <!-- ラベル編集（コンパクト） -->
-        <div style="margin-bottom: 0.6rem">
-          <label
-            style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.2rem"
-            >ラベル</label
-          >
+        <div class="label-edit-section">
+          <label class="section-label">ラベル</label>
           <input
             v-model="editingLabel"
-            class="input is-small"
-            style="width: 100%; font-size: 0.8rem"
+            class="input is-small panel-input"
             @input="updateLabel(selectedFilterIndex, editingLabel)"
           />
         </div>
 
         <!-- フィルター条件（コンパクト） -->
-        <div>
-          <label
-            style="color: #b0b0b0; font-size: 0.75rem; display: block; margin-bottom: 0.3rem"
-          >
+        <div class="conditions-section">
+          <label class="section-label">
             条件 ({{ labeledFilters[selectedFilterIndex].filters.length }}件)
           </label>
-          <div
-            style="display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem"
-          >
+          <div class="conditions-list">
             <div v-for="(filter, k) in labeledFilters[selectedFilterIndex].filters" :key="k">
               <!-- 通常表示 -->
               <div
@@ -217,59 +154,26 @@
                   editingCondition.groupIndex !== selectedFilterIndex ||
                   editingCondition.conditionIndex !== k
                 "
-                style="
-                  font-size: 0.7rem;
-                  background: #2a2a2a;
-                  padding: 0.3rem 0.4rem;
-                  border-radius: 4px;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  cursor: pointer;
-                  transition: background 0.2s;
-                "
+                class="condition-display"
                 @click="startEditCondition(selectedFilterIndex, k, filter)"
-                @mouseenter="$event.currentTarget.style.background = '#333'"
-                @mouseleave="$event.currentTarget.style.background = '#2a2a2a'"
               >
-                <span style="color: #ccc"
+                <span class="condition-text"
                   >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
                 >
-                <button
-                  style="
-                    background: none;
-                    border: none;
-                    color: #ef4444;
-                    cursor: pointer;
-                    font-size: 0.7rem;
-                  "
-                  @click.stop="removeCondition(selectedFilterIndex, k)"
-                >
+                <button class="condition-remove-btn" @click.stop="removeCondition(selectedFilterIndex, k)">
                   ×
                 </button>
               </div>
 
               <!-- 編集フォーム -->
-              <div
-                v-else
-                style="
-                  font-size: 0.7rem;
-                  background: #1a3a5a;
-                  padding: 0.5rem;
-                  border-radius: 4px;
-                  border: 1px solid #4a90e2;
-                "
-              >
-                <div style="display: flex; flex-direction: column; gap: 0.4rem">
+              <div v-else class="condition-edit-form">
+                <div class="edit-form-fields">
                   <!-- Property選択 -->
-                  <div>
-                    <label style="color: #999; font-size: 0.65rem; display: block; margin-bottom: 0.1rem">
-                      プロパティ
-                    </label>
+                  <div class="edit-field">
+                    <label class="edit-field-label">プロパティ</label>
                     <select
                       v-model="editingConditionData.property"
-                      class="input is-small"
-                      style="width: 100%; font-size: 0.75rem; padding: 0.3rem"
+                      class="input is-small edit-select"
                     >
                       <option value="kCGWindowName">ウィンドウ名</option>
                       <option value="kCGWindowOwnerName">アプリ名</option>
@@ -280,32 +184,21 @@
                   </div>
 
                   <!-- 値入力 -->
-                  <div>
-                    <label style="color: #999; font-size: 0.65rem; display: block; margin-bottom: 0.1rem">
-                      値
-                    </label>
+                  <div class="edit-field">
+                    <label class="edit-field-label">値</label>
                     <input
                       v-model="editingConditionData.is"
-                      class="input is-small"
-                      style="width: 100%; font-size: 0.75rem; padding: 0.3rem"
+                      class="input is-small edit-input"
                       type="text"
                     />
                   </div>
 
                   <!-- ボタン -->
-                  <div style="display: flex; gap: 0.3rem; justify-content: flex-end">
-                    <button
-                      class="button is-small"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.5rem"
-                      @click="cancelEditCondition"
-                    >
+                  <div class="edit-buttons">
+                    <button class="button is-small edit-cancel-btn" @click="cancelEditCondition">
                       キャンセル
                     </button>
-                    <button
-                      class="button is-small is-primary"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.5rem"
-                      @click="saveEditCondition"
-                    >
+                    <button class="button is-small is-primary edit-save-btn" @click="saveEditCondition">
                       保存
                     </button>
                   </div>
@@ -322,7 +215,7 @@
         <div class="field-label">
           <label class="label">設定の初期化と終了</label>
         </div>
-        <div class="field-body" style="gap: 16px">
+        <div class="field-body init-buttons">
           <button class="button is-danger" @click="Electron.send('clearSetting')">初期化</button>
           <button class="button is-primary ml-4" @click="Electron.send('restart')">再起動</button>
           <button class="button ml-4" @click="Electron.send('exit')">終了</button>
@@ -593,6 +486,15 @@ export default {
   color: white !important;
 }
 
+/* 並べ替えルール */
+.sort-rule-body {
+  display: block;
+}
+
+.draggable-item {
+  cursor: pointer;
+}
+
 .sort-rule li {
   margin-left: 12px;
 }
@@ -626,13 +528,209 @@ export default {
   cursor: pointer;
 }
 
-/* フィルターピルのホバーエフェクト */
-.filterRule [style*='border-radius: 20px']:hover {
-  transform: scale(1.02);
-  border-color: #4a90e2 !important;
+/* フィルター関連 */
+.filter-body {
+  width: 100%;
 }
-</style>
 
-<style lang="sass" scoped>
-@import 'bulma/css/bulma.css'
+.filter-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 20px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  margin: 0.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    transform: scale(1.02);
+    border-color: #4a90e2 !important;
+  }
+
+  &.selected {
+    border-color: #4a90e2;
+    background: #1a3a5a;
+  }
+}
+
+.filter-label {
+  margin-right: 0.3rem;
+  font-weight: 600;
+
+  &.multi-filter {
+    color: #4a90e2;
+  }
+
+  &.single-filter {
+    color: #059669;
+  }
+}
+
+.filter-count {
+  color: #888;
+  margin-right: 0.3rem;
+}
+
+.filter-remove-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.add-filter-wrapper {
+  display: inline-flex;
+  margin-left: 0.5rem;
+}
+
+/* フローティング編集パネル */
+.floating-edit-panel {
+  position: fixed;
+  width: 320px;
+  background: #1a1a1a;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #4a90e2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.panel-title {
+  color: #4a90e2;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.panel-close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  margin: -0.5rem -0.5rem -0.5rem -1rem;
+  line-height: 1;
+}
+
+.label-edit-section {
+  margin-bottom: 0.6rem;
+}
+
+.section-label {
+  color: #b0b0b0;
+  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.panel-input {
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.conditions-section {
+  .section-label {
+    margin-bottom: 0.3rem;
+  }
+}
+
+.conditions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.4rem;
+}
+
+.condition-display {
+  font-size: 0.7rem;
+  background: #2a2a2a;
+  padding: 0.3rem 0.4rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #333;
+  }
+}
+
+.condition-text {
+  color: #ccc;
+}
+
+.condition-remove-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.condition-edit-form {
+  font-size: 0.7rem;
+  background: #1a3a5a;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #4a90e2;
+}
+
+.edit-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.edit-field-label {
+  color: #999;
+  font-size: 0.65rem;
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.edit-select,
+.edit-input {
+  width: 100%;
+  font-size: 0.75rem;
+  padding: 0.3rem;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.edit-cancel-btn,
+.edit-save-btn {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+}
+
+/* 設定の初期化と終了 */
+.init-buttons {
+  gap: 16px;
+}
 </style>
