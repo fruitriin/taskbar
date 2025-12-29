@@ -474,6 +474,11 @@ func getIconBase64(pid: Int, owner: String, windowName: String, size: Int) -> St
     // 💡 追加推奨対策:
     //    - 別プロセスでアイコン取得を行う
     //    - エラー時は空のアイコンを返してクラッシュを防ぐ
+    // 🔬 実験結果（2025-12-29）:
+    //    ❌ watchモード実行中にアイコン取得（Discord、Obsidian、Code等）: UEにならず（正常取得）
+    //    ❌ 複数アプリのアイコンを並列取得（ProgressiveIconLoader使用）: UEにならず（正常取得）
+    //    ⚠️  未検証: ゾンビ状態プロセスからのアイコン取得、異常終了中のプロセス
+    //    → 結論: 正常動作中のプロセスからのアイコン取得ではUEにならない。異常系は未検証
     // タイムアウト付きでアイコン取得
     let semaphore = DispatchSemaphore(value: 0)
     var result: String?
@@ -530,14 +535,15 @@ func checkScreenRecordingPermission() -> Bool {
     //    2. 権限ダイアログが表示されている最中に check-permissions を実行
     //    3. アプリ起動直後、権限状態が不安定な状態で check-permissions を連続実行
     //    4. 他のアプリが同時にスクリーンレコーディング権限を要求している状態で実行
-    // 🔬 実験結果（2025-12-29）:
-    //    ❌ 権限削除 → check-permissions実行: UEにならず（エラーメッセージを返して正常終了）
-    //    ❌ 権限ダイアログ表示中に10個のcheck-permissionsを並列実行: UEにならず（全て正常終了）
-    //    → 結論: SCShareableContent APIは権限エラー時も適切にエラーを返すため、UEにはなりにくい
     // 💡 推奨対策:
     //    1. 軽量な権限チェック方法に変更（CGWindowListCopyWindowInfoで判定）
     //    2. 権限チェック結果をキャッシュして頻繁な呼び出しを避ける
     //    3. 別プロセスで実行してタイムアウト後にkill
+    // 🔬 実験結果（2025-12-29）:
+    //    ❌ 権限削除 → check-permissions実行: UEにならず（エラーメッセージを返して正常終了）
+    //    ❌ 権限ダイアログ表示中に10個のcheck-permissionsを並列実行: UEにならず（全て正常終了）
+    //    ❌ 権限付与状態でcheck-permissions実行: UEにならず（正常に権限確認結果を返却）
+    //    → 結論: SCShareableContent APIは権限エラー時も適切にエラーを返すため、UEにはなりにくい
     // 画面録画権限をチェックするため、SCShareableContentを使用
     let semaphore = DispatchSemaphore(value: 0)
     var hasPermission = false
@@ -714,6 +720,11 @@ class ProgressiveIconLoader {
         //    1. 非ブロッキングI/O（O_NONBLOCK）に設定してEAGAINをハンドリング
         //    2. データを分割して送信（チャンク送信）
         //    3. タイムアウト付きwrite実装（POSIXのselectまたはpoll使用）
+        // 🔬 実験結果（2025-12-29）:
+        //    ❌ watchモード3秒間実行（親プロセスが正常に読み取り）: UEにならず（正常終了）
+        //    ❌ アイコン更新通知送信（Discord、Obsidian等、数KB）: UEにならず（正常送信）
+        //    ⚠️  未検証: 親プロセスがstdoutを読み取らない極端なケース（意図的なバッファフル）
+        //    → 結論: 親プロセスが正常に動作している限り、UEにならない。異常系は未検証
         let stdOut = FileHandle.standardOutput
         stdOut.write(data)
         stdOut.write("\n".data(using: .utf8)!)
@@ -793,15 +804,16 @@ var windowListProvider: () -> [[String: AnyObject]] = {
     //    5. システムが高負荷（CPU 90%以上）の状態でlist/debug/watchコマンドを連続実行
     //    6. スクリーンセーバーから復帰直後にlist/debug/watchコマンドを実行
     //    7. 複数のTaskbarHelperプロセスを並列実行（5個以上同時に起動）
-    // 🔬 実験結果（2025-12-29）:
-    //    ❌ 10個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
-    //    ❌ 20個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
-    //    ❌ Mission Control表示中に10個のlistコマンドを並列実行（122個のウィンドウ検出）: UEにならず（全て正常終了）
-    //    → 結論: 通常の負荷（並列20個、100+ウィンドウ）ではUEにならない。より極端な条件が必要
     // 💡 推奨対策:
     //    1. 別プロセスで実行してタイムアウト後にSIGKILL（最も効果的）
     //    2. XPCサービスとして分離して実行
     //    3. エラー発生時のフォールバック処理を実装
+    // 🔬 実験結果（2025-12-29）:
+    //    ❌ 10個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
+    //    ❌ 20個のlistコマンドを並列実行（100個のウィンドウ存在時）: UEにならず（全て正常終了）
+    //    ❌ Mission Control表示中に10個のlistコマンドを並列実行（122個のウィンドウ検出）: UEにならず（全て正常終了）
+    //    ❌ watchモード3秒間実行（アイコン更新含む、約20個のウィンドウ）: UEにならず（正常終了）
+    //    → 結論: 通常の負荷（並列20個、100+ウィンドウ、watchモード）ではUEにならない。より極端な条件が必要
     let result = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as! [[String: AnyObject]]
 
     if verboseLogging {
@@ -1029,6 +1041,7 @@ guard arguments.count > 1 else {
     print("  watch         - ウィンドウ変更を監視してリアルタイム出力")
     print("  check-permissions - 権限状態をJSON形式で出力")
     print("  get-config    - 設定ファイル(config.json)の内容を出力")
+    print("  completion [fish|zsh] - シェル補完スクリプトを出力")
     exit(1)
 }
 
@@ -1047,8 +1060,9 @@ case "debug":
         let jsonData = try JSONSerialization.data(withJSONObject: windowsListInfo, options: [])
         // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
         // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
-        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:707-727参照）
         // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
+        // 🔬 実験結果（2025-12-29）: list/debug/exclude実行: UEにならず（正常出力）
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -1069,8 +1083,9 @@ case "list":
         let jsonData = try JSONSerialization.data(withJSONObject: filteredWindows, options: [])
         // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
         // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
-        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:707-727参照）
         // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
+        // 🔬 実験結果（2025-12-29）: list/debug/exclude実行: UEにならず（正常出力）
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -1100,8 +1115,9 @@ case "exclude":
         let jsonData = try JSONSerialization.data(withJSONObject: excludedWindows, options: [])
         // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
         // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
-        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:707-727参照）
         // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
+        // 🔬 実験結果（2025-12-29）: list/debug/exclude実行: UEにならず（正常出力）
         let stdOut = FileHandle.standardOutput
         stdOut.write(jsonData)
         stdOut.write("\n".data(using: .utf8)!)
@@ -1176,8 +1192,9 @@ case "get-config":
         let data = try Data(contentsOf: configJsonPath)
         // ⚠️ UE RISK (HIGH): stdout.write without timeout/non-blocking
         // 🔍 調査結果: ProgressiveIconLoader.sendToStdout()と同じリスク
-        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:686-691参照）
+        // 🧪 UEを起こす可能性のある操作: sendToStdout()と同じ（main.swift:707-727参照）
         // 💡 推奨対策: 非ブロッキングI/Oまたはタイムアウト付きwrite関数を使用
+        // 🔬 実験結果（2025-12-29）: list/debug/exclude実行: UEにならず（正常出力）
         let stdOut = FileHandle.standardOutput
         stdOut.write(data)
         stdOut.write("\n".data(using: .utf8)!)
@@ -1190,8 +1207,101 @@ case "get-config":
         exit(1)
     }
 
+case "completion":
+    // シェル補完スクリプトを出力
+    guard arguments.count > 2 else {
+        print("使用方法: TaskbarHelper completion [fish|zsh]")
+        exit(1)
+    }
+
+    let shell = arguments[2]
+    switch shell {
+    case "fish":
+        print("""
+        # TaskbarHelper completion for fish shell
+
+        # サブコマンドの定義
+        complete -c TaskbarHelper -f
+
+        # grant
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "grant" -d "スクリーンキャプチャのアクセス権限を要求"
+
+        # debug
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "debug" -d "現在のウィンドウ情報をデバッグ出力"
+
+        # list
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "list" -d "フィルター済みウィンドウ一覧をワンショット出力"
+
+        # exclude
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "exclude" -d "除外されたウィンドウ一覧をワンショット出力"
+
+        # watch
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "watch" -d "ウィンドウ変更を監視してリアルタイム出力"
+
+        # check-permissions
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "check-permissions" -d "権限状態をJSON形式で出力"
+
+        # get-config
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "get-config" -d "設定ファイル(config.json)の内容を出力"
+
+        # completion
+        complete -c TaskbarHelper -n "not __fish_seen_subcommand_from grant debug list exclude watch check-permissions get-config completion" \\
+            -a "completion" -d "シェル補完スクリプトを出力"
+
+        # completion のサブコマンド (fish, zsh)
+        complete -c TaskbarHelper -n "__fish_seen_subcommand_from completion" -a "fish" -d "fish用の補完スクリプトを出力"
+        complete -c TaskbarHelper -n "__fish_seen_subcommand_from completion" -a "zsh" -d "zsh用の補完スクリプトを出力"
+        """)
+
+    case "zsh":
+        print("""
+        #compdef TaskbarHelper
+
+        # TaskbarHelper completion for zsh shell
+
+        _taskbarhelper() {
+            local -a commands
+            commands=(
+                'grant:スクリーンキャプチャのアクセス権限を要求'
+                'debug:現在のウィンドウ情報をデバッグ出力'
+                'list:フィルター済みウィンドウ一覧をワンショット出力'
+                'exclude:除外されたウィンドウ一覧をワンショット出力'
+                'watch:ウィンドウ変更を監視してリアルタイム出力'
+                'check-permissions:権限状態をJSON形式で出力'
+                'get-config:設定ファイル(config.json)の内容を出力'
+                'completion:シェル補完スクリプトを出力'
+            )
+
+            if (( CURRENT == 2 )); then
+                _describe 'command' commands
+            elif (( CURRENT == 3 )) && [[ ${words[2]} == "completion" ]]; then
+                local -a shells
+                shells=(
+                    'fish:fish用の補完スクリプトを出力'
+                    'zsh:zsh用の補完スクリプトを出力'
+                )
+                _describe 'shell' shells
+            fi
+        }
+
+        _taskbarhelper
+        """)
+
+    default:
+        print("エラー: 未対応のシェル '\(shell)'")
+        print("対応シェル: fish, zsh")
+        exit(1)
+    }
+
 default:
     print("不明なオプション: \(option)")
-    print("使用可能なオプション: grant, debug, list, exclude, watch, check-permissions, get-config")
+    print("使用可能なオプション: grant, debug, list, exclude, watch, check-permissions, get-config, completion")
     exit(1)
 }
