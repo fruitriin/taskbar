@@ -153,10 +153,23 @@
               </span>
             </td>
             <td>
-              <div v-if="getWindowStatus(window.id).label !== 'フィルター除外'" class="filter-actions">
-                <div class="dropdown" :class="{ 'is-active': activeDropdown === window.id }">
+              <div
+                v-if="getWindowStatus(window.id).label !== 'フィルター除外'"
+                class="filter-actions"
+              >
+                <div
+                  class="dropdown"
+                  :class="{
+                    'is-active': activeDropdown === window.id,
+                    'is-up': shouldDropdownOpenUp(window.id)
+                  }"
+                >
                   <div class="dropdown-trigger">
-                    <button class="button is-small is-primary" @click="toggleDropdown(window.id)">
+                    <button
+                      class="button is-small is-primary"
+                      @click="toggleDropdown(window.id, $event)"
+                      :ref="`dropdownBtn-${window.id}`"
+                    >
                       <span>フィルター作成</span>
                       <span class="icon is-small">
                         <i class="fas fa-angle-down"></i>
@@ -288,6 +301,7 @@ export default {
     itemsPerPage: number
     activeDropdown: number | null
     notification: string | null
+    dropdownShouldOpenUp: Record<number, boolean>
   } {
     return {
       filteredProcesses: [],
@@ -299,7 +313,8 @@ export default {
       currentPage: 1,
       itemsPerPage: 50,
       activeDropdown: null,
-      notification: null
+      notification: null,
+      dropdownShouldOpenUp: {}
     }
   },
   computed: {
@@ -452,7 +467,7 @@ export default {
     convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
       return {
         id: macWindow.kCGWindowNumber || index,
-        name: macWindow.kCGWindowName || '(無題)',
+        name: macWindow.kCGWindowName || '',
         owner: macWindow.kCGWindowOwnerName || '不明',
         pid: macWindow.kCGWindowOwnerPID,
         layer: macWindow.kCGWindowLayer,
@@ -525,8 +540,25 @@ export default {
       }
       this.currentPage = 1
     },
-    toggleDropdown(windowId: number): void {
-      this.activeDropdown = this.activeDropdown === windowId ? null : windowId
+    toggleDropdown(windowId: number, event: MouseEvent): void {
+      if (this.activeDropdown === windowId) {
+        this.activeDropdown = null
+        return
+      }
+
+      // ボタンの位置を取得して、画面下部かどうかを判定
+      const button = event.currentTarget as HTMLElement
+      const rect = button.getBoundingClientRect()
+      const windowHeight = window.innerHeight
+      const dropdownHeight = 200 // ドロップダウンメニューの概算の高さ
+
+      // ボタンの下に十分なスペースがない場合は上に表示
+      this.dropdownShouldOpenUp[windowId] = rect.bottom + dropdownHeight > windowHeight
+
+      this.activeDropdown = windowId
+    },
+    shouldDropdownOpenUp(windowId: number): boolean {
+      return this.dropdownShouldOpenUp[windowId] || false
     },
     handleOutsideClick(event: Event): void {
       const target = event.target as Element
@@ -861,7 +893,6 @@ export default {
 .windows-table-container {
   background: #2a2a2a;
   border-radius: 10px;
-  overflow: hidden;
   border: 1px solid #444;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: box-shadow 0.3s ease;
@@ -975,16 +1006,17 @@ export default {
   .dropdown-menu {
     min-width: 200px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    border: 1px solid #444;
+    background-color: #333;
   }
 
   .dropdown-content {
-    background: #2a2a2a;
+    background-color: #2a2a2a;
   }
 
   .dropdown-item {
     font-size: 0.85rem;
-    color: #b0b0b0;
+    color: #e0e0e0;
+    background-color: #2a2a2a;
 
     &:hover {
       background: #333;
