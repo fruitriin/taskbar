@@ -3,7 +3,7 @@ declare global {
     kCGWindowLayer: number
     kCGWindowName?: string
     kCGWindowMemoryUsage: number
-    kCGWindowIsOnscreen?: boolean
+    kCGWindowIsOnscreen?: number
     kCGWindowSharingState: number
     kCGWindowOwnerPID: number
     kCGWindowOwnerName: string

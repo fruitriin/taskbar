@@ -192,7 +192,7 @@ export function setEventHandlers(): void {
 
     // タスクバーの位置とサイズを取得
     const taskbarBounds = senderWindow.getBounds()
-    const layout = store.get('options.layout')
+    const layout = store.get('options.layout') as 'bottom' | 'left' | 'right' | undefined
 
     createMenuWindow(taskbarBounds, layout)
   })

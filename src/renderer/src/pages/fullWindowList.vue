@@ -253,7 +253,8 @@
 <script lang="ts">
 import { Electron } from '../utils'
 
-interface WindowInfo {
+// UI用の型
+type WindowInfo = {
   id: number
   name: string
   owner: string
