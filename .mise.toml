@@ -15,7 +15,7 @@ run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.he
 
 [tasks.swiftbuild]
 description = "Swiftヘルパーをビルド"
-run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && echo [COPY]binary copry to resouces && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper"
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && echo [COPY]binary copy to resouces && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && echo [COPY] done."
 
 [tasks."build:mac"]
 description = "macOSユニバーサルバイナリをビルド"
