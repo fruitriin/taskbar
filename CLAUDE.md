@@ -46,6 +46,7 @@ Taskbar.fm is an Electron application that brings Windows-like taskbar functiona
 If the TaskbarHelper process becomes unresponsive or causes UE errors:
 
 1. **Check Code Signing Configuration** (CRITICAL):
+
    - Open the Xcode project: `mise run helper`
    - Navigate to: **taskbar.helper target** → **Signing & Capabilities** tab
    - Verify that a valid **Signing Certificate** is selected
@@ -54,6 +55,7 @@ If the TaskbarHelper process becomes unresponsive or causes UE errors:
    - Recommended: Use "Sign to Run Locally" or a valid development certificate
 
 2. **Verify Entitlements**:
+
    - Check that `taskbar.helper.entitlements` exists and has proper permissions
    - Required entitlements: Screen Recording, Accessibility
 
@@ -67,6 +69,55 @@ If the TaskbarHelper process becomes unresponsive or causes UE errors:
 ### Installation
 
 - `mise run install-app` - Install built app to /Applications
+
+## Browser-Based UI Testing
+
+### Overview
+
+開発サーバー（`mise run dev`）を起動すると、ブラウザから直接UIにアクセスしてテストできます。Electron APIのモックが自動的に注入され、実際のElectron環境と同じようにUIが動作します。
+
+### アクセス方法
+
+開発サーバー起動後、以下のURLにブラウザまたはPlaywright MCPでアクセス：
+
+- **メインタスクバー**: http://localhost:10234/
+- **設定画面**: http://localhost:10234/option.html
+- **メニュー**: http://localhost:10234/menu.html
+- **全ウィンドウリスト**: http://localhost:10234/fullWindowList.html
+
+### モック機能
+
+- **自動イベント発火**: `Electron.send('windowReady')` が呼ばれると、自動的にサンプルデータが送信されます
+
+  - `process` - サンプルウィンドウデータ（TextEdit, Chrome, VS Code, Terminal）
+  - `iconUpdate` - アイコンデータ
+  - `displayInfo` - ディスプレイ情報
+  - `updateOptions` - オプション設定
+
+- **開発者ヘルパー**: ブラウザコンソールから `window.__mockHelpers` を使用して手動でイベントを発火できます
+
+```javascript
+// 例: ウィンドウデータを更新
+__mockHelpers.updateWindows([...])
+
+// 例: イベントを手動発火
+__mockHelpers.emit('process', __mockHelpers.sampleWindows)
+
+// 例: windowReadyを再トリガー
+__mockHelpers.triggerWindowReady()
+```
+
+### フィクスチャーのカスタマイズ
+
+サンプルデータは `src/renderer/src/mocks/sample-fixture.ts` で定義されています。テストシナリオに合わせてカスタマイズ可能です。
+
+### Playwright MCP による自動テスト
+
+Playwright MCPを使用して、ブラウザ上でのUI動作を自動的にテストできます。モックが自動注入されるため、実際のElectron環境なしでUIの動作確認が可能です。
+
+### 一時ファイルの保存先
+
+**重要**: Playwright MCPで作業的にファイル（スクリーンショット、テストログなど）を作成する場合は、`.playwright-mcp/` ディレクトリを使用してください。このディレクトリは `.gitignore` に含まれており、リポジトリを汚しません。
 
 ## Architecture
 

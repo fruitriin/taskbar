@@ -9,3 +9,4 @@ out
 .env
 icon_cache/
 taskbar_mac_cert.p12
+.playwright-mcp/

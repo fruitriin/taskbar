@@ -1,4 +1,5 @@
 import { mock } from 'bun:test'
+import { createElectronMock, createStoreMock } from '../src/mocks/electron-mocks'
 
 // グローバルwindowオブジェクトの作成（テスト環境用）
 if (typeof window === 'undefined') {
@@ -12,13 +13,15 @@ mock.module('@electron-toolkit/preload', () => ({
   IpcRendererEvent: {}
 }))
 
-// window.electron のモック
+// window.electron のモック（テスト用にmock()でラップ）
+const electronMock = createElectronMock()
 Object.defineProperty(window, 'electron', {
   value: {
     ipcRenderer: {
-      on: mock(),
-      send: mock(),
-      removeListener: mock()
+      on: mock(electronMock.ipcRenderer.on),
+      send: mock(electronMock.ipcRenderer.send),
+      removeListener: mock(electronMock.ipcRenderer.removeListener),
+      invoke: mock(electronMock.ipcRenderer.invoke)
     }
   },
   writable: true
@@ -26,15 +29,6 @@ Object.defineProperty(window, 'electron', {
 
 // window.store のモック
 Object.defineProperty(window, 'store', {
-  value: {
-    granted: true,
-    options: {
-      layout: 'bottom',
-      windowSortByPositionInApp: false,
-      headers: [],
-      footers: []
-    },
-    filters: []
-  },
+  value: createStoreMock(),
   writable: true
 })

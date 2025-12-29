@@ -6,7 +6,7 @@
       "Bash(mise:run build)",
       "Bash(mise:run typecheck)",
       "Bash(mise:run typecheck:node)",
-      "Bash(mise:run typecheck:renderer)",
+      "Bash(mise:run typecheck:web)",
       
       "Bash(mise:run lint)",
       "Bash(mise:run format)",
