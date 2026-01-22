@@ -181,6 +181,16 @@ export function setEventHandlers(): void {
     }
   })
 
+  // タスクバーと重なるウィンドウを調整
+  ipcMain.on('adjustOverlappingWindows', async () => {
+    const { adjustAllOverlappingWindows } = await import('@/funcs/window-collision')
+    const displays = Screen.getAllDisplays()
+
+    for (const display of displays) {
+      await adjustAllOverlappingWindows(macWindowProcesses, display)
+    }
+  })
+
   // ロゴをクリックしたときのメニューウィンドウを表示
   ipcMain.on('contextLogo', (event) => {
     // イベント送信元のタスクバーを特定

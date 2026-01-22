@@ -54,7 +54,8 @@ export const store = new ElectronStore({
       layout: 'bottom' as LayoutType,
       windowSortByPositionInApp: false,
       headers: [] as string[],
-      footers: [] as string[]
+      footers: [] as string[],
+      autoAdjustOverlappingWindows: false
     },
     // >= 1.6.2
     filters: [],
