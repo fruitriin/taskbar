@@ -23,6 +23,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B64CA11E2F0217D600CD286B /* taskbar.helper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = taskbar.helper.entitlements; sourceTree = "<group>"; };
 		B6B575602B00EE8F00D09CC8 /* taskbar.helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = taskbar.helper; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6B575632B00EE8F00D09CC8 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B6B5756B2B00EED000D09CC8 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -60,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				B6B575632B00EE8F00D09CC8 /* main.swift */,
+				B64CA11E2F0217D600CD286B /* taskbar.helper.entitlements */,
 			);
 			path = taskbar.helper;
 			sourceTree = "<group>";
@@ -258,11 +260,11 @@
 		B6B575682B00EE8F00D09CC8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 4Z474DZ677;
 				ENABLE_HARDENED_RUNTIME = YES;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = taskbar.helper;
+				PRODUCT_BUNDLE_IDENTIFIER = taskbar.helper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};
@@ -272,11 +274,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development: Rin Nakashima (2GU627Y6N9)";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 4Z474DZ677;
 				ENABLE_HARDENED_RUNTIME = YES;
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]" = taskbar.helper;
+				PRODUCT_BUNDLE_IDENTIFIER = taskbar.helper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};
