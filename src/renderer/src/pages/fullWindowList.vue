@@ -250,8 +250,9 @@
   </div>
 </template>
 
-<script lang="ts">
-import { Electron } from '../utils'
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ipcListen, ipcSend } from '../composables/ipc'
 
 // UI用の型
 type WindowInfo = {
@@ -270,319 +271,310 @@ type WindowInfo = {
   }
 }
 
-export default {
-  data(): {
-    filteredProcesses: WindowInfo[]
-    excludedProcess: WindowInfo[]
-    displayMode: 'filtered' | 'all' | 'excluded'
-    searchQuery: string
-    sortField: string
-    sortDirection: 'asc' | 'desc'
-    currentPage: number
-    itemsPerPage: number
-    activeDropdown: number | null
-    notification: string | null
-    dropdownShouldOpenUp: Record<number, boolean>
-  } {
-    return {
-      filteredProcesses: [],
-      excludedProcess: [],
-      displayMode: 'filtered',
-      searchQuery: '',
-      sortField: 'owner',
-      sortDirection: 'asc',
-      currentPage: 1,
-      itemsPerPage: 50,
-      activeDropdown: null,
-      notification: null,
-      dropdownShouldOpenUp: {}
+const filteredProcesses = ref<WindowInfo[]>([])
+const excludedProcess = ref<WindowInfo[]>([])
+const displayMode = ref<'filtered' | 'all' | 'excluded'>('filtered')
+const searchQuery = ref('')
+const sortField = ref('owner')
+const sortDirection = ref<'asc' | 'desc'>('asc')
+const currentPage = ref(1)
+const itemsPerPage = ref(50)
+const activeDropdown = ref<number | null>(null)
+const notification = ref<string | null>(null)
+const dropdownShouldOpenUp = ref<Record<number, boolean>>({})
+
+// フィルター済みと除外を合成して全プロセスを作成
+const allProcesses = computed<WindowInfo[]>(() => [
+  ...filteredProcesses.value,
+  ...excludedProcess.value
+])
+
+// 表示モードに応じてデータを切り替え
+const displayWindowsList = computed<WindowInfo[]>(() => {
+  switch (displayMode.value) {
+    case 'all':
+      return allProcesses.value
+    case 'excluded':
+      return excludedProcess.value
+    case 'filtered':
+    default:
+      return filteredProcesses.value
+  }
+})
+
+const filteredWindows = computed<WindowInfo[]>(() => {
+  let filtered = [...displayWindowsList.value]
+
+  // 検索フィルター
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(
+      (win) => win.name?.toLowerCase().includes(query) || win.owner?.toLowerCase().includes(query)
+    )
+  }
+
+  // ソート
+  filtered.sort((a, b) => {
+    let aVal: string | number | boolean | undefined
+    let bVal: string | number | boolean | undefined
+
+    // 特殊な'status'フィールドの処理
+    if (sortField.value === 'status') {
+      aVal = getWindowStatus(a.id).label
+      bVal = getWindowStatus(b.id).label
+    } else {
+      aVal = a[sortField.value as keyof WindowInfo] as string | number | boolean | undefined
+      bVal = b[sortField.value as keyof WindowInfo] as string | number | boolean | undefined
     }
-  },
-  computed: {
-    allProcesses(): WindowInfo[] {
-      // フィルター済みと除外を合成して全プロセスを作成
-      return [...this.filteredProcesses, ...this.excludedProcess]
-    },
-    displayWindowsList(): WindowInfo[] {
-      // 表示モードに応じてデータを切り替え
-      switch (this.displayMode) {
-        case 'all':
-          console.log('全プロセス表示モード:', this.allProcesses.length)
-          return this.allProcesses
-        case 'excluded':
-          console.log('除外プロセス表示モード:', this.excludedProcess.length)
-          return this.excludedProcess
-        case 'filtered':
-        default:
-          console.log('フィルター済み表示モード:', this.filteredProcesses.length)
-          return this.filteredProcesses
-      }
-    },
-    filteredWindows(): WindowInfo[] {
-      let filtered = [...this.displayWindowsList]
 
-      // 検索フィルター
-      if (this.searchQuery.trim()) {
-        const query = this.searchQuery.toLowerCase()
-        filtered = filtered.filter(
-          (window) =>
-            window.name?.toLowerCase().includes(query) ||
-            window.owner?.toLowerCase().includes(query)
-        )
-      }
+    // 文字列の場合は小文字で比較
+    if (typeof aVal === 'string') aVal = aVal.toLowerCase()
+    if (typeof bVal === 'string') bVal = bVal.toLowerCase()
 
-      // ソート
-      filtered.sort((a, b) => {
-        let aVal: any
-        let bVal: any
+    // TS の型ガード用。undefined 同士の比較は旧実装（any）でも常に 0 扱いだった
+    if (aVal === undefined || bVal === undefined) return 0
+    if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1
+    return 0
+  })
 
-        // 特殊な'status'フィールドの処理
-        if (this.sortField === 'status') {
-          aVal = this.getWindowStatus(a.id).label
-          bVal = this.getWindowStatus(b.id).label
-        } else {
-          aVal = a[this.sortField as keyof WindowInfo]
-          bVal = b[this.sortField as keyof WindowInfo]
-        }
+  return filtered
+})
 
-        // 文字列の場合は小文字で比較
-        if (typeof aVal === 'string') aVal = aVal.toLowerCase()
-        if (typeof bVal === 'string') bVal = bVal.toLowerCase()
+const paginatedWindows = computed<WindowInfo[]>(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredWindows.value.slice(start, end)
+})
 
-        if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1
-        if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1
-        return 0
-      })
+const totalPages = computed<number>(() =>
+  Math.ceil(filteredWindows.value.length / itemsPerPage.value)
+)
 
-      return filtered
-    },
-    paginatedWindows(): WindowInfo[] {
-      const start = (this.currentPage - 1) * this.itemsPerPage
-      const end = start + this.itemsPerPage
-      return this.filteredWindows.slice(start, end)
-    },
-    totalPages(): number {
-      return Math.ceil(this.filteredWindows.length / this.itemsPerPage)
-    },
-    visiblePages(): (number | string)[] {
-      const pages: (number | string)[] = []
-      const total = this.totalPages
-      const current = this.currentPage
+const visiblePages = computed<(number | string)[]>(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
 
-      // 総ページ数が7以下の場合はすべて表示
-      if (total <= 7) {
-        for (let i = 1; i <= total; i++) {
-          pages.push(i)
-        }
-        return pages
-      }
-
-      // 1ページ目は常に表示
-      pages.push(1)
-
-      // 現在のページが1から遠い場合は省略記号
-      if (current > 4) {
-        pages.push('...')
-      }
-
-      // 現在のページ周辺を表示
-      const start = Math.max(2, current - 1)
-      const end = Math.min(total - 1, current + 1)
-
-      for (let i = start; i <= end; i++) {
-        // 1ページ目の重複を避ける
-        if (i > 1) {
-          pages.push(i)
-        }
-      }
-
-      // 最後のページから遠い場合は省略記号
-      if (current < total - 3) {
-        pages.push('...')
-      }
-
-      // 最後のページは常に表示（重複を避ける）
-      if (total > 1 && !pages.includes(total)) {
-        pages.push(total)
-      }
-
-      return pages
+  // 総ページ数が7以下の場合はすべて表示
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
     }
-  },
-  mounted(): void {
-    // IPCイベントリスナーを追加
-    Electron.listen('allProcesses', this.handleAllProcessesData)
+    return pages
+  }
 
-    // 外部クリックでドロップダウンを閉じる
-    document.addEventListener('click', this.handleOutsideClick)
+  // 1ページ目は常に表示
+  pages.push(1)
 
-    Electron.listen('catchExcludeWindow', (_event: any, res: MacWindow[]) => {
-      console.log('Received excluded processes:', res)
-      this.excludedProcess = res.map((macWindow, index) =>
-        this.convertMacWindowToWindowInfo(macWindow, index)
-      )
-    })
+  // 現在のページが1から遠い場合は省略記号
+  if (current > 4) {
+    pages.push('...')
+  }
 
-    // 初期読み込み時に除外プロセスを取得
-    Electron.send('getExcludeWindows')
-  },
-  beforeUnmount(): void {
-    document.removeEventListener('click', this.handleOutsideClick)
-    // IPCイベントリスナーを削除
-    window.electron.ipcRenderer.removeAllListeners('allProcesses')
-    window.electron.ipcRenderer.removeAllListeners('catchExcludeWindow')
-  },
-  watch: {
-    currentPage(): void {
-      // ページ変更時にスクロールを一番上に戻す
-      window.scrollTo({ top: 0 })
-    }
-  },
-  methods: {
-    handleAllProcessesData(_event: any, data: MacWindow[]): void {
-      // フィルター済みプロセスデータを変換して保存
-      this.filteredProcesses = data.map((macWindow, index) =>
-        this.convertMacWindowToWindowInfo(macWindow, index)
-      )
-    },
-    convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
-      return {
-        id: macWindow.kCGWindowNumber || index,
-        name: macWindow.kCGWindowName || '',
-        owner: macWindow.kCGWindowOwnerName || '不明',
-        pid: macWindow.kCGWindowOwnerPID,
-        layer: macWindow.kCGWindowLayer,
-        isOnscreen: macWindow.kCGWindowIsOnscreen ? macWindow.kCGWindowIsOnscreen > 0 : false,
-        appIcon: macWindow.appIcon || undefined,
-        bounds: macWindow.kCGWindowBounds
-          ? {
-              x: macWindow.kCGWindowBounds.X,
-              y: macWindow.kCGWindowBounds.Y,
-              width: macWindow.kCGWindowBounds.Width,
-              height: macWindow.kCGWindowBounds.Height
-            }
-          : undefined
-      }
-    },
-    handleImageError(event: Event): void {
-      // アイコン読み込みエラー時の処理
-      const target = event.target as HTMLImageElement
-      target.style.display = 'none'
-    },
-    getWindowStatus(windowId: number): { label: string; class: string; tooltip: string } {
-      // フィルター済みリストに含まれているかで判定
-      const isInFiltered = this.filteredProcesses.some((w) => w.id === windowId)
+  // 現在のページ周辺を表示
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
 
-      if (isInFiltered) {
-        return {
-          label: 'フィルター通過',
-          class: 'is-success',
-          tooltip: 'このウィンドウはフィルターを通過し、タスクバーに表示されます'
-        }
-      } else {
-        // 除外された理由を特定
-        const isInAll = this.allProcesses.some((w) => w.id === windowId)
-        const isInExcluded = this.excludedProcess.some((w) => w.id === windowId)
-
-        if (isInExcluded) {
-          return {
-            label: 'フィルター除外',
-            class: 'is-warning',
-            tooltip:
-              'このウィンドウはフィルターにより除外されています（サイズ不足、除外アプリなど）'
-          }
-        } else if (isInAll) {
-          return {
-            label: '不明',
-            class: 'is-light',
-            tooltip: '全ウィンドウリストにはあるが、分類が不明'
-          }
-        } else {
-          return {
-            label: 'データなし',
-            class: 'is-light',
-            tooltip: 'ウィンドウデータが見つかりません'
-          }
-        }
-      }
-    },
-    switchDisplayMode(mode: 'filtered' | 'all' | 'excluded'): void {
-      this.displayMode = mode
-      this.currentPage = 1 // ページをリセット
-      this.activeDropdown = null // ドロップダウンを閉じる
-      console.log(`表示モード切り替え: ${mode}`)
-    },
-    setSortField(field: string): void {
-      if (this.sortField === field) {
-        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'
-      } else {
-        this.sortField = field
-        this.sortDirection = 'asc'
-      }
-      this.currentPage = 1
-    },
-    toggleDropdown(windowId: number, event: MouseEvent): void {
-      if (this.activeDropdown === windowId) {
-        this.activeDropdown = null
-        return
-      }
-
-      // ボタンの位置を取得して、画面下部かどうかを判定
-      const button = event.currentTarget as HTMLElement
-      const rect = button.getBoundingClientRect()
-      const windowHeight = window.innerHeight
-      const dropdownHeight = 200 // ドロップダウンメニューの概算の高さ
-
-      // ボタンの下に十分なスペースがない場合は上に表示
-      this.dropdownShouldOpenUp[windowId] = rect.bottom + dropdownHeight > windowHeight
-
-      this.activeDropdown = windowId
-    },
-    shouldDropdownOpenUp(windowId: number): boolean {
-      return this.dropdownShouldOpenUp[windowId] || false
-    },
-    handleOutsideClick(event: Event): void {
-      const target = event.target as Element
-      if (!target.closest('.dropdown')) {
-        this.activeDropdown = null
-      }
-    },
-    createFilter(property: string, value: string | number, _window: WindowInfo): void {
-      // フィルター作成ロジック（設定ウィンドウにフィルターを追加）
-      const filterData = {
-        property,
-        is: value
-      }
-
-      // 新しいフィルターグループを作成（option.vueと同じラベル形式）
-      const propertyName = this.getPropertyDisplayName(property)
-      const label = `${propertyName}:${value}を除外`
-
-      Electron.send('addFilter', {
-        filter: filterData,
-        label: label
-      })
-
-      this.showNotification(`フィルターを作成しました: ${label}`)
-      this.activeDropdown = null
-    },
-    getPropertyDisplayName(property: string): string {
-      const displayNames: Record<string, string> = {
-        kCGWindowName: 'ウィンドウ名',
-        kCGWindowOwnerName: 'アプリ名',
-        kCGWindowOwnerPID: 'プロセスID',
-        kCGWindowLayer: 'レイヤー'
-      }
-      return displayNames[property] || property
-    },
-    showNotification(message: string): void {
-      this.notification = message
-      setTimeout(() => {
-        this.notification = null
-      }, 3000)
+  for (let i = start; i <= end; i++) {
+    // 1ページ目の重複を避ける
+    if (i > 1) {
+      pages.push(i)
     }
   }
+
+  // 最後のページから遠い場合は省略記号
+  if (current < total - 3) {
+    pages.push('...')
+  }
+
+  // 最後のページは常に表示（重複を避ける）
+  if (total > 1 && !pages.includes(total)) {
+    pages.push(total)
+  }
+
+  return pages
+})
+
+function convertMacWindowToWindowInfo(macWindow: MacWindow, index: number): WindowInfo {
+  return {
+    id: macWindow.kCGWindowNumber || index,
+    name: macWindow.kCGWindowName || '',
+    owner: macWindow.kCGWindowOwnerName || '不明',
+    pid: macWindow.kCGWindowOwnerPID,
+    layer: macWindow.kCGWindowLayer,
+    isOnscreen: macWindow.kCGWindowIsOnscreen ? macWindow.kCGWindowIsOnscreen > 0 : false,
+    appIcon: macWindow.appIcon || undefined,
+    bounds: macWindow.kCGWindowBounds
+      ? {
+          x: macWindow.kCGWindowBounds.X,
+          y: macWindow.kCGWindowBounds.Y,
+          width: macWindow.kCGWindowBounds.Width,
+          height: macWindow.kCGWindowBounds.Height
+        }
+      : undefined
+  }
 }
+
+function handleImageError(event: Event): void {
+  // アイコン読み込みエラー時の処理
+  const target = event.target as HTMLImageElement
+  target.style.display = 'none'
+}
+
+function getWindowStatus(windowId: number): { label: string; class: string; tooltip: string } {
+  // フィルター済みリストに含まれているかで判定
+  const isInFiltered = filteredProcesses.value.some((w) => w.id === windowId)
+
+  if (isInFiltered) {
+    return {
+      label: 'フィルター通過',
+      class: 'is-success',
+      tooltip: 'このウィンドウはフィルターを通過し、タスクバーに表示されます'
+    }
+  }
+
+  // 除外された理由を特定
+  const isInAll = allProcesses.value.some((w) => w.id === windowId)
+  const isInExcluded = excludedProcess.value.some((w) => w.id === windowId)
+
+  if (isInExcluded) {
+    return {
+      label: 'フィルター除外',
+      class: 'is-warning',
+      tooltip: 'このウィンドウはフィルターにより除外されています（サイズ不足、除外アプリなど）'
+    }
+  } else if (isInAll) {
+    return {
+      label: '不明',
+      class: 'is-light',
+      tooltip: '全ウィンドウリストにはあるが、分類が不明'
+    }
+  }
+  return {
+    label: 'データなし',
+    class: 'is-light',
+    tooltip: 'ウィンドウデータが見つかりません'
+  }
+}
+
+function switchDisplayMode(mode: 'filtered' | 'all' | 'excluded'): void {
+  displayMode.value = mode
+  currentPage.value = 1 // ページをリセット
+  activeDropdown.value = null // ドロップダウンを閉じる
+}
+
+function setSortField(field: string): void {
+  if (sortField.value === field) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortDirection.value = 'asc'
+  }
+  currentPage.value = 1
+}
+
+function toggleDropdown(windowId: number, event: MouseEvent): void {
+  if (activeDropdown.value === windowId) {
+    activeDropdown.value = null
+    return
+  }
+
+  // ボタンの位置を取得して、画面下部かどうかを判定
+  const button = event.currentTarget as HTMLElement
+  const rect = button.getBoundingClientRect()
+  const windowHeight = window.innerHeight
+  const dropdownHeight = 200 // ドロップダウンメニューの概算の高さ
+
+  // ボタンの下に十分なスペースがない場合は上に表示
+  dropdownShouldOpenUp.value[windowId] = rect.bottom + dropdownHeight > windowHeight
+
+  activeDropdown.value = windowId
+}
+
+function shouldDropdownOpenUp(windowId: number): boolean {
+  return dropdownShouldOpenUp.value[windowId] || false
+}
+
+function handleOutsideClick(event: Event): void {
+  const target = event.target as Element
+  if (!target.closest('.dropdown')) {
+    activeDropdown.value = null
+  }
+}
+
+function getPropertyDisplayName(property: string): string {
+  const displayNames: Record<string, string> = {
+    kCGWindowName: 'ウィンドウ名',
+    kCGWindowOwnerName: 'アプリ名',
+    kCGWindowOwnerPID: 'プロセスID',
+    kCGWindowLayer: 'レイヤー'
+  }
+  return displayNames[property] || property
+}
+
+function showNotification(message: string): void {
+  notification.value = message
+  setTimeout(() => {
+    notification.value = null
+  }, 3000)
+}
+
+function createFilter(property: string, value: string | number, _window: WindowInfo): void {
+  // フィルター作成ロジック（設定ウィンドウにフィルターを追加）
+  const filterData = {
+    property,
+    is: value
+  }
+
+  // 新しいフィルターグループを作成（option.vueと同じラベル形式）
+  const propertyName = getPropertyDisplayName(property)
+  const label = `${propertyName}:${value}を除外`
+
+  ipcSend('addFilter', {
+    filter: filterData,
+    label: label
+  })
+
+  showNotification(`フィルターを作成しました: ${label}`)
+  activeDropdown.value = null
+}
+
+// ページ変更時にスクロールを一番上に戻す
+watch(currentPage, () => {
+  window.scrollTo({ top: 0 })
+})
+
+let unlistenAllProcesses: (() => void) | undefined
+let unlistenExcluded: (() => void) | undefined
+
+onMounted(() => {
+  // フィルター済みプロセスデータを変換して保存
+  unlistenAllProcesses = ipcListen<MacWindow[]>('allProcesses', (data) => {
+    filteredProcesses.value = data.map((macWindow, index) =>
+      convertMacWindowToWindowInfo(macWindow, index)
+    )
+  })
+
+  unlistenExcluded = ipcListen<MacWindow[]>('catchExcludeWindow', (res) => {
+    excludedProcess.value = res.map((macWindow, index) =>
+      convertMacWindowToWindowInfo(macWindow, index)
+    )
+  })
+
+  // 外部クリックでドロップダウンを閉じる
+  document.addEventListener('click', handleOutsideClick)
+
+  // 初期読み込み時に除外プロセスを取得
+  ipcSend('getExcludeWindows')
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick)
+  // 解除関数ペア方式（removeAllListeners は他のリスナーを巻き込むため使わない）
+  unlistenAllProcesses?.()
+  unlistenExcluded?.()
+})
 </script>
 
 <style lang="scss" scoped>
