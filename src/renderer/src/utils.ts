@@ -1,5 +1,8 @@
 // @ts-ignore - Import type compatibility
 import { ElectronAPI, IpcRendererEvent } from '@electron-toolkit/preload'
+import type { Store } from './types'
+import { ipcSend } from './composables/ipc'
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -7,45 +10,8 @@ declare global {
   }
 }
 
-type NumberFilter = {
-  property:
-    | 'X'
-    | 'Y'
-    | 'Height'
-    | 'Width'
-    | 'kCGWindowMemoryUsage'
-    | 'kCGWindowOwnerPID'
-    | 'kCGWindowNumber'
-  is: number
-}
-type StringFilter = {
-  property: 'kCGWindowOwnerName' | 'kCGWindowName'
-  is: string
-}
-type BooleanFilter = {
-  property: 'kCGWindowStoreType' | 'kCGWindowIsOnscreen'
-  is: boolean
-}
-
-type Filter = NumberFilter | StringFilter | BooleanFilter
-
-type LabeledFilters = {
-  label: string
-  filters: Filter[]
-}
-
-export type Store = {
-  granted: boolean
-  options: {
-    layout: string
-    windowSortByPositionInApp: boolean
-    appOrder?: string[]
-    headers: string[]
-    footers: string[]
-  }
-  filters?: unknown[]
-  labeledFilters: LabeledFilters[]
-}
+// 互換のための再エクスポート（新規コードは './types' から直接 import すること）
+export type { Store, Filter, LabeledFilters } from './types'
 
 export type WindowSortOptions = {
   /** false: 起動順（kCGWindowNumber 昇順）/ true: 座標順 */
@@ -182,10 +148,13 @@ export function moveApp(apps: string[], dragged: string, target: string): string
 }
 
 export const Electron = {
+  // listen はリスナーが (event, ...args) を受ける旧シグネチャのため委譲しない
+  // （ipcListen はペイロードのみを渡す新シグネチャ。移行はコンポーネント側で段階的に行う）
   listen(channel: string, listener: (event: IpcRendererEvent, ...args: any[]) => void): void {
     window.electron.ipcRenderer.on(channel, listener)
   },
+  // ipc.ts へ委譲（JSON クローンによるプロキシ剥がしの単一ソース化。Phase 3 の差し替え箇所を集約）
   send(channel: string, ...args: any[]): void {
-    window.electron.ipcRenderer.send(channel, ...JSON.parse(JSON.stringify(args)))
+    ipcSend(channel, ...args)
   }
 }

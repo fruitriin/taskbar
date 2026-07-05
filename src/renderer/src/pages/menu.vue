@@ -34,31 +34,30 @@
   </div>
 </template>
 
-<script lang="ts">
-import { Electron } from '../utils'
-import { defineComponent } from 'vue'
+<script setup lang="ts">
+import { ipcSend } from '../composables/ipc'
 
-export default defineComponent({
-  methods: {
-    openOption(): void {
-      Electron.send('openOption')
-      this.closeMenu()
-    },
-    openWindowManager(): void {
-      Electron.send('openFullWindowList')
-      this.closeMenu()
-    },
-    restart(): void {
-      Electron.send('restart')
-    },
-    exit(): void {
-      Electron.send('exit')
-    },
-    closeMenu(): void {
-      Electron.send('closeMenu')
-    }
-  }
-})
+function closeMenu(): void {
+  ipcSend('closeMenu')
+}
+
+function openOption(): void {
+  ipcSend('openOption')
+  closeMenu()
+}
+
+function openWindowManager(): void {
+  ipcSend('openFullWindowList')
+  closeMenu()
+}
+
+function restart(): void {
+  ipcSend('restart')
+}
+
+function exit(): void {
+  ipcSend('exit')
+}
 </script>
 
 <style lang="scss" scoped>

@@ -4,7 +4,7 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import { ipcListen, ipcSend } from './ipc'
-import type { Store } from '../utils'
+import type { Store } from '../types'
 
 export type Options = Store['options']
 

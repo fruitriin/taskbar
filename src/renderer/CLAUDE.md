@@ -95,49 +95,43 @@ src/
 
 ### IPC Communication
 
-レンダラープロセスは `window.Electron` API を通じてメインプロセスと通信します：
+preload（@electron-toolkit/preload）が注入する **`window.electron.ipcRenderer`**（小文字）が実体です。
+直接は触らず、以下のラッパーを使います:
+
+- **新規コード（推奨）**: `src/composables/ipc.ts` の `ipcSend` / `ipcListen` / `ipcInvoke`
+  （リアーキ Phase 1 で導入。Phase 3 でこの層だけ Tauri 実装に差し替わる）
+- **既存コード**: `src/utils.ts` の `Electron.send` / `Electron.listen`（段階的に ipc.ts へ移行中）
 
 #### Sending to Main Process
 
 ```typescript
-// ウィンドウをアクティブ化
-window.Electron.send('activeWindow', { windowNumber: 123 })
+import { ipcSend } from '@/composables/ipc'
 
-// ウィンドウを閉じる
-window.Electron.send('closeWindow', { windowNumber: 123 })
-
-// 設定を更新
-window.Electron.send('setOptions', { layout: 'bottom' })
-
-// レンダラー準備完了を通知
-window.Electron.send('windowReady')
+ipcSend('activeWindow', win) // ウィンドウをアクティブ化
+ipcSend('setOptions', options) // 設定を更新（全体をマージして送る）
+ipcSend('windowReady') // レンダラー準備完了を通知
 ```
 
 #### Receiving from Main Process
 
 ```typescript
-// ウィンドウ情報の更新を受信
-window.Electron.on('process', (processes: MacWindow[]) => {
-  // ...
-})
+import { ipcListen } from '@/composables/ipc'
 
-// アイコン更新を受信
-window.Electron.on('iconUpdate', (iconData: Record<string, string>) => {
-  // ...
-})
-
-// ディスプレイ情報を受信
-window.Electron.on('displayInfo', (info: DisplayInfo) => {
-  // ...
-})
-
-// 設定更新を受信
-window.Electron.on('updateOptions', (options: OptionsType) => {
-  // ...
+// 解除関数が返る。コンポーネント寿命のリスナーは onUnmounted で必ず解除する
+const unlisten = ipcListen<MacWindow[]>('process', (processes) => {
+  /* ... */
 })
 ```
 
-**重要**: すべてのIPC通信は型安全です。`src/main/funcs/events.ts` で定義されたイベントハンドラーと対応しています。
+#### Composables（さらに上の層）
+
+`useOptions()` / `useWindows()`（`src/composables/`）はモジュールシングルトンで、
+リスナー登録と `windowReady` 送信を1回に抑えます。**`windowReady` はメインプロセス側で
+ウィンドウリストのリセットという副作用を持つため、コンポーネントから直接送らず
+`useWindows()` を使うこと。**
+
+**重要**: `src/main/funcs/events.ts` で定義されたイベントハンドラーと対応しています。
+`ipcSend` は引数を JSON クローンするため、Vue の reactivity proxy をそのまま渡せます。
 
 ### Browser-Based Testing with Mocks
 
@@ -145,7 +139,7 @@ window.Electron.on('updateOptions', (options: OptionsType) => {
 
 #### モックの仕組み
 
-1. **自動注入**: `src/renderer/src/mocks/electron-mocks.ts` がブラウザ環境を検出し、`window.Electron` APIを提供
+1. **自動注入**: `src/renderer/src/mocks/electron-mocks.ts` がブラウザ環境を検出し、`window.electron` API（ipcRenderer モック）を提供
 2. **自動イベント発火**: `Electron.send('windowReady')` が呼ばれると、サンプルデータが自動送信
 3. **開発者ヘルパー**: `window.__mockHelpers` で手動制御が可能
 
@@ -226,16 +220,15 @@ bun test src/renderer/tests/sample.test.ts --preload src/renderer/tests/setup.ts
 
 ## Type Definitions
 
-### Electron API Types (env.d.ts)
+### Electron API Types
 
-レンダラープロセスで使用可能なElectron APIの型定義：
+Window のグローバル型は `src/utils.ts` の `declare global` で拡張されています:
 
 ```typescript
-interface Window {
-  Electron: {
-    send: (channel: string, ...args: any[]) => void
-    on: (channel: string, callback: (...args: any[]) => void) => void
-    invoke: (channel: string, ...args: any[]) => Promise<any>
+declare global {
+  interface Window {
+    electron: ElectronAPI // @electron-toolkit/preload が注入
+    store: Store // preload が注入する初期ストア（型は src/types.ts）
   }
 }
 ```
@@ -282,11 +275,11 @@ import { ref, onMounted } from 'vue'
 const windows = ref<MacWindow[]>([])
 
 onMounted(() => {
-  window.Electron.on('process', (processes) => {
+  window.electron.ipcRenderer.on('process', (processes) => {
     windows.value = processes
   })
 
-  window.Electron.send('windowReady')
+  window.electron.ipcRenderer.send('windowReady')
 })
 </script>
 ```
@@ -305,7 +298,7 @@ Vue Routerはファイルベースルーティングを使用：
 レンダラープロセスが準備完了したことをメインプロセスに通知する重要なプロトコル：
 
 1. レンダラープロセスが起動
-2. `window.Electron.send('windowReady')` を送信
+2. `window.electron.ipcRenderer.send('windowReady')` を送信
 3. メインプロセスが初期データを送信：
    - `process` - ウィンドウリスト
    - `iconUpdate` - アイコンデータ
@@ -365,16 +358,16 @@ const windows = ref<MacWindow[]>([])
 
 // ウィンドウをアクティブ化
 function activateWindow(windowNumber: number): void {
-  window.Electron.send('activeWindow', { windowNumber })
+  window.electron.ipcRenderer.send('activeWindow', { windowNumber })
 }
 
 // ウィンドウを閉じる
 function closeWindow(windowNumber: number): void {
-  window.Electron.send('closeWindow', { windowNumber })
+  window.electron.ipcRenderer.send('closeWindow', { windowNumber })
 }
 
 // ウィンドウリストの更新を受信
-window.Electron.on('process', (processes: MacWindow[]) => {
+window.electron.ipcRenderer.on('process', (processes: MacWindow[]) => {
   windows.value = processes
 })
 </script>
@@ -398,16 +391,16 @@ const layout = ref<'top' | 'bottom' | 'left' | 'right'>('bottom')
 
 // 設定を読み込む
 onMounted(() => {
-  window.Electron.on('updateOptions', (options) => {
+  window.electron.ipcRenderer.on('updateOptions', (options) => {
     layout.value = options.layout
   })
 
-  window.Electron.send('windowReady')
+  window.electron.ipcRenderer.send('windowReady')
 })
 
 // 設定を保存
 function saveLayout(): void {
-  window.Electron.send('setOptions', { layout: layout.value })
+  window.electron.ipcRenderer.send('setOptions', { layout: layout.value })
 }
 </script>
 ```
@@ -420,7 +413,7 @@ import { ref } from 'vue'
 
 const icons = ref<Record<string, string>>({})
 
-window.Electron.on('iconUpdate', (iconData) => {
+window.electron.ipcRenderer.on('iconUpdate', (iconData) => {
   icons.value = iconData
 })
 </script>

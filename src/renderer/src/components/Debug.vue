@@ -27,17 +27,8 @@
   </table>
 </template>
 
-<script lang="ts">
-import { PropType } from 'vue'
-
-export default {
-  props: {
-    windows: {
-      type: Array as PropType<MacWindow[]>,
-      default: (): MacWindow[] => {
-        return []
-      }
-    }
-  }
-}
+<script setup lang="ts">
+withDefaults(defineProps<{ windows?: MacWindow[] }>(), {
+  windows: () => []
+})
 </script>

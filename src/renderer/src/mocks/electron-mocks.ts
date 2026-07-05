@@ -4,7 +4,7 @@
  */
 
 import { sampleWindows, sampleIcons, sampleDisplayInfo } from './sample-fixture'
-import type { Store } from '../utils'
+import type { Store } from '../types'
 
 // リスナーを管理するためのストレージ
 type Listener = (...args: unknown[]) => void
