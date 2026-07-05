@@ -1,6 +1,6 @@
 # Phase 3: Electron + Swift → Tauri v2 + ビルドチェーン完全移行
 
-**親ドキュメント**: [リアーキテクチャ計画書](../rearchitecture-plan.md)
+**親ドキュメント**: [リアーキテクチャ計画書](rearchitecture-plan.md)
 
 **前提**: 一気通貫で実施。途中ではビルドが通らなくてよい。
 3.1〜3.5 のサブタスクで進捗を管理する。

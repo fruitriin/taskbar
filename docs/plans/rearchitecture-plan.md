@@ -72,9 +72,9 @@ Evan You の VoidZero が開発した統合ツールチェーン。現在 **Alph
 
 | Phase | 内容 | ビルド | 詳細 |
 |-------|------|:------:|------|
-| **1** | Vue 整理 + Composition 統一 + UnoCSS + 状態管理 composable | ✅ Electron 上で動作 | [Phase 1 詳細](./claudeTasks/rearch-phase1.md) |
-| **2** | フロントエンドビルドチェーン整理 (vp) | ✅ Electron 上で動作 | [Phase 2 詳細](./claudeTasks/rearch-phase2.md) |
-| **3** | Electron+Swift → Tauri v2+Rust + ビルドチェーン完全移行 | 途中不通、完了時 ✅ | [Phase 3 詳細](./claudeTasks/rearch-phase3.md) |
+| **1** | Vue 整理 + Composition 統一 + UnoCSS + 状態管理 composable | ✅ Electron 上で動作 | [Phase 1 詳細](./rearch-phase1.md) |
+| **2** | フロントエンドビルドチェーン整理 (vp) | ✅ Electron 上で動作 | [Phase 2 詳細](./rearch-phase2.md) |
+| **3** | Electron+Swift → Tauri v2+Rust + ビルドチェーン完全移行 | 途中不通、完了時 ✅ | [Phase 3 詳細](./rearch-phase3.md) |
 
 Phase 1, 2 完了後はそれぞれリリース可能。Phase 3 は一気通貫で実施。
 

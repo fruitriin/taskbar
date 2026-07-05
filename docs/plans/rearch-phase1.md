@@ -1,6 +1,6 @@
 # Phase 1: Vue 整理 + Composition 統一 + UnoCSS + 状態管理
 
-**親ドキュメント**: [リアーキテクチャ計画書](../rearchitecture-plan.md)
+**親ドキュメント**: [リアーキテクチャ計画書](rearchitecture-plan.md)
 
 **前提**: Electron 上で動作を維持したまま実施。このフェーズ完了後にリリース可能。
 

@@ -1,6 +1,6 @@
 # Phase 2: フロントエンドビルドチェーン整理 (vp)
 
-**親ドキュメント**: [リアーキテクチャ計画書](../rearchitecture-plan.md)
+**親ドキュメント**: [リアーキテクチャ計画書](rearchitecture-plan.md)
 
 **前提**: Electron 上で動作を維持したまま実施。このフェーズ完了後にリリース可能。
 electron-vite は Phase 3 まで残す（dev/build はそのまま、品質チェック系のみ vp に移行）。
