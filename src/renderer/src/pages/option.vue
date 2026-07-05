@@ -119,15 +119,7 @@
       >
         <div class="panel-header">
           <span class="panel-title">編集中</span>
-          <button
-            class="panel-close-btn"
-            @click="
-              selectedFilterIndex = null;
-              panelPosition = null;
-            "
-          >
-            ✕
-          </button>
+          <button class="panel-close-btn" @click="closeEditPanel">✕</button>
         </div>
 
         <!-- ラベル編集（コンパクト） -->
@@ -160,7 +152,10 @@
                 <span class="condition-text"
                   >{{ getPropertyDisplayName(filter.property) }}={{ filter.is }}</span
                 >
-                <button class="condition-remove-btn" @click.stop="removeCondition(selectedFilterIndex, k)">
+                <button
+                  class="condition-remove-btn"
+                  @click.stop="removeCondition(selectedFilterIndex, k)"
+                >
                   ×
                 </button>
               </div>
@@ -198,7 +193,10 @@
                     <button class="button is-small edit-cancel-btn" @click="cancelEditCondition">
                       キャンセル
                     </button>
-                    <button class="button is-small is-primary edit-save-btn" @click="saveEditCondition">
+                    <button
+                      class="button is-small is-primary edit-save-btn"
+                      @click="saveEditCondition"
+                    >
                       保存
                     </button>
                   </div>
@@ -228,240 +226,230 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// Electron はテンプレートからも参照される（send は ipc.ts へ委譲済み）
 import { Electron } from '../utils'
+import { ipcListen, ipcSend } from '../composables/ipc'
+import type { LabeledFilters } from '../types'
+import type { Options } from '../composables/useOptions'
 import draggable from 'vuedraggable'
 import AddFilter from '../components/AddFilter.vue'
 import PermissionStatus from '../components/PermissionStatus.vue'
 
-export default {
-  components: {
-    draggable,
-    AddFilter,
-    PermissionStatus
+const drag = ref(false)
+// 注意: useOptions には接続しない。現状 optionWindow は 'updateOptions' の
+// ブロードキャスト対象外（main/funcs/events.ts は taskbars にのみ送信）なので echo は
+// 発生しないが、useOptions は内部で ipcListen('updateOptions') を張るため、将来
+// optionWindow を配信対象に加えると本 watch と組み合わさり無限ループになる。
+// 結線する際は等価性ガードとセットで設計すること（レビュー 2026-07-06 で配線を検証済み）
+const options = ref<Options>({ ...window.store.options })
+const sortRule = ref<Array<{ name: 'headers' | 'footers'; label: string }>>([
+  { name: 'headers', label: '先頭' },
+  { name: 'footers', label: '末尾' }
+])
+const labeledFilters = ref<LabeledFilters[]>([
+  ...JSON.parse(JSON.stringify(window.store.labeledFilters))
+])
+const editingLabel = ref('')
+const selectedFilterIndex = ref<number | null>(null)
+const panelPosition = ref<{ top: string; left: string } | null>(null)
+const editingCondition = ref<{ groupIndex: number; conditionIndex: number } | null>(null)
+const editingConditionData = ref<{ property: string; is: string | number | boolean }>({
+  property: '',
+  is: ''
+})
+
+// options のあらゆる変更を自動送信（旧実装の deep watch と同一挙動）
+watch(
+  options,
+  (value) => {
+    ipcSend('setOptions', value)
   },
-  data(): {
-    drag: boolean
-    options: any
-    sortRule: Array<{ name: string; label: string }>
-    labeledFilters: Array<{
-      label: string
-      filters: Array<{ property: string; is: string | number | boolean }>
-    }>
-    newFilter: { property: string; is: string }
-    editingLabel: string
-    editingLabelIndex: number | null
-    selectedFilterIndex: number | null
-    panelPosition: { top: string; left: string } | null
-    editingCondition: { groupIndex: number; conditionIndex: number } | null
-    editingConditionData: { property: string; is: string | number | boolean }
-  } {
-    return {
-      drag: false,
-      options: {
-        ...window.store.options
-      },
-      sortRule: [
-        { name: 'headers', label: '先頭' },
-        { name: 'footers', label: '末尾' }
-      ],
-      labeledFilters: [...JSON.parse(JSON.stringify(window.store.labeledFilters))],
-      newFilter: {
-        property: '',
-        is: ''
-      },
-      editingLabel: '',
-      editingLabelIndex: null,
-      selectedFilterIndex: null,
-      panelPosition: null,
-      editingCondition: null,
-      editingConditionData: { property: '', is: '' }
-    }
-  },
-  computed: {
-    Electron(): typeof Electron {
-      return Electron
-    }
-  },
-  watch: {
-    options: {
-      deep: true,
-      handler(value: any): void {
-        Electron.send('setOptions', value)
-      }
-    }
-  },
-  methods: {
-    removeFilter(index: number): void {
-      this.labeledFilters.splice(index, 1)
+  { deep: true }
+)
 
-      // 選択中のフィルターインデックスを調整
-      if (this.selectedFilterIndex === index) {
-        // 削除したグループが選択中だった場合、選択を解除
-        this.selectedFilterIndex = null
-      } else if (this.selectedFilterIndex !== null && this.selectedFilterIndex > index) {
-        // 削除したグループより後ろが選択されていた場合、インデックスを調整
-        this.selectedFilterIndex -= 1
-      }
+function removeFilter(index: number): void {
+  labeledFilters.value.splice(index, 1)
 
-      Electron.send('setLabeledFilters', this.labeledFilters)
-      // フィルターリストを更新
-      Electron.send('getExcludeWindows')
-    },
-    removeCondition(groupIndex: number, conditionIndex: number): void {
-      this.labeledFilters[groupIndex].filters.splice(conditionIndex, 1)
-      // condition が0件になったらグループごと削除
-      if (this.labeledFilters[groupIndex].filters.length === 0) {
-        this.labeledFilters.splice(groupIndex, 1)
-        this.selectedFilterIndex = null
-      }
+  // 選択中のフィルターインデックスを調整
+  if (selectedFilterIndex.value === index) {
+    // 削除したグループが選択中だった場合、選択を解除
+    selectedFilterIndex.value = null
+  } else if (selectedFilterIndex.value !== null && selectedFilterIndex.value > index) {
+    // 削除したグループより後ろが選択されていた場合、インデックスを調整
+    selectedFilterIndex.value -= 1
+  }
 
-      Electron.send('setLabeledFilters', this.labeledFilters)
-      // フィルターリストを更新
-      Electron.send('getExcludeWindows')
-    },
-    getPropertyDisplayName(property: string): string {
-      const displayNames: Record<string, string> = {
-        kCGWindowName: 'ウィンドウ名',
-        kCGWindowOwnerName: 'アプリ名',
-        kCGWindowOwnerPID: 'プロセスID',
-        kCGWindowNumber: 'ウィンドウ番号',
-        kCGWindowLayer: 'レイヤー',
-        kCGWindowIsOnscreen: '画面表示',
-        kCGWindowSharingState: '共有状態',
-        kCGWindowStoreType: 'ストア'
-      }
-      return displayNames[property] || property
-    },
-    handleAddFilter(data: {
-      filter: { property: string; is: string }
-      filterIndex?: number
-    }): void {
-      if (data.filterIndex !== undefined) {
-        // 既存のフィルターグループにルールを追加
-        this.labeledFilters[data.filterIndex].filters.push(data.filter)
-      } else {
-        // 新しいフィルターグループを作成
-        const propertyName = this.getPropertyDisplayName(data.filter.property)
-        const newGroupLabel = `${propertyName}:${data.filter.is}を除外`
-        this.labeledFilters.push({
-          label: newGroupLabel,
-          filters: [data.filter]
-        })
-        this.selectedFilterIndex = null
-      }
-      Electron.send('setLabeledFilters', this.labeledFilters)
-      // フィルターリストを更新
-      Electron.send('getExcludeWindows')
-    },
-    updateLabel(_index: number, newLabel: string): void {
-      if (this.selectedFilterIndex === null) return
+  ipcSend('setLabeledFilters', labeledFilters.value)
+  // フィルターリストを更新
+  ipcSend('getExcludeWindows')
+}
 
-      this.labeledFilters[this.selectedFilterIndex].label = newLabel
+function removeCondition(groupIndex: number, conditionIndex: number): void {
+  labeledFilters.value[groupIndex].filters.splice(conditionIndex, 1)
+  // condition が0件になったらグループごと削除
+  if (labeledFilters.value[groupIndex].filters.length === 0) {
+    labeledFilters.value.splice(groupIndex, 1)
+    selectedFilterIndex.value = null
+  }
 
-      Electron.send('setLabeledFilters', this.labeledFilters)
-    },
-    startEditLabel(index: number): void {
-      this.editingLabelIndex = index
-    },
-    finishEditLabel(): void {
-      if (this.editingLabelIndex !== null) {
-        Electron.send('setLabeledFilters', this.labeledFilters)
-        this.editingLabelIndex = null
-      }
-    },
-    selectFilter(index: number, event: MouseEvent): void {
-      this.selectedFilterIndex = index
-      this.editingLabel = this.labeledFilters[this.selectedFilterIndex].label
-      this.editingCondition = null // フィルターグループを切り替えた時は条件編集をクリア
+  ipcSend('setLabeledFilters', labeledFilters.value)
+  // フィルターリストを更新
+  ipcSend('getExcludeWindows')
+}
 
-      // クリックされたボタン要素の位置を取得
-      const button = event.currentTarget as HTMLElement
-      const buttonRect = button.getBoundingClientRect()
+function getPropertyDisplayName(property: string): string {
+  const displayNames: Record<string, string> = {
+    kCGWindowName: 'ウィンドウ名',
+    kCGWindowOwnerName: 'アプリ名',
+    kCGWindowOwnerPID: 'プロセスID',
+    kCGWindowNumber: 'ウィンドウ番号',
+    kCGWindowLayer: 'レイヤー',
+    kCGWindowIsOnscreen: '画面表示',
+    kCGWindowSharingState: '共有状態',
+    kCGWindowStoreType: 'ストア'
+  }
+  return displayNames[property] || property
+}
 
-      // パネルのサイズ（概算）
-      const panelWidth = 320
-      const panelHeight = 300 // 最大高さの概算（max-height: 80vhも考慮）
-
-      // ビューポートのサイズ
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-
-      const offset = 8 // ボタンとパネルの間のマージン
-      let left = buttonRect.left
-      let top: number
-
-      // 第一候補：パネルの上端をボタンの下端に配置
-      top = buttonRect.bottom + offset
-
-      // ボタンの下に表示するスペースがあるかチェック
-      const spaceBelow = viewportHeight - buttonRect.bottom - offset - 20 // 20pxはマージン
-
-      // はみ出る場合：パネルの下端をボタンの上端に配置
-      if (spaceBelow < panelHeight) {
-        // パネルの下端がボタンの上端に来るように計算
-        top = buttonRect.top - panelHeight - offset
-      }
-
-      // 右端のチェック：パネルが画面からはみ出る場合は左にずらす
-      if (left + panelWidth > viewportWidth - 10) {
-        left = viewportWidth - panelWidth - 10
-      }
-
-      // 左端のチェック
-      if (left < 10) {
-        left = 10
-      }
-
-      // 上端のチェック（ボタンの上に表示した場合でもはみ出る場合）
-      if (top < 10) {
-        top = 10
-      }
-
-      this.panelPosition = {
-        top: `${top}px`,
-        left: `${left}px`
-      }
-    },
-    startEditCondition(
-      groupIndex: number,
-      conditionIndex: number,
-      filter: { property: string; is: string | number | boolean }
-    ): void {
-      this.editingCondition = { groupIndex, conditionIndex }
-      this.editingConditionData = { property: filter.property, is: filter.is }
-    },
-    cancelEditCondition(): void {
-      this.editingCondition = null
-      this.editingConditionData = { property: '', is: '' }
-    },
-    saveEditCondition(): void {
-      if (this.editingCondition === null) return
-
-      const { groupIndex, conditionIndex } = this.editingCondition
-      this.labeledFilters[groupIndex].filters[conditionIndex] = {
-        property: this.editingConditionData.property,
-        is: this.editingConditionData.is
-      }
-
-      Electron.send('setLabeledFilters', this.labeledFilters)
-      // フィルターリストを更新
-      Electron.send('getExcludeWindows')
-      this.editingCondition = null
-      this.editingConditionData = { property: '', is: '' }
-    }
-  },
-  mounted(): void {
-    // fullWindowListからのフィルター追加を受け取る
-    Electron.listen('labeledFiltersUpdated', (_event: any, updatedFilters: any) => {
-      this.labeledFilters = [...updatedFilters]
+function handleAddFilter(data: {
+  filter: { property: string; is: string }
+  filterIndex?: number
+}): void {
+  if (data.filterIndex !== undefined) {
+    // 既存のフィルターグループにルールを追加
+    labeledFilters.value[data.filterIndex].filters.push(
+      data.filter as LabeledFilters['filters'][number]
+    )
+  } else {
+    // 新しいフィルターグループを作成
+    const propertyName = getPropertyDisplayName(data.filter.property)
+    const newGroupLabel = `${propertyName}:${data.filter.is}を除外`
+    labeledFilters.value.push({
+      label: newGroupLabel,
+      filters: [data.filter as LabeledFilters['filters'][number]]
     })
-  },
-  beforeUnmount(): void {
-    // リスナーをクリーンアップ
-    window.electron.ipcRenderer.removeAllListeners('labeledFiltersUpdated')
+    selectedFilterIndex.value = null
+  }
+  ipcSend('setLabeledFilters', labeledFilters.value)
+  // フィルターリストを更新
+  ipcSend('getExcludeWindows')
+}
+
+function updateLabel(_index: number, newLabel: string): void {
+  if (selectedFilterIndex.value === null) return
+
+  labeledFilters.value[selectedFilterIndex.value].label = newLabel
+
+  ipcSend('setLabeledFilters', labeledFilters.value)
+}
+
+// フローティング編集パネルを閉じる。旧実装のインライン複数文ハンドラは、prettier が
+// セミコロンを剥がした状態で vite:vue の式パースエラーになった実績があるため関数化
+// （エラー実測: Error parsing JavaScript expression: Unexpected token）
+function closeEditPanel(): void {
+  selectedFilterIndex.value = null
+  panelPosition.value = null
+}
+
+function selectFilter(index: number, event: MouseEvent): void {
+  selectedFilterIndex.value = index
+  editingLabel.value = labeledFilters.value[index].label
+  editingCondition.value = null // フィルターグループを切り替えた時は条件編集をクリア
+
+  // クリックされたボタン要素の位置を取得
+  const button = event.currentTarget as HTMLElement
+  const buttonRect = button.getBoundingClientRect()
+
+  // パネルのサイズ（概算）
+  const panelWidth = 320
+  const panelHeight = 300 // 最大高さの概算（max-height: 80vhも考慮）
+
+  // ビューポートのサイズ
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  const offset = 8 // ボタンとパネルの間のマージン
+  let left = buttonRect.left
+  let top: number
+
+  // 第一候補：パネルの上端をボタンの下端に配置
+  top = buttonRect.bottom + offset
+
+  // ボタンの下に表示するスペースがあるかチェック
+  const spaceBelow = viewportHeight - buttonRect.bottom - offset - 20 // 20pxはマージン
+
+  // はみ出る場合：パネルの下端をボタンの上端に配置
+  if (spaceBelow < panelHeight) {
+    // パネルの下端がボタンの上端に来るように計算
+    top = buttonRect.top - panelHeight - offset
+  }
+
+  // 右端のチェック：パネルが画面からはみ出る場合は左にずらす
+  if (left + panelWidth > viewportWidth - 10) {
+    left = viewportWidth - panelWidth - 10
+  }
+
+  // 左端のチェック
+  if (left < 10) {
+    left = 10
+  }
+
+  // 上端のチェック（ボタンの上に表示した場合でもはみ出る場合）
+  if (top < 10) {
+    top = 10
+  }
+
+  panelPosition.value = {
+    top: `${top}px`,
+    left: `${left}px`
   }
 }
+
+function startEditCondition(
+  groupIndex: number,
+  conditionIndex: number,
+  filter: { property: string; is: string | number | boolean }
+): void {
+  editingCondition.value = { groupIndex, conditionIndex }
+  editingConditionData.value = { property: filter.property, is: filter.is }
+}
+
+function cancelEditCondition(): void {
+  editingCondition.value = null
+  editingConditionData.value = { property: '', is: '' }
+}
+
+function saveEditCondition(): void {
+  if (editingCondition.value === null) return
+
+  const { groupIndex, conditionIndex } = editingCondition.value
+  labeledFilters.value[groupIndex].filters[conditionIndex] = {
+    property: editingConditionData.value.property,
+    is: editingConditionData.value.is
+  } as LabeledFilters['filters'][number]
+
+  ipcSend('setLabeledFilters', labeledFilters.value)
+  // フィルターリストを更新
+  ipcSend('getExcludeWindows')
+  editingCondition.value = null
+  editingConditionData.value = { property: '', is: '' }
+}
+
+let unlistenFiltersUpdated: (() => void) | undefined
+
+onMounted(() => {
+  // fullWindowListからのフィルター追加を受け取る
+  unlistenFiltersUpdated = ipcListen<LabeledFilters[]>('labeledFiltersUpdated', (updated) => {
+    labeledFilters.value = [...updated]
+  })
+})
+
+onBeforeUnmount(() => {
+  // 解除関数ペア方式（removeAllListeners は他のリスナーを巻き込むため使わない）
+  unlistenFiltersUpdated?.()
+})
 </script>
 <style>
 #app {
