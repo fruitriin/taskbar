@@ -4,7 +4,7 @@
   "exclude": ["**/node_modules", "**/.*/"],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"],
+    "types": ["electron-vite/node", "bun"],
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {

@@ -4,6 +4,7 @@
  */
 
 import { sampleWindows, sampleIcons, sampleDisplayInfo } from './sample-fixture'
+import type { Store } from '../utils'
 
 // リスナーを管理するためのストレージ
 type Listener = (...args: unknown[]) => void
@@ -12,7 +13,7 @@ const listeners = new Map<string, Set<Listener>>()
 /**
  * イベントリスナーを追加
  */
-const addListener = (channel: string, listener: Listener) => {
+const addListener = (channel: string, listener: Listener): void => {
   if (!listeners.has(channel)) {
     listeners.set(channel, new Set())
   }
@@ -22,14 +23,14 @@ const addListener = (channel: string, listener: Listener) => {
 /**
  * イベントリスナーを削除
  */
-const removeListener = (channel: string, listener: Listener) => {
+const removeListener = (channel: string, listener: Listener): void => {
   listeners.get(channel)?.delete(listener)
 }
 
 /**
  * イベントを発火
  */
-const emit = (channel: string, ...args: unknown[]) => {
+const emit = (channel: string, ...args: unknown[]): void => {
   const channelListeners = listeners.get(channel)
   if (channelListeners) {
     // IpcRendererEventのモック（最小限の実装）
@@ -47,7 +48,7 @@ const emit = (channel: string, ...args: unknown[]) => {
 /**
  * windowReady送信後に自動的にイベントを発火
  */
-const handleWindowReady = () => {
+const handleWindowReady = (): void => {
   console.log('[Mock] Triggering initial events after windowReady')
 
   // 少し遅延させてから発火（実際のIPCを模倣）
@@ -67,20 +68,28 @@ const handleWindowReady = () => {
     emit('updateOptions', {
       layout: 'bottom',
       windowSortByPositionInApp: false,
+      appOrder: [],
       headers: [],
       footers: []
     })
   }, 400)
 }
 
-export const createElectronMock = () => ({
+type IpcRendererMock = {
+  on: (channel: string, listener: Listener) => () => void
+  send: (channel: string, ...args: unknown[]) => void
+  removeListener: (channel: string, listener: Listener) => void
+  invoke: (channel: string, ...args: unknown[]) => Promise<null>
+}
+
+export const createElectronMock = (): { ipcRenderer: IpcRendererMock } => ({
   ipcRenderer: {
-    on: (channel: string, listener: Listener) => {
+    on: (channel: string, listener: Listener): (() => void) => {
       console.log(`[Mock] ipcRenderer.on: ${channel}`)
       addListener(channel, listener)
-      return () => removeListener(channel, listener) // cleanup function
+      return (): void => removeListener(channel, listener) // cleanup function
     },
-    send: (channel: string, ...args: unknown[]) => {
+    send: (channel: string, ...args: unknown[]): void => {
       console.log(`[Mock] ipcRenderer.send: ${channel}`, args)
 
       // windowReadyが送信されたら、自動的にイベントを発火
@@ -119,22 +128,23 @@ export const createElectronMock = () => ({
         console.log(`[Mock] ${channel} command executed (no-op in mock mode)`)
       }
     },
-    removeListener: (channel: string, listener: Listener) => {
+    removeListener: (channel: string, listener: Listener): void => {
       console.log(`[Mock] ipcRenderer.removeListener: ${channel}`)
       removeListener(channel, listener)
     },
-    invoke: async (channel: string, ...args: unknown[]) => {
+    invoke: async (channel: string, ...args: unknown[]): Promise<null> => {
       console.log(`[Mock] ipcRenderer.invoke: ${channel}`, args)
       return null
     }
   }
 })
 
-export const createStoreMock = () => ({
+export const createStoreMock = (): Store => ({
   granted: true,
   options: {
     layout: 'bottom',
     windowSortByPositionInApp: false,
+    appOrder: [],
     headers: [],
     footers: []
   },
@@ -214,7 +224,7 @@ export const createStoreMock = () => ({
  * Inject mocks into window object if Electron APIs are not available
  * Electron APIが利用できない場合、windowオブジェクトにモックを注入
  */
-export const injectElectronMocks = () => {
+export const injectElectronMocks = (): void => {
   if (typeof window === 'undefined') return
 
   // window.electron のモック
@@ -242,8 +252,8 @@ export const injectElectronMocks = () => {
     ;(window as any).__mockHelpers = {
       emit,
       triggerWindowReady: handleWindowReady,
-      updateWindows: (windows: unknown[]) => emit('process', windows),
-      updateIcons: (icons: Record<string, string>) => emit('iconUpdate', icons),
+      updateWindows: (windows: unknown[]): void => emit('process', windows),
+      updateIcons: (icons: Record<string, string>): void => emit('iconUpdate', icons),
       sampleWindows,
       sampleIcons,
       sampleDisplayInfo

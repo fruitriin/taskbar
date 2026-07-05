@@ -379,4 +379,46 @@ describe('Store Migration', () => {
       expect(mockStore.has('filters_backup')).toBe(false)
     })
   })
+
+  describe('appOrder migration (>=2.1.1)', () => {
+    // store.ts の '>=2.1.1' マイグレーションと同じロジック
+    // 注意: electron-store は semver.satisfies(package.json の version, キー) で発火判定するため、
+    // このマイグレーションはアプリのバージョンが 2.1.1 以上になって初めて実行される
+    const migration2_1_1 = (store: any): void => {
+      if (store.get('options.appOrder') === undefined) {
+        store.set('options.appOrder', [])
+      }
+    }
+
+    it('options キーが既存で appOrder が無い旧ストアに appOrder: [] が補われる', () => {
+      mockStore = createMockStore({
+        options: {
+          layout: 'bottom',
+          windowSortByPositionInApp: false,
+          headers: [],
+          footers: []
+        } as unknown as Options
+      })
+
+      migration2_1_1(mockStore)
+
+      expect(mockStore.get('options.appOrder' as keyof StoreSchema)).toEqual([])
+    })
+
+    it('既に appOrder を持つストアは上書きされない', () => {
+      mockStore = createMockStore({
+        options: {
+          layout: 'bottom',
+          windowSortByPositionInApp: false,
+          appOrder: ['Safari', 'Terminal'],
+          headers: [],
+          footers: []
+        } as unknown as Options
+      })
+
+      migration2_1_1(mockStore)
+
+      expect(mockStore.get('options.appOrder' as keyof StoreSchema)).toEqual(['Safari', 'Terminal'])
+    })
+  })
 })

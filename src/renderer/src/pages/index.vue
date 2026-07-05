@@ -37,8 +37,13 @@
         v-for="win in centerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
+        draggable="true"
         @click="acticveWindow(win)"
         @click.right.prevent="test(win)"
+        @dragstart="onDragStart($event, win)"
+        @dragover.prevent
+        @drop="onDropOnApp($event, win)"
+        @dragend="onDragEnd"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">
@@ -75,7 +80,7 @@
 
 <script lang="ts">
 import icon from '../assets/icon.png'
-import { Electron } from '../utils'
+import { Electron, buildAppOrder, groupWindowsByApp, moveApp } from '../utils'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
 import MainPermissionStatus from '../components/MainPermissionStatus.vue'
@@ -92,6 +97,10 @@ export default defineComponent({
     return {
       icon,
       windows: [] as MacWindow[] | null,
+      // セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
+      appearanceOrder: [] as string[],
+      // ドラッグ中のアプリ名
+      dragApp: null as string | null,
       debug: true,
       options: window.store.options,
       granted: window.store.granted,
@@ -129,7 +138,7 @@ export default defineComponent({
       return footers
     },
     centerWindows(): MacWindow[] {
-      return this.visibleWindows.filter((w: MacWindow) => {
+      const centers = this.visibleWindows.filter((w: MacWindow) => {
         if (
           !this.options?.headers.includes(w.kCGWindowOwnerName) &&
           !this.options?.footers.includes(w.kCGWindowOwnerName)
@@ -137,6 +146,12 @@ export default defineComponent({
           return true
         }
         return false
+      })
+      return groupWindowsByApp(centers, {
+        sortByPosition: this.options?.windowSortByPositionInApp ?? false,
+        layout: this.options?.layout ?? 'bottom',
+        appOrder: this.options?.appOrder ?? [],
+        appearanceOrder: this.appearanceOrder
       })
     },
     // ディスプレイの中にウィンドウだけに絞り込む
@@ -166,6 +181,7 @@ export default defineComponent({
       this.options = value
     })
     Electron.listen('process', (_event, value: MacWindow[]) => {
+      this.trackAppearance(value)
       if (this.windows == null) {
         this.windows = value
         return
@@ -211,6 +227,45 @@ export default defineComponent({
     test(ev): void {
       Electron.send('contextTask', ev)
       console.log('test')
+    },
+    // 新しく出現したアプリを出現順リストの末尾に追加する
+    // 同時に複数現れた場合は最小 kCGWindowNumber 昇順で追加し、
+    // どのディスプレイのタスクバーでも同じ順序に収束させる
+    trackAppearance(windows: MacWindow[]): void {
+      const minNumbers = new Map<string, number>()
+      for (const win of windows) {
+        const app = win.kCGWindowOwnerName
+        const current = minNumbers.get(app)
+        if (current === undefined || win.kCGWindowNumber < current) {
+          minNumbers.set(app, win.kCGWindowNumber)
+        }
+      }
+      const newApps = [...minNumbers.keys()]
+        .filter((app) => !this.appearanceOrder.includes(app))
+        .sort((a, b) => (minNumbers.get(a) as number) - (minNumbers.get(b) as number))
+      this.appearanceOrder.push(...newApps)
+    },
+    onDragStart(event: DragEvent, win: MacWindow): void {
+      this.dragApp = win.kCGWindowOwnerName
+      // 別ディスプレイのタスクバーへのドロップでも動くよう dataTransfer にも載せる
+      event.dataTransfer?.setData('application/x-taskbar-app', win.kCGWindowOwnerName)
+    },
+    onDragEnd(): void {
+      this.dragApp = null
+    },
+    // ドロップ先アプリの位置にドラッグ元アプリのグループを移動し、appOrder として永続化する
+    onDropOnApp(event: DragEvent, win: MacWindow): void {
+      const target = win.kCGWindowOwnerName
+      const dragged = event.dataTransfer?.getData('application/x-taskbar-app') || this.dragApp
+      this.dragApp = null
+      if (!dragged || dragged === target) return
+
+      // 既存 appOrder の並びを温存しつつ表示中アプリを補完してから移動する
+      const baseOrder = buildAppOrder(this.options?.appOrder ?? [], this.centerWindows)
+      Electron.send('setOptions', {
+        ...this.options,
+        appOrder: moveApp(baseOrder, dragged, target)
+      })
     },
     dumpTaskbarInfo(): void {
       Electron.send('dumpTaskbarInfo')

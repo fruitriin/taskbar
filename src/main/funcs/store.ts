@@ -47,12 +47,19 @@ export const store = new ElectronStore({
       // ストアを完全にクリア
       store.clear()
       store.reset()
+    },
+    '>=2.1.1': (store): void => {
+      // defaults は options キーが既存だとマージされないため、明示的に補う
+      if (store.get('options.appOrder') === undefined) {
+        store.set('options.appOrder', [])
+      }
     }
   },
   defaults: {
     options: {
       layout: 'bottom' as LayoutType,
       windowSortByPositionInApp: false,
+      appOrder: [] as string[],
       headers: [] as string[],
       footers: [] as string[]
     },

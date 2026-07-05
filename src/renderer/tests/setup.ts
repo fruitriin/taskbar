@@ -3,7 +3,7 @@ import { createElectronMock, createStoreMock } from '../src/mocks/electron-mocks
 
 // グローバルwindowオブジェクトの作成（テスト環境用）
 if (typeof window === 'undefined') {
-  // @ts-ignore
+  // @ts-ignore テスト環境には window が無いため globalThis で代用する
   globalThis.window = globalThis
 }
 
