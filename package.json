@@ -99,8 +99,7 @@
     "eslint-plugin-vue": "^9.18.1",
     "fast-sort": "^3.4.0",
     "less": "^4.2.0",
-    "riinlogger": "file:../RiinLogger",
-    "vitest": "^3.2.4"
+    "riinlogger": "file:../RiinLogger"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
