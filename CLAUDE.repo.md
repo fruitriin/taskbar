@@ -1,0 +1,216 @@
+# CLAUDE.repo.md
+
+Taskbar.fm — macOS に Windows ライクなタスクバー機能を提供する Electron アプリケーション。
+ユーザーへの返事は日本語でお願いします。
+
+# プロジェクト種別
+
+このリポジトリは **ADDF 利用プロジェクト** です。
+
+---
+
+## コミットログ規約
+
+日本語で書く。形式:
+
+```
+[領域] 変更内容の要約
+
+詳細説明（何を・なぜ・影響範囲。LLM がコミットするので情報を惜しまず詰める）
+```
+
+- 領域の例: `[main]` `[renderer]` `[helper]` `[build]` `[docs]` `[addf]`
+- 要約は1行で完結させ、背景・判断理由・副作用はボディに書く
+
+例:
+
+```
+[renderer] オプション画面から既存のフィルターを編集できるようにする
+
+フィルター一覧に編集ボタンを追加し、作成フォームを編集モードでも共用。
+編集時は既存値をフォームに読み込み、保存で該当インデックスを置換する。
+```
+
+---
+
+<!-- 以下は ADDF 導入前の CLAUDE.md から退避したプロジェクト固有ドキュメント -->
+
+
+## Documentation Structure
+
+このプロジェクトは、各コンポーネントごとに詳細なドキュメントを持っています：
+
+- **このファイル** (`CLAUDE.md`) - プロジェクト全体の概要と開発コマンド
+- **`src/main/CLAUDE.md`** - Electron メインプロセスの詳細実装
+- **`src/renderer/CLAUDE.md`** - Vue.js レンダラープロセスの詳細実装
+- **`nativeSrc/taskbar.helper/CLAUDE.md`** - Swift Helper の詳細実装と UE トラブルシューティング
+
+各ドキュメントは独立しており、作業対象のコンポーネントに応じて参照してください。
+
+## Project Overview
+
+Taskbar.fm is an Electron application that brings Windows-like taskbar functionality to macOS. It consists of three main components:
+
+- **Main Process** (src/main/): Node.js-based Electron main process
+- **Renderer Process** (src/renderer/): Vue.js-based UI layer
+- **Native Helper** (nativeSrc/): Swift application for system integration
+
+### Development Tools
+
+- **Task Runner**: mise - Used for running all development and build tasks
+- **Package Manager**: bun - Used for dependency management and script execution
+
+## Development Commands
+
+### Essential Commands (use `mise run` prefix)
+
+- `mise run dev` - Start development server (copies helper binary and runs electron-vite dev)
+- `mise run build` - Build application for production
+- `mise run build:mac` - Create macOS universal binary
+- `mise run test` - Run main process tests
+- `mise run test:renderer` - Run renderer process tests
+- `mise run test:all` - Run all tests
+
+### Code Quality
+
+- `mise run format` - Format code with Prettier
+- `mise run lint` - Run ESLint
+- `mise run typecheck` - Run TypeScript type checking for both processes
+- `mise run typecheck:node` - Type check main process only
+- `mise run typecheck:web` - Type check renderer process only
+
+### Native Helper Development
+
+- `mise run helper` - Open Xcode project for Swift helper
+- `mise run swiftbuild` - Build Swift helper via command line
+- Native helper binary must be built before running `dev` or `build`
+
+#### Troubleshooting
+
+If the TaskbarHelper process becomes unresponsive (UE: Unresponsive Execution):
+
+- **Most common cause**: Code signing misconfiguration
+- **Quick fix**: `mise run helper` → Signing & Capabilities → Select valid certificate → `mise run swiftbuild`
+
+**詳細なトラブルシューティング、UEリスク分析、デバッグ方法は `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
+
+### Installation
+
+- `mise run install-app` - Install built app to /Applications
+
+## Browser-Based UI Testing
+
+### Overview
+
+開発サーバー（`mise run dev`）を起動すると、ブラウザから直接UIにアクセスしてテストできます。Electron APIのモックが自動的に注入され、実際のElectron環境と同じようにUIが動作します。
+
+### アクセス方法
+
+開発サーバー起動後、以下のURLにブラウザまたはPlaywright MCPでアクセス：
+
+- **メインタスクバー**: http://localhost:10234/
+- **設定画面**: http://localhost:10234/option.html
+- **メニュー**: http://localhost:10234/menu.html
+- **全ウィンドウリスト**: http://localhost:10234/fullWindowList.html
+
+### モック機能
+
+- **自動イベント発火**: `Electron.send('windowReady')` が呼ばれると、自動的にサンプルデータが送信されます
+
+  - `process` - サンプルウィンドウデータ（TextEdit, Chrome, VS Code, Terminal）
+  - `iconUpdate` - アイコンデータ
+  - `displayInfo` - ディスプレイ情報
+  - `updateOptions` - オプション設定
+
+- **開発者ヘルパー**: ブラウザコンソールから `window.__mockHelpers` を使用して手動でイベントを発火できます
+
+```javascript
+// 例: ウィンドウデータを更新
+__mockHelpers.updateWindows([...])
+
+// 例: イベントを手動発火
+__mockHelpers.emit('process', __mockHelpers.sampleWindows)
+
+// 例: windowReadyを再トリガー
+__mockHelpers.triggerWindowReady()
+```
+
+### フィクスチャーのカスタマイズ
+
+サンプルデータは `src/renderer/src/mocks/sample-fixture.ts` で定義されています。テストシナリオに合わせてカスタマイズ可能です。
+
+### Playwright MCP による自動テスト
+
+Playwright MCPを使用して、ブラウザ上でのUI動作を自動的にテストできます。モックが自動注入されるため、実際のElectron環境なしでUIの動作確認が可能です。
+
+### 一時ファイルの保存先
+
+**重要**: Playwright MCPで作業的にファイル（スクリーンショット、テストログなど）を作成する場合は、`.playwright-mcp/` ディレクトリを使用してください。このディレクトリは `.gitignore` に含まれており、リポジトリを汚しません。
+
+## Architecture
+
+### Main Process Structure
+
+- `src/main/main.ts` - Entry point, handles app lifecycle and power management
+- `src/main/funcs/` - Core functionality modules:
+  - `windows.ts` - Window management and display event handling
+  - `helper.ts` - Communication with native Swift helper
+  - `events.ts` - IPC event handlers between main and renderer
+  - `store.ts` - Electron-store configuration management
+  - `icon-cache.ts` - Application icon caching system
+
+**詳細な実装、テスト、IPC通信パターンは `src/main/CLAUDE.md` を参照してください。**
+
+### Renderer Process Structure
+
+- `src/renderer/` - Vue.js application with multiple entry points:
+  - `index.html` / `renderer-main.ts` - Main taskbar interface
+  - `option.html` / `renderer-option.ts` - Settings/preferences window
+- Uses Vue Router with file-based routing (`src/renderer/src/pages/`)
+- State management with Pinia
+- Styling with Bulma CSS framework and Less preprocessor
+
+**詳細な実装、Vue.js パターン、ブラウザテストは `src/renderer/CLAUDE.md` を参照してください。**
+
+### Native Helper
+
+- `nativeSrc/taskbar.helper/` - Swift application for macOS system integration
+- Provides window information, screen capture permissions, and system-level taskbar functionality
+- Must be built separately and copied to `resources/TaskbarHelper`
+
+**詳細な実装、アーキテクチャ、コマンド一覧、UEトラブルシューティングは `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
+
+## Testing
+
+### Test Structure
+
+- Main process tests: `src/main/tests/`
+- Renderer process tests: `src/renderer/src/` (alongside source files)
+- Uses Vitest as the test runner
+- Separate test configurations for main and renderer processes
+
+### Test Commands
+
+- Single test file: `npx vitest path/to/test.file.ts` (run from appropriate directory)
+- UI mode: `mise run test:ui` or `mise run test:ui:renderer`
+- Coverage: `mise run test:coverage` or `mise run test:coverage:renderer`
+
+## Key Technical Notes
+
+### Build Dependencies
+
+- The native Swift helper must be compiled before building the Electron app
+- Development workflow requires copying the helper binary from DerivedData to resources/
+- Universal macOS builds are supported via electron-builder
+
+### Multi-Process Architecture
+
+- Main process handles system integration, window management, and native helper communication
+- Renderer processes handle UI for main taskbar and settings windows
+- IPC communication managed through `src/main/funcs/events.ts`
+
+### Configuration Management
+
+- Uses electron-store for persistent configuration
+- Settings structure managed in `src/main/funcs/store.ts`
+- Icon caching system stores app icons in Application Support directory

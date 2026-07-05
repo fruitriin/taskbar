@@ -1,183 +1,103 @@
-# CLAUDE.md
+# CLAUDE.md — エージェント駆動開発フレームワーク
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-ユーザーへの返事は日本語でお願いします
+> このファイルはAIエージェント（Claude等）がタスクを実行する際に従うべき
+> 開発プロセス・参照先・運用ルールを定めたドキュメントです。
 
-## Documentation Structure
+---
 
-このプロジェクトは、各コンポーネントごとに詳細なドキュメントを持っています：
+## ブートシーケンス（セッション開始時に必ず実行）
 
-- **このファイル** (`CLAUDE.md`) - プロジェクト全体の概要と開発コマンド
-- **`src/main/CLAUDE.md`** - Electron メインプロセスの詳細実装
-- **`src/renderer/CLAUDE.md`** - Vue.js レンダラープロセスの詳細実装
-- **`nativeSrc/taskbar.helper/CLAUDE.md`** - Swift Helper の詳細実装と UE トラブルシューティング
+1. @.claude/Feedback.md を読む — 未対応の改善アクションを確認する。読み終えたら続けて以下を実行する（手順 1 のサブステップ。以降の手順番号は変わらない）:
+   - 1.5. @.claude/Questions.md を読む — オーナーの新しい回答があれば Plan に反映し、該当質問を「回答済み」へ移す
+   - 1.6. `.claude/Dashboard.md` が存在すれば冒頭で内容を提示する（unattended 自走の差分まとめ）。オーナーの応答を確認してから削除する。確認前にセッションが終わった場合は次回再提示する
+2. @TODO.md を読む — タスクバックログと優先度を把握する
+3. @.claude/Progress.md を読む — 現在進行中のタスクがあれば継続する
+   - 進行中タスクに「日記」セクションがあれば末尾3エントリーを読み、前任者の状況・判断・気にしていたことを把握してから着手する（日記の書き方は Progress.md の運用ルール参照）
+4. **TODO に未完了タスクがない場合**:
+   - **`docs/plans/` に計画ファイルが1つもない場合**（プロジェクト初回）— 以下の骨格プランニングを実施する:
+     1. プロジェクトの README・ソースコード・既存ドキュメントを走査し、現状を把握する
+     2. オーナーに情報提供方法を選択してもらう（AskUserQuestion）:
+        - **A. 質問に答える形式** — こちらから質問していく
+        - **B. フリーフォーマット** — プロジェクトについて自由に説明してもらう
+     3. **A を選択した場合**、以下を1問ずつ AskUserQuestion で聞く:
+        - 何を作りたいか？（プロジェクトのゴール・目的）
+        - 何に困っているか？（現在の課題・ペインポイント）
+        - どのプラットフォームで動かしたいか？（Web / モバイル / デスクトップ / CLI 等）
+        - 既存のツールやサービスで解決できないのはなぜか？（差別化ポイント・固有の制約）
+     4. 回答（A/B いずれも）をもとに初動の計画ファイル（2〜3本）を `docs/plans/` に作成し、`TODO.md` に登録する
+     5. `CLAUDE.repo.md` が未作成または `CLAUDE.repo.example.md` のままなら、ヒアリング結果をもとにプロジェクト固有の `CLAUDE.repo.md` を作成する（プロジェクト種別は「ADDF 利用プロジェクト」、プロジェクト概要・ビルドコマンド・テストコマンド等を記述）
+     6. 作成した計画をオーナーに提示し、優先度の確認を取る
+   - **計画ファイルが存在する場合** — オーナーに次のタスクを確認する
+5. 次に着手する Plan を特定したら、knowhow サブエージェントを起動する:
+   - Plan ファイルの内容をサブエージェントに渡す
+   - サブエージェントは `docs/knowhow/` を全読みし、Plan に必要・有用なノウハウのパスと要約をメインコンテキストに返す
+   - メインコンテキストには Plan に関連する knowhow のみが載り、コンテキスト消費を抑制する
 
-各ドキュメントは独立しており、作業対象のコンポーネントに応じて参照してください。
+## 開発プロセスファイル一覧
 
-## Project Overview
+- **`TODO.md`**: タスクバックログ。`docs/plans/` の完了状態・優先度を追跡する
+- **`.claude/Progress.md`**: 現在のタスク進捗。運用ルールもここに記載
+- **`.claude/Feedback.md`**: 問題・改善アクションの記録
+- `docs/plans/`: 実装計画ファイル
+- `docs/knowhow/`: 実装で得たノウハウの蓄積
 
-Taskbar.fm is an Electron application that brings Windows-like taskbar functionality to macOS. It consists of three main components:
+---
 
-- **Main Process** (src/main/): Node.js-based Electron main process
-- **Renderer Process** (src/renderer/): Vue.js-based UI layer
-- **Native Helper** (nativeSrc/): Swift application for system integration
+@CLAUDE.repo.md
 
-### Development Tools
+---
 
-- **Task Runner**: mise - Used for running all development and build tasks
-- **Package Manager**: bun - Used for dependency management and script execution
+## コントリビューションモデル
 
-## Development Commands
+- コードではなく計画（Plan）をレビューする。筋の良い計画は受け入れ、実装はAIが担保する
 
-### Essential Commands (use `mise run` prefix)
+---
 
-- `mise run dev` - Start development server (copies helper binary and runs electron-vite dev)
-- `mise run build` - Build application for production
-- `mise run build:mac` - Create macOS universal binary
-- `mise run test` - Run main process tests
-- `mise run test:renderer` - Run renderer process tests
-- `mise run test:all` - Run all tests
+## 並列実装方針
 
-### Code Quality
+サブタスクを並列に実装する場合、**git worktree を積極的に使う**。
 
-- `mise run format` - Format code with Prettier
-- `mise run lint` - Run ESLint
-- `mise run typecheck` - Run TypeScript type checking for both processes
-- `mise run typecheck:node` - Type check main process only
-- `mise run typecheck:web` - Type check renderer process only
+**ルール:**
+- サブエージェントに実装を委譲する場合は、原則 `isolation: "worktree"` で起動する
+- 各 worktree は独立したブランチで作業し、完了後にメインブランチへマージする
+- worktree なしの並列実行は、変更対象ファイルが完全に独立していると確信できる場合のみ許可する
+- **worktree 起動後、`.claude` ディレクトリを worktree にコピーする**（hooks 等の .gitignore 対象ファイルは worktree に自動複製されないため）
 
-### Native Helper Development
+---
 
-- `mise run helper` - Open Xcode project for Swift helper
-- `mise run swiftbuild` - Build Swift helper via command line
-- Native helper binary must be built before running `dev` or `build`
+## 迷ったときの作法（7割共有原則）
 
-#### Troubleshooting
+タスク中に Plan の曖昧さ・要件の不確実性に遭遇したら、着手前に「この方向で進めて Plan の意図と合致する確信度」を見積もり、独立した3軸で進む/止まる/問うを決める。
 
-If the TaskbarHelper process becomes unresponsive (UE: Unresponsive Execution):
+### 軸A: 信頼性 — 閾値そのものを決める
 
-- **Most common cause**: Code signing misconfiguration
-- **Quick fix**: `mise run helper` → Signing & Capabilities → Select valid certificate → `mise run swiftbuild`
+| trust | 閾値 | 状況 |
+|---|---|---|
+| `nervous` | 5割 | 早めに見たい・初対面・新しい領域 |
+| `normal`（デフォルト） | 7割 | 通常の信頼関係。エージェントを信じて任せる |
+| `full` | 9割 | 全面委任・実績のある低リスク領域 |
 
-**詳細なトラブルシューティング、UEリスク分析、デバッグ方法は `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
+### 軸B: 応答性 — 閾値割れ時の行動を決める
 
-### Installation
+| responsiveness | 閾値を下回ったときの挙動 |
+|---|---|
+| `interactive` | 即時質問し、オーナーの応答を待つ |
+| `relaxed`（デフォルト） | `.claude/Questions.md` に質問を置き、別タスクへ移る |
+| `unattended` | 質問を置き、最有力解釈で**投機続行**する。投機作業は `speculative/` ブランチに隔離し、本流にはマージしない |
 
-- `mise run install-app` - Install built app to /Applications
+### 軸C: 完成イメージ確度 — 閾値を補正する
 
-## Browser-Based UI Testing
+- `specific`: オーナーの完成イメージが具体的 → **-1段**（粗くても早めに見せてズレを修正する）
+- `balanced`（デフォルト）: ちょうどいい塩梅 → ±0
+- `vague`: イメージが曖昧 → **+1段**（完成品に近いものを見せないと判断できない。まず作る）
 
-### Overview
+### 運用ルール
 
-開発サーバー（`mise run dev`）を起動すると、ブラウザから直接UIにアクセスしてテストできます。Electron APIのモックが自動的に注入され、実際のElectron環境と同じようにUIが動作します。
+- モードは Plan のフロントマター（`trust:` / `responsiveness:` / `image_clarity:`）または `/addf-mode` で宣言する。値は表のとおり `nervous|normal|full` / `interactive|relaxed|unattended` / `specific|balanced|vague`。省略時は `normal` × `relaxed` × `balanced`
+- 閾値割れでタスクをスキップしたら、TODO の該当タスクを「要確認（質問投下済み）」にし、`.claude/Questions.md` に質問を置いて次のタスクへ移る
+- worktree 隔離下は失敗を捨てられるため、閾値を1段下げてよい
+- サブタスク完了時点でブランチ `checkpoint/<phase>-<N>` を切ってよい。途中から別方針を試すときは checkpoint から `alt/` ブランチを分岐する
+- `unattended` の情報伝達は2フラグで制御する: `dashboard_report`（次セッション冒頭で `.claude/Dashboard.md` の差分まとめを表示）/ `uncertainty_notify`（閾値割れ・投機分岐・障害時に外部通知）。書式は `.claude/Dashboard.example.md` / `.claude/Questions.example.md` を参照
+- 3軸の表は固定式ではなくガイドライン。最終判断は人間とタスクとシチュエーションに応じてケースバイケースで揺らいでよい。自分の見立ては Progress.md に書き残す
 
-### アクセス方法
 
-開発サーバー起動後、以下のURLにブラウザまたはPlaywright MCPでアクセス：
-
-- **メインタスクバー**: http://localhost:10234/
-- **設定画面**: http://localhost:10234/option.html
-- **メニュー**: http://localhost:10234/menu.html
-- **全ウィンドウリスト**: http://localhost:10234/fullWindowList.html
-
-### モック機能
-
-- **自動イベント発火**: `Electron.send('windowReady')` が呼ばれると、自動的にサンプルデータが送信されます
-
-  - `process` - サンプルウィンドウデータ（TextEdit, Chrome, VS Code, Terminal）
-  - `iconUpdate` - アイコンデータ
-  - `displayInfo` - ディスプレイ情報
-  - `updateOptions` - オプション設定
-
-- **開発者ヘルパー**: ブラウザコンソールから `window.__mockHelpers` を使用して手動でイベントを発火できます
-
-```javascript
-// 例: ウィンドウデータを更新
-__mockHelpers.updateWindows([...])
-
-// 例: イベントを手動発火
-__mockHelpers.emit('process', __mockHelpers.sampleWindows)
-
-// 例: windowReadyを再トリガー
-__mockHelpers.triggerWindowReady()
-```
-
-### フィクスチャーのカスタマイズ
-
-サンプルデータは `src/renderer/src/mocks/sample-fixture.ts` で定義されています。テストシナリオに合わせてカスタマイズ可能です。
-
-### Playwright MCP による自動テスト
-
-Playwright MCPを使用して、ブラウザ上でのUI動作を自動的にテストできます。モックが自動注入されるため、実際のElectron環境なしでUIの動作確認が可能です。
-
-### 一時ファイルの保存先
-
-**重要**: Playwright MCPで作業的にファイル（スクリーンショット、テストログなど）を作成する場合は、`.playwright-mcp/` ディレクトリを使用してください。このディレクトリは `.gitignore` に含まれており、リポジトリを汚しません。
-
-## Architecture
-
-### Main Process Structure
-
-- `src/main/main.ts` - Entry point, handles app lifecycle and power management
-- `src/main/funcs/` - Core functionality modules:
-  - `windows.ts` - Window management and display event handling
-  - `helper.ts` - Communication with native Swift helper
-  - `events.ts` - IPC event handlers between main and renderer
-  - `store.ts` - Electron-store configuration management
-  - `icon-cache.ts` - Application icon caching system
-
-**詳細な実装、テスト、IPC通信パターンは `src/main/CLAUDE.md` を参照してください。**
-
-### Renderer Process Structure
-
-- `src/renderer/` - Vue.js application with multiple entry points:
-  - `index.html` / `renderer-main.ts` - Main taskbar interface
-  - `option.html` / `renderer-option.ts` - Settings/preferences window
-- Uses Vue Router with file-based routing (`src/renderer/src/pages/`)
-- State management with Pinia
-- Styling with Bulma CSS framework and Less preprocessor
-
-**詳細な実装、Vue.js パターン、ブラウザテストは `src/renderer/CLAUDE.md` を参照してください。**
-
-### Native Helper
-
-- `nativeSrc/taskbar.helper/` - Swift application for macOS system integration
-- Provides window information, screen capture permissions, and system-level taskbar functionality
-- Must be built separately and copied to `resources/TaskbarHelper`
-
-**詳細な実装、アーキテクチャ、コマンド一覧、UEトラブルシューティングは `nativeSrc/taskbar.helper/CLAUDE.md` を参照してください。**
-
-## Testing
-
-### Test Structure
-
-- Main process tests: `src/main/tests/`
-- Renderer process tests: `src/renderer/src/` (alongside source files)
-- Uses Vitest as the test runner
-- Separate test configurations for main and renderer processes
-
-### Test Commands
-
-- Single test file: `npx vitest path/to/test.file.ts` (run from appropriate directory)
-- UI mode: `mise run test:ui` or `mise run test:ui:renderer`
-- Coverage: `mise run test:coverage` or `mise run test:coverage:renderer`
-
-## Key Technical Notes
-
-### Build Dependencies
-
-- The native Swift helper must be compiled before building the Electron app
-- Development workflow requires copying the helper binary from DerivedData to resources/
-- Universal macOS builds are supported via electron-builder
-
-### Multi-Process Architecture
-
-- Main process handles system integration, window management, and native helper communication
-- Renderer processes handle UI for main taskbar and settings windows
-- IPC communication managed through `src/main/funcs/events.ts`
-
-### Configuration Management
-
-- Uses electron-store for persistent configuration
-- Settings structure managed in `src/main/funcs/store.ts`
-- Icon caching system stores app icons in Application Support directory

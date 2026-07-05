@@ -10,3 +10,18 @@ out
 icon_cache/
 taskbar_mac_cert.p12
 .playwright-mcp/
+
+# --- ADDF Framework (do not remove) ---
+.claude/commands/*.exp.md
+.claude/.turn-count
+.claude/.context-reminder-state
+.claude/logs/
+CLAUDE.local.md
+.claude/Dashboard.md
+.claude/Worktrees.md
+# オプショナルスキルの有効化コピー（原本は .claude/optional/。sync-optional-skills.py が配置）
+.claude/commands/addf-gui-test.md
+.claude/commands/addf-annotate-grid.md
+.claude/commands/addf-clip-image.md
+.claude/agents/addf-ui-test-agent.md
+# --- /ADDF Framework ---
