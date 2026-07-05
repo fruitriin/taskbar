@@ -15,7 +15,7 @@ run = "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.he
 
 [tasks.swiftbuild]
 description = "Swiftヘルパーをビルド"
-run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release build && echo [COPY]binary copy to resouces && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && echo [COPY] done."
+run = "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release -derivedDataPath nativeSrc/DerivedData/taskbar.helper build && echo [COPY]binary copy to resouces && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && echo [COPY] done."
 
 [tasks."build:mac"]
 description = "macOSユニバーサルバイナリをビルド"
@@ -65,6 +65,3 @@ run = ["mise run test", "mise run test:renderer"]
 description = "Swiftヘルパーの単体テストを実行"
 dir = "nativeSrc"
 run = "swift test"
-
-[tasks."afterSign"]
-run = "node scripts/notarize.js"

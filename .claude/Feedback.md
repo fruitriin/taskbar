@@ -16,6 +16,8 @@
 - 2026-07-05: `package.json` の `riinlogger: "file:../RiinLogger"` は参照元ディレクトリが存在せず、`bun install` のたびに「Failed to install 1 package」を出す。使用箇所は全てコメントアウト済み import のみ。依存から外してよいかはオーナー判断（削除するなら package.json から1行削除）
 - 2026-07-05: `mise run build` は Swift Helper バイナリ（nativeSrc/DerivedData/...）が未ビルドだと cp 段階で失敗する。JS 側だけ検証したいときは `npx electron-vite build` を直接使う
 
+- 2026-07-05: リリースビルドが `fork: Resource temporarily unavailable` で失敗 → 原因は別プロジェクト（wardrobe-test-spec-runall-strict）の ADDF テスト `test-run-all-bun-detection.sh` が `run-all.sh` と再帰呼び出しし合い bash を3535個リークしていたこと（オーナー承認の上 kill で解消）。**ADDF 本体へのバグ報告候補**: 当該テストの再帰ガード（環境変数フラグ等）が必要。wardrobe 側の ADDF バージョン確認も
+
 ## 改善アクション
 
 - 2026-07-05: 新しい electron-store マイグレーションを追加したら、リリース時に package.json の version がマイグレーションキーを満たすことを確認する（今回 `>=2.1.1` を追加、現行 2.1.0。詳細は `docs/knowhow/electron-store-migration.md`）
