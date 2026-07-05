@@ -3,13 +3,13 @@
 `docs/plans/` の完了状態・優先度をトラックする。
 `docs/plans/` と TODO が一致しなければ TODO を編集する。
 
-## 現在のフェーズ: タスクバー D&D アニメーション（割り込み）
+## 現在のフェーズ: リアーキテクチャ（Tauri v2 移行）準備
 
 ## バックログ
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | 単発（割り込み） | [pointer-drag-animation.md](docs/plans/pointer-drag-animation.md) | 未着手 |
+| 1 | 単発 | [drag-state-machine-tests.md](docs/plans/drag-state-machine-tests.md) | 未着手（レビュー指摘の先送り分） |
 | 2 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 未着手（親計画） |
 | 3 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | 未着手 |
 | 4 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | 未着手 |
@@ -25,6 +25,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| 単発 | [pointer-drag-animation.md](docs/plans/pointer-drag-animation.md) | 完了（2026-07-05。実機確認項目の消化が残） |
 | 単発 | [app-window-grouping.md](docs/plans/app-window-grouping.md) | 完了（2026-07-05。D&D 実機確認済み。リリース時に version 2.1.1+ 必須） |
 | 2.0.0 | [release200loadmap.md](docs/plans/release200loadmap.md) | 完了（2.0.0 リリース済み） |
 | 単発 | [permission-ui-plan.md](docs/plans/permission-ui-plan.md) | 完了（旧 claudeTasks/Finished） |

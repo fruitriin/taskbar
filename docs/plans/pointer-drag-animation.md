@@ -1,6 +1,6 @@
 # Plan: タスクバー D&D の Pointer Events 化と「滑って避ける」アニメーション
 
-**実装状況**: 未着手
+**実装状況**: 実装済み（2026-07-05。実機確認項目の消化が残）
 **作成日**: 2026-07-05
 **前提計画**: [app-window-grouping.md](app-window-grouping.md)（実装済み）
 
@@ -70,3 +70,11 @@ https://github.com/fruitriin/misskey/commit/3dfe8185447525b4e4b112adc4cdf8d58447
 
 - ドラッグ開始をつまみ持ち（即時）にするか 8px 閾値にするか → 初版は 8px 閾値（クリックとの共存優先）
 - ゴーストの見た目（グループ全体を掴むか、掴んだボタン1個か）→ 初版は掴んだボタン1個（実装が軽く、視覚的にも十分）
+
+## レビューからの残課題（先送り分）
+
+- 状態機械のコンポーネントテスト → 独立計画 [drag-state-machine-tests.md](drag-state-machine-tests.md)
+- setOptions → updateOptions echo の理論的競合（連続ドラッグ時に古い並びの echo が後着しうる。
+  リクエストにバージョンが無いため。既存パターン由来で実害は未観測。将来 appOrder に
+  リビジョンを持たせる等を検討）
+- onPointerMove 内の elementFromPoint / getBoundingClientRect の rAF 間引き（優先度低）

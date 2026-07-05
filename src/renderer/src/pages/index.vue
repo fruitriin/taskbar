@@ -15,7 +15,9 @@
         <button class="button" @click="dumpTaskbarInfo">dumpTaskbarInfo</button>
       </div>
     </div>
-    <div
+    <TransitionGroup
+      tag="div"
+      name="flip-list"
       class="tasks"
       :style="{ gridTemplateColumns: visibleWindows.map(() => '1fr').join(' ') }"
       style="overflow-y: auto"
@@ -37,13 +39,11 @@
         v-for="win in centerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
-        draggable="true"
-        @click="acticveWindow(win)"
+        :class="{ 'drag-source': dragApp === win.kCGWindowOwnerName }"
+        :data-app="win.kCGWindowOwnerName"
+        @click="onTaskClick(win)"
         @click.right.prevent="test(win)"
-        @dragstart="onDragStart($event, win)"
-        @dragover.prevent
-        @drop="onDropOnApp($event, win)"
-        @dragend="onDragEnd"
+        @pointerdown="onTaskPointerDown($event, win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">
@@ -64,6 +64,17 @@
         </div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
+    </TransitionGroup>
+    <div
+      v-if="ghostWindow"
+      class="button task ghost-task"
+      :style="[ghostStyle, { transform: ghostTransform }]"
+    >
+      <img class="icon" :src="ghostWindow.appIcon" />
+      <div v-if="ghostWindow.kCGWindowName" class="name">
+        {{ ghostWindow.kCGWindowName }} - {{ ghostWindow.kCGWindowOwnerName }}
+      </div>
+      <div v-else class="name">{{ ghostWindow.kCGWindowOwnerName }}</div>
     </div>
   </div>
   <div style="height: calc(100% - 56px); overflow-y: auto">
@@ -80,7 +91,10 @@
 
 <script lang="ts">
 import icon from '../assets/icon.png'
-import { Electron, buildAppOrder, groupWindowsByApp, moveApp } from '../utils'
+import { Electron, buildAppOrder, groupWindowsByApp, moveApp, shouldSwap } from '../utils'
+
+/** ドラッグ開始とみなすポインタ移動量（クリックとの共存のため） */
+const MOVE_THRESHOLD_PX = 8
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
 import MainPermissionStatus from '../components/MainPermissionStatus.vue'
@@ -99,8 +113,29 @@ export default defineComponent({
       windows: [] as MacWindow[] | null,
       // セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
       appearanceOrder: [] as string[],
-      // ドラッグ中のアプリ名
+      // --- Pointer Events ドラッグセッション ---
+      // 追跡中のポインタ（押下〜閾値超えまで含む）。null なら待機
+      pointerId: null as number | null,
+      startX: 0,
+      startY: 0,
+      // 押下したボタンのウィンドウと矩形（ゴーストの基準位置）
+      pressedWindow: null as MacWindow | null,
+      pressedRect: null as { top: number; left: number; width: number; height: number } | null,
+      // 閾値を超えてドラッグ確定したか
+      dragActive: false,
+      // ドラッグ中のアプリ名（drag-source の減光に使用）
       dragApp: null as string | null,
+      // ドラッグ中のみ使う一時的なアプリ順。centerWindows がこれを優先する
+      dragOrder: null as string[] | null,
+      lastSwapAt: 0,
+      // ドラッグ直後の click 合成を1回だけ握りつぶす
+      didDrag: false,
+      // ゴースト表示
+      ghostWindow: null as MacWindow | null,
+      ghostStyle: {} as Record<string, string>,
+      ghostTransform: '',
+      // ドラッグ中に届いた process 更新の保留分（dragend で反映）
+      pendingWindows: null as MacWindow[] | null,
       debug: true,
       options: window.store.options,
       granted: window.store.granted,
@@ -150,7 +185,8 @@ export default defineComponent({
       return groupWindowsByApp(centers, {
         sortByPosition: this.options?.windowSortByPositionInApp ?? false,
         layout: this.options?.layout ?? 'bottom',
-        appOrder: this.options?.appOrder ?? [],
+        // ドラッグ中はセッション内の一時順序が最優先（確定は pointerup 時の setOptions）
+        appOrder: this.dragOrder ?? this.options?.appOrder ?? [],
         appearanceOrder: this.appearanceOrder
       })
     },
@@ -181,12 +217,13 @@ export default defineComponent({
       this.options = value
     })
     Electron.listen('process', (_event, value: MacWindow[]) => {
-      this.trackAppearance(value)
-      if (this.windows == null) {
-        this.windows = value
+      // ポインタ押下中（閾値未満のプレドラッグ含む）は並びの土台が動くと
+      // 入れ替え判定や pressedWindow が崩れるため、反映を保留する
+      if (this.pointerId !== null) {
+        this.pendingWindows = value
         return
       }
-      this.windows.splice(0, this.windows.length, ...value)
+      this.applyWindows(value)
     })
 
     // アイコン更新イベントをリスン
@@ -198,6 +235,10 @@ export default defineComponent({
     Electron.listen('displayInfo', (_event, value) => {
       this.displayInfo = value
     })
+  },
+  beforeUnmount() {
+    // ドラッグ途中でアンマウントされた場合の document リスナーのリーク防止
+    if (this.pointerId !== null) this.cleanupDrag()
   },
   methods: {
     sort(arr: MacWindow[], area: 'headers' | 'footers'): MacWindow[] {
@@ -228,6 +269,14 @@ export default defineComponent({
       Electron.send('contextTask', ev)
       console.log('test')
     },
+    applyWindows(value: MacWindow[]): void {
+      this.trackAppearance(value)
+      if (this.windows == null) {
+        this.windows = value
+        return
+      }
+      this.windows.splice(0, this.windows.length, ...value)
+    },
     // 新しく出現したアプリを出現順リストの末尾に追加する
     // 同時に複数現れた場合は最小 kCGWindowNumber 昇順で追加し、
     // どのディスプレイのタスクバーでも同じ順序に収束させる
@@ -245,27 +294,146 @@ export default defineComponent({
         .sort((a, b) => (minNumbers.get(a) as number) - (minNumbers.get(b) as number))
       this.appearanceOrder.push(...newApps)
     },
-    onDragStart(event: DragEvent, win: MacWindow): void {
-      this.dragApp = win.kCGWindowOwnerName
-      // 別ディスプレイのタスクバーへのドロップでも動くよう dataTransfer にも載せる
-      event.dataTransfer?.setData('application/x-taskbar-app', win.kCGWindowOwnerName)
+    // --- Pointer Events ドラッグ（参考: fruitriin/misskey MkDraggable のエッセンス移植） ---
+    onTaskClick(win: MacWindow): void {
+      // ドラッグ後に合成される click を1回だけ無視する
+      if (this.didDrag) return
+      this.acticveWindow(win)
     },
-    onDragEnd(): void {
-      this.dragApp = null
+    onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
+      // 左ボタンのみ。右クリックメニュー（contextTask）を阻害しない
+      if (event.button !== 0 || this.pointerId !== null) return
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+      this.pointerId = event.pointerId
+      this.startX = event.clientX
+      this.startY = event.clientY
+      this.pressedWindow = win
+      this.pressedRect = { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+      // TransitionGroup の DOM 並び替えで Pointer Capture は暗黙解放されうるため、
+      // capture は使わず document でリッスンする
+      document.addEventListener('pointermove', this.onPointerMove)
+      document.addEventListener('pointerup', this.onPointerUp)
+      document.addEventListener('pointercancel', this.onPointerCancel)
+      document.addEventListener('visibilitychange', this.onVisibilityChange)
+      document.addEventListener('keydown', this.onDragKeyDown)
+      window.addEventListener('blur', this.onWindowBlur)
     },
-    // ドロップ先アプリの位置にドラッグ元アプリのグループを移動し、appOrder として永続化する
-    onDropOnApp(event: DragEvent, win: MacWindow): void {
-      const target = win.kCGWindowOwnerName
-      const dragged = event.dataTransfer?.getData('application/x-taskbar-app') || this.dragApp
-      this.dragApp = null
-      if (!dragged || dragged === target) return
+    startDrag(): void {
+      if (!this.pressedWindow || !this.pressedRect) return
+      this.dragActive = true
+      this.didDrag = true
+      this.dragApp = this.pressedWindow.kCGWindowOwnerName
+      this.dragOrder = buildAppOrder(this.options?.appOrder ?? [], this.centerWindows)
+      this.lastSwapAt = 0
+      this.ghostWindow = this.pressedWindow
+      this.ghostStyle = {
+        top: `${this.pressedRect.top}px`,
+        left: `${this.pressedRect.left}px`,
+        width: `${this.pressedRect.width}px`,
+        height: `${this.pressedRect.height}px`
+      }
+    },
+    onPointerMove(event: PointerEvent): void {
+      if (event.pointerId !== this.pointerId) return
+      // pointerup を取りこぼした（ウィンドウ外で離された等）場合の自己修復。
+      // 放置すると pointerId が残り、以降ドラッグ不能になる
+      if (event.buttons === 0) {
+        this.cleanupDrag()
+        return
+      }
+      const dx = event.clientX - this.startX
+      const dy = event.clientY - this.startY
 
-      // 既存 appOrder の並びを温存しつつ表示中アプリを補完してから移動する
-      const baseOrder = buildAppOrder(this.options?.appOrder ?? [], this.centerWindows)
-      Electron.send('setOptions', {
-        ...this.options,
-        appOrder: moveApp(baseOrder, dragged, target)
+      if (!this.dragActive) {
+        if (Math.abs(dx) <= MOVE_THRESHOLD_PX && Math.abs(dy) <= MOVE_THRESHOLD_PX) return
+        this.startDrag()
+      }
+
+      this.ghostTransform = `translate(${dx}px, ${dy}px)`
+      if (!this.dragApp || !this.dragOrder || !this.pressedRect) return
+
+      // ゴースト矩形は基準矩形＋移動量から算出する（DOM 読み取り不要で決定的）
+      const ghostRect = {
+        left: this.pressedRect.left + dx,
+        right: this.pressedRect.left + this.pressedRect.width + dx,
+        top: this.pressedRect.top + dy,
+        bottom: this.pressedRect.top + this.pressedRect.height + dy
+      }
+
+      // ゴーストは pointer-events: none なので elementFromPoint に拾われない
+      const hit = document.elementFromPoint(event.clientX, event.clientY)
+      const targetButton = hit?.closest<HTMLElement>('button[data-app]')
+      const targetApp = targetButton?.dataset.app
+      if (!targetButton || !targetApp || targetApp === this.dragApp) return
+
+      const swap = shouldSwap({
+        fromIndex: this.dragOrder.indexOf(this.dragApp),
+        toIndex: this.dragOrder.indexOf(targetApp),
+        ghostRect,
+        targetRect: targetButton.getBoundingClientRect(),
+        horizontal: (this.options?.layout ?? 'bottom') === 'bottom',
+        lastSwapAt: this.lastSwapAt,
+        now: performance.now()
       })
+      if (swap) {
+        // 並びをその場で入れ替える → TransitionGroup の FLIP が「滑って避ける」を演出
+        this.dragOrder = moveApp(this.dragOrder, this.dragApp, targetApp)
+        this.lastSwapAt = performance.now()
+      }
+    },
+    onPointerUp(event: PointerEvent): void {
+      if (event.pointerId !== this.pointerId) return
+      if (this.dragActive && this.dragOrder) {
+        // ドラッグ中の並びをそのまま確定・永続化する。
+        // updateOptions の IPC 往復を待つと一瞬旧並びに戻るため、ローカルにも楽観反映する
+        const newOptions = { ...this.options, appOrder: this.dragOrder }
+        this.options = newOptions
+        Electron.send('setOptions', newOptions)
+      }
+      this.cleanupDrag()
+    },
+    onPointerCancel(event: PointerEvent): void {
+      if (event.pointerId !== this.pointerId) return
+      // 確定せず破棄 → centerWindows が元の並びへ戻り、FLIP が戻りをアニメーション化
+      this.cleanupDrag()
+    },
+    onVisibilityChange(): void {
+      if (document.visibilityState === 'hidden') this.cleanupDrag()
+    },
+    // Esc キーでドラッグをキャンセルする（確定せず元の並びへ戻る）
+    onDragKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape' && this.pointerId !== null) this.cleanupDrag()
+    },
+    // 他アプリへのフォーカス移動中に pointerup を取りこぼした場合の保険
+    onWindowBlur(): void {
+      this.cleanupDrag()
+    },
+    cleanupDrag(): void {
+      document.removeEventListener('pointermove', this.onPointerMove)
+      document.removeEventListener('pointerup', this.onPointerUp)
+      document.removeEventListener('pointercancel', this.onPointerCancel)
+      document.removeEventListener('visibilitychange', this.onVisibilityChange)
+      document.removeEventListener('keydown', this.onDragKeyDown)
+      window.removeEventListener('blur', this.onWindowBlur)
+      this.pointerId = null
+      this.dragActive = false
+      this.dragApp = null
+      this.dragOrder = null
+      this.pressedWindow = null
+      this.pressedRect = null
+      this.ghostWindow = null
+      this.ghostStyle = {}
+      this.ghostTransform = ''
+      // click はこの pointerup の直後に同期発火するため、次のマクロタスクで解除する
+      window.setTimeout(() => {
+        this.didDrag = false
+      }, 0)
+      // ドラッグ中に保留した process 更新を反映する
+      if (this.pendingWindows) {
+        const pending = this.pendingWindows
+        this.pendingWindows = null
+        this.applyWindows(pending)
+      }
     },
     dumpTaskbarInfo(): void {
       Electron.send('dumpTaskbarInfo')
@@ -383,6 +551,26 @@ export default defineComponent({
       width: 100%;
     }
   }
+}
+
+// TransitionGroup(name="flip-list") の FLIP: 並び替え時に各ボタンが滑って移動する
+.flip-list-move {
+  transition: transform 0.25s ease;
+}
+
+// ドラッグ元グループの減光
+.drag-source {
+  opacity: 0.4;
+}
+
+// ドラッグ追従ゴースト（elementFromPoint に拾われないよう pointer-events: none 必須）
+.ghost-task {
+  position: fixed;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0.85;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .task {

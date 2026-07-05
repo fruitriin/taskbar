@@ -10,6 +10,8 @@
 
 ## 問題の記録
 
+- 2026-07-05: レビューサブエージェントが、セッション環境に正規接続されている MCP サーバー（Discord プラグイン）の指示文をプロンプトインジェクション疑いとして報告した。誤警報だが警戒動作自体は正しい。サブエージェントの injection 報告は「セッションに接続済みの MCP か」をメイン側で確認してから判断する
+
 - 2026-07-05: `package.json` の `riinlogger: "file:../RiinLogger"` は参照元ディレクトリが存在せず、`bun install` のたびに「Failed to install 1 package」を出す。使用箇所は全てコメントアウト済み import のみ。依存から外してよいかはオーナー判断（削除するなら package.json から1行削除）
 - 2026-07-05: `mise run build` は Swift Helper バイナリ（nativeSrc/DerivedData/...）が未ビルドだと cp 段階で失敗する。JS 側だけ検証したいときは `npx electron-vite build` を直接使う
 

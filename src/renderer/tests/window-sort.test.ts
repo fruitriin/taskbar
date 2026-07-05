@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'bun:test'
-import { sortWindowsInApp, groupWindowsByApp, moveApp, buildAppOrder } from '../src/utils'
+import {
+  sortWindowsInApp,
+  groupWindowsByApp,
+  moveApp,
+  buildAppOrder,
+  shouldSwap,
+  REORDER_COOLDOWN_MS
+} from '../src/utils'
 
 // テスト用の最小ウィンドウ生成ヘルパー
 function win(app: string, num: number, x = 0, y = 0): MacWindow {
@@ -159,5 +166,75 @@ describe('moveApp', () => {
   it('元の配列を破壊しない', () => {
     moveApp(apps, 'D', 'A')
     expect(apps).toEqual(['A', 'B', 'C', 'D'])
+  })
+})
+
+describe('shouldSwap', () => {
+  // 幅100pxのボタンが x=0 と x=100 に並ぶ水平タスクバーを想定
+  const rect = (
+    left: number,
+    width = 100
+  ): { left: number; right: number; top: number; bottom: number } => ({
+    left,
+    right: left + width,
+    top: 0,
+    bottom: 40
+  })
+  const base = {
+    fromIndex: 0,
+    toIndex: 1,
+    targetRect: rect(100),
+    horizontal: true,
+    lastSwapAt: 0,
+    now: 10_000
+  }
+
+  it('前方→後方: ゴースト後端が閾値以上食い込んだら入れ替える', () => {
+    // 閾値 = 100 * OVERLAP_RATIO = 30px
+    expect(shouldSwap({ ...base, ghostRect: rect(100 - 100 + 31) })).toBe(true) // 31px 食い込み
+    expect(shouldSwap({ ...base, ghostRect: rect(100 - 100 + 30) })).toBe(true) // 閾値ちょうど（>=）
+    expect(shouldSwap({ ...base, ghostRect: rect(100 - 100 + 29) })).toBe(false) // 29px
+  })
+
+  it('後方→前方: ゴースト前端側の食い込みで判定する', () => {
+    const back = { ...base, fromIndex: 2, toIndex: 1 }
+    // targetRect.right(200) - ghostRect.left >= 30 で入れ替え
+    expect(shouldSwap({ ...back, ghostRect: rect(169) })).toBe(true) // 200-169=31
+    expect(shouldSwap({ ...back, ghostRect: rect(171) })).toBe(false) // 200-171=29
+  })
+
+  it('クールダウン中は入れ替えない', () => {
+    const input = { ...base, ghostRect: rect(50), lastSwapAt: 10_000 - REORDER_COOLDOWN_MS + 1 }
+    expect(shouldSwap(input)).toBe(false)
+    expect(shouldSwap({ ...input, lastSwapAt: 10_000 - REORDER_COOLDOWN_MS })).toBe(true)
+  })
+
+  it('垂直レイアウトでは Y 方向で判定する', () => {
+    const vRect = (top: number): { left: number; right: number; top: number; bottom: number } => ({
+      left: 0,
+      right: 200,
+      top,
+      bottom: top + 40
+    })
+    const vertical = {
+      ...base,
+      horizontal: false,
+      targetRect: vRect(40)
+    }
+    // 閾値 = 40 * 0.3 = 12px
+    expect(shouldSwap({ ...vertical, ghostRect: vRect(13) })).toBe(true) // 53-40=13
+    expect(shouldSwap({ ...vertical, ghostRect: vRect(11) })).toBe(false) // 51-40=11
+  })
+
+  it('自分自身・不明なインデックスは常に false', () => {
+    expect(shouldSwap({ ...base, ghostRect: rect(100), fromIndex: 1, toIndex: 1 })).toBe(false)
+    expect(shouldSwap({ ...base, ghostRect: rect(100), fromIndex: -1 })).toBe(false)
+  })
+
+  it('OVERLAP_RATIO は小さいほうの矩形を基準にする', () => {
+    // ターゲットが 40px と小さい場合、閾値 = 40 * 0.3 = 12px
+    const smallTarget = { ...base, targetRect: rect(100, 40) }
+    expect(shouldSwap({ ...smallTarget, ghostRect: rect(13) })).toBe(true) // 113-100=13
+    expect(shouldSwap({ ...smallTarget, ghostRect: rect(11) })).toBe(false)
   })
 })
