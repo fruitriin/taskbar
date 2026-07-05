@@ -554,8 +554,10 @@ export default defineComponent({
 }
 
 // TransitionGroup(name="flip-list") の FLIP: 並び替え時に各ボタンが滑って移動する
+// duration は入れ替えクールダウン（REORDER_COOLDOWN_MS = 150ms）以内に完走させる。
+// これより長いと連続で避けるときに完走前へ次の入れ替えが割り込み、等速で流れて見える
 .flip-list-move {
-  transition: transform 0.25s ease;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
 // ドラッグ元グループの減光
