@@ -35,6 +35,8 @@
 </template>
 
 <script setup lang="ts">
+// Font Awesome は旧 HTML の CDN link から self-host 化（オフライン動作・CSP 緩和不要）
+import '@fortawesome/fontawesome-free/css/all.min.css'
 import { ipcSend } from '../composables/ipc'
 
 function closeMenu(): void {
@@ -147,5 +149,20 @@ function exit(): void {
   height: 1px;
   background: linear-gradient(90deg, transparent 0%, #555 50%, transparent 100%);
   margin: 0.5rem 0;
+}
+</style>
+
+<style>
+/* 旧 Menu.vue ラッパーから移設（このビューは bulma を読み込まない） */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
 }
 </style>

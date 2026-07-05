@@ -1,7 +1,6 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
-import VueRouter from 'unplugin-vue-router/vite'
 
 export default defineConfig({
   main: {
@@ -28,10 +27,7 @@ export default defineConfig({
       watch: {},
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload.ts'),
-          option: resolve(__dirname, 'src/preload.ts'),
-          fullWindowList: resolve(__dirname, 'src/preload.ts'),
-          menu: resolve(__dirname, 'src/preload.ts')
+          index: resolve(__dirname, 'src/preload.ts')
         }
       }
     }
@@ -45,10 +41,8 @@ export default defineConfig({
       watch: {},
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html'),
-          option: resolve(__dirname, 'src/renderer/option.html'),
-          fullWindowList: resolve(__dirname, 'src/renderer/fullWindowList.html'),
-          menu: resolve(__dirname, 'src/renderer/menu.html')
+          // 単一エントリー。ビューは ?view= パラメータで切り替える（App.vue 参照）
+          index: resolve(__dirname, 'src/renderer/index.html')
         }
       }
     },
@@ -57,12 +51,6 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [
-      VueRouter({
-        routesFolder: 'src/renderer/src/pages',
-        dts: 'src/renderer/typed-router.d.ts'
-      }),
-      vue()
-    ]
+    plugins: [vue()]
   }
 })

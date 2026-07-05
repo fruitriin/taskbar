@@ -90,6 +90,8 @@
 </template>
 
 <script lang="ts">
+// このビューは bulma に依存する（旧ルートコンポーネントから移設。ビュー単位の動的 import でスタイル分離）
+import 'bulma/css/bulma.css'
 import icon from '../assets/icon.png'
 import { markRaw } from 'vue'
 import { Electron, buildAppOrder, groupWindowsByApp } from '../utils'

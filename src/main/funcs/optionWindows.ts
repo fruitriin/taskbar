@@ -18,9 +18,9 @@ export function createOptionWindow(): void {
     }
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/option.html')
+    optionWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/?view=option')
   } else {
-    optionWindow.loadFile(join(__dirname, '../renderer/option.html'))
+    optionWindow.loadFile(join(__dirname, '../renderer/index.html'), { query: { view: 'option' } })
   }
   optionWindow.on('ready-to-show', () => {
     optionWindow.show()
@@ -47,9 +47,11 @@ export async function createFullWindowListWindow(): Promise<void> {
     }
   })
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    fullWindowListWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/fullWindowList.html')
+    fullWindowListWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/?view=fullWindowList')
   } else {
-    fullWindowListWindow.loadFile(join(__dirname, '../renderer/fullWindowList.html'))
+    fullWindowListWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      query: { view: 'fullWindowList' }
+    })
   }
   fullWindowListWindow.on('ready-to-show', async () => {
     fullWindowListWindow.show()
@@ -86,9 +88,9 @@ export function initMenuWindow(): void {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    menuWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/menu.html')
+    menuWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '/?view=menu')
   } else {
-    menuWindow.loadFile(join(__dirname, '../renderer/menu.html'))
+    menuWindow.loadFile(join(__dirname, '../renderer/index.html'), { query: { view: 'menu' } })
   }
 
   // フォーカスを失ったら非表示にする

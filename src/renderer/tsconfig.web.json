@@ -6,7 +6,6 @@
     "./src/**/*.vue",
     "./*.ts",
     "../preload/*.d.ts",
-    "./typed-router.d.ts",
     "../main/type.d.ts"
   ],
   "exclude": ["**/node_modules", "**/.*/"],

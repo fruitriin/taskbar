@@ -251,6 +251,10 @@
 </template>
 
 <script setup lang="ts">
+// このビューは bulma に依存する（旧ルートコンポーネントから移設。ビュー単位の動的 import でスタイル分離）
+import 'bulma/css/bulma.css'
+// Font Awesome は旧 HTML の CDN link から self-host 化（オフライン動作・CSP 緩和不要）
+import '@fortawesome/fontawesome-free/css/all.min.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ipcListen, ipcSend } from '../composables/ipc'
 
@@ -579,6 +583,8 @@ onBeforeUnmount(() => {
 
 <style lang="scss" scoped>
 .full-window-list {
+  /* 旧 fullWindowList.html の html/body 指定から移設（等幅フォントのデバッグ画面） */
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   padding: 2rem;
   min-height: 100vh;
   background: hsl(0, 0%, 21%);

@@ -38,50 +38,43 @@ mise run dev
 
 # ブラウザまたはPlaywright MCPでアクセス
 # - http://localhost:10234/ (メインタスクバー)
-# - http://localhost:10234/option.html (設定画面)
-# - http://localhost:10234/menu.html (メニュー)
-# - http://localhost:10234/fullWindowList.html (全ウィンドウリスト)
+# - http://localhost:10234/?view=option (設定画面)
+# - http://localhost:10234/?view=menu (メニュー)
+# - http://localhost:10234/?view=fullWindowList (全ウィンドウリスト)
 ```
 
 ## Architecture
 
 ### Entry Points
 
-このレンダラープロセスには4つのエントリーポイントがあります：
+エントリーポイントは **index.html / src/main.ts の1つ**で、URL の `?view=` パラメータで
+ビューを切り替えます（リアーキ Phase 1 スライス 1-B で統合。App.vue がビューホスト）:
 
-1. **index.html** / **renderer-main.ts** - メインタスクバーUI
-   - ウィンドウリストの表示
-   - ウィンドウのクリック・アクティベーション
-   - 右クリックメニューの表示
+| view | コンポーネント | 内容 |
+|---|---|---|
+| （なし）/ `taskbar` | pages/index.vue | メインタスクバー UI |
+| `option` | pages/option.vue | 設定画面（レイアウト・フィルター・権限） |
+| `menu` | pages/menu.vue | 右クリックメニュー |
+| `fullWindowList` | pages/fullWindowList.vue | 全ウィンドウリスト（開発用、Cmd+Shift+W） |
 
-2. **option.html** / **renderer-option.ts** - 設定画面
-   - タスクバーのレイアウト設定（top/bottom/left/right）
-   - ウィンドウフィルターの管理
-   - 権限状態の表示
-
-3. **menu.html** / **renderer-menu.ts** - 右クリックメニュー
-   - ウィンドウを閉じる
-   - その他のウィンドウ操作
-
-4. **fullWindowList.html** / **renderer-fullWindowList.ts** - 全ウィンドウリスト（開発用）
-   - すべてのウィンドウ情報のデバッグ表示
-   - 開発時のみ使用（Cmd+Shift+W）
+各ビューは App.vue で **動的 import** されるため、そのウィンドウに必要なモジュールと
+スタイルだけが読み込まれます（menu は bulma 非依存の独自リセットを維持）。
+メインプロセス側は dev では `ELECTRON_RENDERER_URL + '/?view=xxx'`、prod では
+`loadFile(index.html, { query: { view: 'xxx' } })` で開きます。
 
 ### Vue Components Structure
 
 ```
 src/
-├── App.vue                      # メインタスクバーのルートコンポーネント
-├── Option.vue                   # 設定画面のルートコンポーネント
-├── Menu.vue                     # メニューのルートコンポーネント
-├── FullWindowList.vue           # 全ウィンドウリストのルートコンポーネント
+├── main.ts                      # 唯一のエントリーポイント（モック注入もここ）
+├── App.vue                      # ?view= で切り替えるビューホスト（エラーバウンダリ付き）
 ├── components/
 │   ├── AddFilter.vue            # フィルター追加UI
 │   ├── Debug.vue                # デバッグ情報表示
 │   ├── MainPermissionStatus.vue # メインUI用権限状態表示
 │   ├── PermissionStatus.vue     # 設定画面用権限状態表示
 │   └── Versions.vue             # バージョン情報表示
-├── pages/                       # Vue Routerページ（ファイルベースルーティング）
+├── pages/                       # 各ビュー（App.vue から動的 import）
 │   ├── index.vue                # メインタスクバーページ
 │   ├── option.vue               # 設定ページ
 │   ├── menu.vue                 # メニューページ
@@ -258,9 +251,6 @@ type MacWindow = {
 }
 ```
 
-### Vue Router Types
-
-ファイルベースルーティングの型定義は `typed-router.d.ts` に自動生成されます。
 
 ## Key Technical Notes
 
@@ -284,14 +274,15 @@ onMounted(() => {
 </script>
 ```
 
-### File-Based Routing
+### View Switching（旧 File-Based Routing）
 
-Vue Routerはファイルベースルーティングを使用：
+vue-router は Phase 1 スライス 1-B で削除されました。ビューの切り替えは
+`?view=` パラメータと App.vue の動的 import で行います:
 
-- `src/pages/index.vue` → `/`
-- `src/pages/option.vue` → `/option`
-- `src/pages/menu.vue` → `/menu`
-- `src/pages/fullWindowList.vue` → `/fullWindowList`
+- `/` または `/?view=taskbar` → `pages/index.vue`
+- `/?view=option` → `pages/option.vue`
+- `/?view=menu` → `pages/menu.vue`
+- `/?view=fullWindowList` → `pages/fullWindowList.vue`
 
 ### Window Ready Protocol
 
