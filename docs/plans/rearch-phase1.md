@@ -6,6 +6,40 @@
 
 ---
 
+## 鮮度更新（2026-07-06。計画本文は 2026-03-18 時点の記述）
+
+v2.1.1 リリースまでの変更で、計画の前提がいくつか変わっている:
+
+- **index.vue は Options API のまま大きく成長した**: アプリグルーピング computed
+  （`groupWindowsByApp`）、Pointer Events D&D の配線、TransitionGroup(FLIP)、ゴースト描画、
+  process 更新保留ガードが追加済み。Composition API 化（1.2）のコストは計画時より大きい
+- **ドラッグ状態機械は `drag-session.ts` に DI 抽出済み**（DOM/Vue 非依存）。
+  Composition 化ではコンポーネント側の配線（createDragSession の deps とコールバック）だけを
+  移せばよい。回帰の安全網は utils.ts の純関数テスト26件（window-sort.test.ts）＋
+  drag-session テスト21件（drag-session.test.ts）
+- **Options 型に `appOrder: string[]` が追加済み**。本計画中の useOptions 例示コードには
+  appOrder が無いので、実装時に含めること（`?? []` フォールバックの慣習も維持）
+- **Pinia はコード上未使用**（import ゼロ）。「Pinia 削除」は package.json の依存削除のみで完了する
+- **`$forceUpdate()` は index.vue の `updateWindowIcons` 内に1箇所現存**（アイコン更新後の強制再描画）
+- **ブラウザモック（`mocks/electron-mocks.ts`）は `window.electron` を注入する設計**。
+  1.2 の ipc.ts ラッパーが `window.electron` 経由を維持すれば、モック・ブラウザテスト・
+  既存ユニットテストがそのまま生きる
+- **削除対象依存の現存確認済み**: bulma 1.0.4 / less / dart-sass / pinia / vue-router / unplugin-vue-router
+
+## スライス分割（1スライス = /addf-dev 1〜2サイクル、各完了時点でリリース可能）
+
+| スライス | 内容 | 依存 | 備考 |
+|---|---|---|---|
+| 1-0 | pinia を package.json から削除（コード上未使用のため依存削除のみ） | なし | 即時可能な最小スライス |
+| 1-A | ipc.ts ラッパー導入＋useOptions/useWindows 等の composables 新設（既存コンポーネントは未移行のまま併存可） | なし | |
+| 1-B | エントリーポイント統合（4 HTML → 1 + `?view=` 切替）＋ vue-router / unplugin-vue-router 削除。**メインプロセス側の loadURL/loadFile 4箇所も同時変更必須**: windows.ts（index）と optionWindows.ts（option / fullWindowList / menu）の dev/prod 分岐を `?view=` 形式に（prod は loadFile の query オプション） | なし（1-A と独立） | 完了条件: `mise run dev` で4画面すべて起動 |
+| 1-C | 小物コンポーネントの Composition API 化＋composables 接続（Menu / FullWindowList / Debug / PermissionStatus 系） | 1-A | |
+| 1-D | option.vue の Composition API 化 | 1-A | |
+| 1-E | index.vue の Composition API 化＋$forceUpdate 排除（最難関。drag-session の配線移行含む） | 1-A | 1-C / 1-D 完了後を推奨（パターン確立のため） |
+| 1-F | UnoCSS 導入＋Bulma/less/dart-sass 撤去 | 技術的には独立 | 運用判断で最後に回す（同じテンプレートを二度触らない・視覚回帰の目視確認を一度にまとめる）。オーナーの目視確認を完了条件に含める |
+
+---
+
 ## 1.1 Vue 依存整理
 
 ### エントリーポイント統合
@@ -43,8 +77,8 @@
 #### Pinia 削除
 
 - [ ] `pinia` を package.json から削除
-- [ ] Pinia 関連の import / createPinia() を削除
-- [ ] （composables で置換完了後に実施）
+- [ ] ~~Pinia 関連の import / createPinia() を削除~~ →（2026-07-06 鮮度更新: コード上未使用と確認済み。
+  依存削除のみで完了する。「composables で置換完了後に実施」の順序制約も不要 → スライス 1-0）
 
 #### $forceUpdate() 排除
 
