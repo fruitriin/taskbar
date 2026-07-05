@@ -91,10 +91,10 @@
 
 <script lang="ts">
 import icon from '../assets/icon.png'
-import { Electron, buildAppOrder, groupWindowsByApp, moveApp, shouldSwap } from '../utils'
-
-/** ドラッグ開始とみなすポインタ移動量（クリックとの共存のため） */
-const MOVE_THRESHOLD_PX = 8
+import { markRaw } from 'vue'
+import { Electron, buildAppOrder, groupWindowsByApp } from '../utils'
+import { createDragSession } from '../drag-session'
+import type { DragSession } from '../drag-session'
 import { defineComponent } from 'vue'
 import Debug from '../components/Debug.vue'
 import MainPermissionStatus from '../components/MainPermissionStatus.vue'
@@ -114,20 +114,14 @@ export default defineComponent({
       // セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
       appearanceOrder: [] as string[],
       // --- Pointer Events ドラッグセッション ---
-      // 追跡中のポインタ（押下〜閾値超えまで含む）。null なら待機
-      pointerId: null as number | null,
-      startX: 0,
-      startY: 0,
-      // 押下したボタンのウィンドウと矩形（ゴーストの基準位置）
+      // 状態機械の本体（drag-session.ts）。Vue のリアクティブ化は不要なので markRaw で保持
+      session: null as DragSession | null,
+      // 押下したボタンのウィンドウ（ゴーストの表示内容に使用。矩形は session が保持）
       pressedWindow: null as MacWindow | null,
-      pressedRect: null as { top: number; left: number; width: number; height: number } | null,
-      // 閾値を超えてドラッグ確定したか
-      dragActive: false,
       // ドラッグ中のアプリ名（drag-source の減光に使用）
       dragApp: null as string | null,
       // ドラッグ中のみ使う一時的なアプリ順。centerWindows がこれを優先する
       dragOrder: null as string[] | null,
-      lastSwapAt: 0,
       // ドラッグ直後の click 合成を1回だけ握りつぶす
       didDrag: false,
       // ゴースト表示
@@ -219,7 +213,7 @@ export default defineComponent({
     Electron.listen('process', (_event, value: MacWindow[]) => {
       // ポインタ押下中（閾値未満のプレドラッグ含む）は並びの土台が動くと
       // 入れ替え判定や pressedWindow が崩れるため、反映を保留する
-      if (this.pointerId !== null) {
+      if (this.session?.isActive) {
         this.pendingWindows = value
         return
       }
@@ -236,9 +230,52 @@ export default defineComponent({
       this.displayInfo = value
     })
   },
+  created() {
+    // 状態機械に DOM 依存（hitTest）と副作用（ゴースト・永続化）を注入する
+    this.session = markRaw(
+      createDragSession({
+        getBaseOrder: () => buildAppOrder(this.options?.appOrder ?? [], this.centerWindows),
+        hitTest: (x, y) => {
+          const button = document.elementFromPoint(x, y)?.closest<HTMLElement>('button[data-app]')
+          const app = button?.dataset.app
+          if (!button || !app) return null
+          const rect = button.getBoundingClientRect()
+          return {
+            app,
+            rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+          }
+        },
+        isHorizontal: () => (this.options?.layout ?? 'bottom') === 'bottom',
+        onDragStart: (app, rect) => {
+          this.didDrag = true
+          this.dragApp = app
+          this.ghostWindow = this.pressedWindow
+          this.ghostStyle = {
+            top: `${rect.top}px`,
+            left: `${rect.left}px`,
+            width: `${rect.right - rect.left}px`,
+            height: `${rect.bottom - rect.top}px`
+          }
+        },
+        onGhostMove: (dx, dy) => {
+          this.ghostTransform = `translate(${dx}px, ${dy}px)`
+        },
+        onOrderChange: (order) => {
+          this.dragOrder = order
+        },
+        onCommit: (order) => {
+          // updateOptions の IPC 往復を待つと一瞬旧並びに戻るため、ローカルにも楽観反映する
+          const newOptions = { ...this.options, appOrder: order }
+          this.options = newOptions
+          Electron.send('setOptions', newOptions)
+        },
+        onEnd: () => this.cleanupDrag()
+      })
+    )
+  },
   beforeUnmount() {
     // ドラッグ途中でアンマウントされた場合の document リスナーのリーク防止
-    if (this.pointerId !== null) this.cleanupDrag()
+    this.session?.cancel()
   },
   methods: {
     sort(arr: MacWindow[], area: 'headers' | 'footers'): MacWindow[] {
@@ -301,14 +338,22 @@ export default defineComponent({
       this.acticveWindow(win)
     },
     onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
-      // 左ボタンのみ。右クリックメニュー（contextTask）を阻害しない
-      if (event.button !== 0 || this.pointerId !== null) return
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-      this.pointerId = event.pointerId
-      this.startX = event.clientX
-      this.startY = event.clientY
+      const el = event.currentTarget as HTMLElement
+      const rect = el.getBoundingClientRect()
+      const pressedRect = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+      const accepted = this.session?.pointerDown(
+        {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          buttons: event.buttons,
+          button: event.button
+        },
+        win.kCGWindowOwnerName,
+        pressedRect
+      )
+      if (!accepted) return
       this.pressedWindow = win
-      this.pressedRect = { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
       // TransitionGroup の DOM 並び替えで Pointer Capture は暗黙解放されうるため、
       // capture は使わず document でリッスンする
       document.addEventListener('pointermove', this.onPointerMove)
@@ -318,96 +363,39 @@ export default defineComponent({
       document.addEventListener('keydown', this.onDragKeyDown)
       window.addEventListener('blur', this.onWindowBlur)
     },
-    startDrag(): void {
-      if (!this.pressedWindow || !this.pressedRect) return
-      this.dragActive = true
-      this.didDrag = true
-      this.dragApp = this.pressedWindow.kCGWindowOwnerName
-      this.dragOrder = buildAppOrder(this.options?.appOrder ?? [], this.centerWindows)
-      this.lastSwapAt = 0
-      this.ghostWindow = this.pressedWindow
-      this.ghostStyle = {
-        top: `${this.pressedRect.top}px`,
-        left: `${this.pressedRect.left}px`,
-        width: `${this.pressedRect.width}px`,
-        height: `${this.pressedRect.height}px`
-      }
-    },
     onPointerMove(event: PointerEvent): void {
-      if (event.pointerId !== this.pointerId) return
-      // pointerup を取りこぼした（ウィンドウ外で離された等）場合の自己修復。
-      // 放置すると pointerId が残り、以降ドラッグ不能になる
-      if (event.buttons === 0) {
-        this.cleanupDrag()
-        return
-      }
-      const dx = event.clientX - this.startX
-      const dy = event.clientY - this.startY
-
-      if (!this.dragActive) {
-        if (Math.abs(dx) <= MOVE_THRESHOLD_PX && Math.abs(dy) <= MOVE_THRESHOLD_PX) return
-        this.startDrag()
-      }
-
-      this.ghostTransform = `translate(${dx}px, ${dy}px)`
-      if (!this.dragApp || !this.dragOrder || !this.pressedRect) return
-
-      // ゴースト矩形は基準矩形＋移動量から算出する（DOM 読み取り不要で決定的）
-      const ghostRect = {
-        left: this.pressedRect.left + dx,
-        right: this.pressedRect.left + this.pressedRect.width + dx,
-        top: this.pressedRect.top + dy,
-        bottom: this.pressedRect.top + this.pressedRect.height + dy
-      }
-
-      // ゴーストは pointer-events: none なので elementFromPoint に拾われない
-      const hit = document.elementFromPoint(event.clientX, event.clientY)
-      const targetButton = hit?.closest<HTMLElement>('button[data-app]')
-      const targetApp = targetButton?.dataset.app
-      if (!targetButton || !targetApp || targetApp === this.dragApp) return
-
-      const swap = shouldSwap({
-        fromIndex: this.dragOrder.indexOf(this.dragApp),
-        toIndex: this.dragOrder.indexOf(targetApp),
-        ghostRect,
-        targetRect: targetButton.getBoundingClientRect(),
-        horizontal: (this.options?.layout ?? 'bottom') === 'bottom',
-        lastSwapAt: this.lastSwapAt,
-        now: performance.now()
+      this.session?.pointerMove({
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        buttons: event.buttons
       })
-      if (swap) {
-        // 並びをその場で入れ替える → TransitionGroup の FLIP が「滑って避ける」を演出
-        this.dragOrder = moveApp(this.dragOrder, this.dragApp, targetApp)
-        this.lastSwapAt = performance.now()
-      }
     },
     onPointerUp(event: PointerEvent): void {
-      if (event.pointerId !== this.pointerId) return
-      if (this.dragActive && this.dragOrder) {
-        // ドラッグ中の並びをそのまま確定・永続化する。
-        // updateOptions の IPC 往復を待つと一瞬旧並びに戻るため、ローカルにも楽観反映する
-        const newOptions = { ...this.options, appOrder: this.dragOrder }
-        this.options = newOptions
-        Electron.send('setOptions', newOptions)
-      }
-      this.cleanupDrag()
+      this.session?.pointerUp({
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        buttons: event.buttons
+      })
     },
     onPointerCancel(event: PointerEvent): void {
-      if (event.pointerId !== this.pointerId) return
-      // 確定せず破棄 → centerWindows が元の並びへ戻り、FLIP が戻りをアニメーション化
-      this.cleanupDrag()
+      // 確定せず破棄 → centerWindows が元の並びへ戻り、FLIP が戻りをアニメーション化。
+      // 別ポインタ由来の pointercancel で正当なセッションを打ち切らないよう id を渡す
+      this.session?.cancel(event.pointerId)
     },
     onVisibilityChange(): void {
-      if (document.visibilityState === 'hidden') this.cleanupDrag()
+      if (document.visibilityState === 'hidden') this.session?.cancel()
     },
     // Esc キーでドラッグをキャンセルする（確定せず元の並びへ戻る）
     onDragKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape' && this.pointerId !== null) this.cleanupDrag()
+      if (event.key === 'Escape') this.session?.cancel()
     },
     // 他アプリへのフォーカス移動中に pointerup を取りこぼした場合の保険
     onWindowBlur(): void {
-      this.cleanupDrag()
+      this.session?.cancel()
     },
+    // 状態機械の onEnd から呼ばれる後片付け（確定・キャンセル共通）
     cleanupDrag(): void {
       document.removeEventListener('pointermove', this.onPointerMove)
       document.removeEventListener('pointerup', this.onPointerUp)
@@ -415,12 +403,9 @@ export default defineComponent({
       document.removeEventListener('visibilitychange', this.onVisibilityChange)
       document.removeEventListener('keydown', this.onDragKeyDown)
       window.removeEventListener('blur', this.onWindowBlur)
-      this.pointerId = null
-      this.dragActive = false
       this.dragApp = null
       this.dragOrder = null
       this.pressedWindow = null
-      this.pressedRect = null
       this.ghostWindow = null
       this.ghostStyle = {}
       this.ghostTransform = ''

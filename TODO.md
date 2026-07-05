@@ -9,13 +9,12 @@
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | 単発 | [drag-state-machine-tests.md](docs/plans/drag-state-machine-tests.md) | 未着手（レビュー指摘の先送り分） |
-| 2 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 未着手（親計画） |
-| 3 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | 未着手 |
-| 4 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | 未着手 |
-| 5 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 未着手 |
-| 6 | 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | 未着手 ※Phase 3 で Swift Helper 廃止予定のため要否確認 |
-| 7 | 単発 | [autoUpdate.md](docs/plans/autoUpdate.md) | 検討段階 |
+| 1 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 未着手（親計画） |
+| 2 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | 未着手 |
+| 3 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | 未着手 |
+| 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 未着手 |
+| 5 | 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | 未着手 ※Phase 3 で Swift Helper 廃止予定のため要否確認 |
+| 6 | 単発 | [autoUpdate.md](docs/plans/autoUpdate.md) | 検討段階 |
 
 ※優先度は導入時の仮置き。オーナーが並べ替えてください。
 
@@ -25,6 +24,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| 単発 | [drag-state-machine-tests.md](docs/plans/drag-state-machine-tests.md) | 完了（2026-07-05。DI 抽出方式に方針変更、High 退行1件を検出・修正） |
 | 単発 | [pointer-drag-animation.md](docs/plans/pointer-drag-animation.md) | 完了（2026-07-05。実機確認項目の消化が残） |
 | 単発 | [app-window-grouping.md](docs/plans/app-window-grouping.md) | 完了（2026-07-05。D&D 実機確認済み。リリース時に version 2.1.1+ 必須） |
 | 2.0.0 | [release200loadmap.md](docs/plans/release200loadmap.md) | 完了（2.0.0 リリース済み） |
