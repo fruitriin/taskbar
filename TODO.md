@@ -10,7 +10,7 @@
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
 | 1 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 進行中（親計画。Phase 1 を詰め済み） |
-| 2 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | 進行中: 1-0〜1-E 完了。**残りは 1-F（UnoCSS）のみ**（オーナー目視確認が完了条件のため在席時推奨） |
+| 2 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | **完了（2026-07-07）** 🎉 全スライス消化・オーナー確認済み。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照）のみ |
 | 3 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | 詰め済み。2-0 完了・2-C クローズ（bun test 継続）・2-D 決定済み（mise 廃止 → package.json scripts）。残 2-A/2-B/2-D |
 | 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 未着手 |
 | 5 | 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | 未着手 ※Phase 3 で Swift Helper 廃止予定のため要否確認 |

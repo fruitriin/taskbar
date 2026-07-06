@@ -2,33 +2,33 @@
   <div class="menu-container">
     <div class="menu-list">
       <button class="menu-item" @click="openOption">
-        <span class="icon">
+        <span class="menu-icon">
           <i class="fas fa-cog"></i>
         </span>
-        <span class="label">設定</span>
+        <span class="menu-label">設定</span>
       </button>
 
       <button class="menu-item" @click="openWindowManager">
-        <span class="icon">
+        <span class="menu-icon">
           <i class="fas fa-window-restore"></i>
         </span>
-        <span class="label">ウィンドウマネージャー</span>
+        <span class="menu-label">ウィンドウマネージャー</span>
       </button>
 
       <div class="divider"></div>
 
       <button class="menu-item" @click="restart">
-        <span class="icon">
+        <span class="menu-icon">
           <i class="fas fa-sync-alt"></i>
         </span>
-        <span class="label">再起動</span>
+        <span class="menu-label">再起動</span>
       </button>
 
       <button class="menu-item danger" @click="exit">
-        <span class="icon">
+        <span class="menu-icon">
           <i class="fas fa-times-circle"></i>
         </span>
-        <span class="label">終了</span>
+        <span class="menu-label">終了</span>
       </button>
     </div>
   </div>
@@ -121,7 +121,7 @@ function exit(): void {
     }
   }
 
-  .icon {
+  .menu-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -132,11 +132,11 @@ function exit(): void {
     flex-shrink: 0;
   }
 
-  &.danger .icon {
+  &.danger .menu-icon {
     color: #ff6b6b !important;
   }
 
-  .label {
+  .menu-label {
     flex: 1;
     font-weight: 500;
     letter-spacing: 0.3px;

@@ -90,8 +90,6 @@
 </template>
 
 <script setup lang="ts">
-// このビューは bulma に依存する（旧ルートコンポーネントから移設。ビュー単位の動的 import でスタイル分離）
-import 'bulma/css/bulma.css'
 import icon from '../assets/icon.png'
 import { computed, markRaw, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createNewSortInstance } from 'fast-sort'

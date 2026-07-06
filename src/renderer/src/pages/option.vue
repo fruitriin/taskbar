@@ -227,8 +227,6 @@
 </template>
 
 <script setup lang="ts">
-// このビューは bulma に依存する（旧ルートコンポーネントから移設。ビュー単位の動的 import でスタイル分離）
-import 'bulma/css/bulma.css'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // Electron はテンプレートからも参照される（send は ipc.ts へ委譲済み）
 import { Electron } from '../utils'
