@@ -8,12 +8,6 @@
   "scripts": {
     "moved": "mise run"
   },
-  "prettier": {
-    "singleQuote": true,
-    "semi": false,
-    "printWidth": 100,
-    "trailingComma": "none"
-  },
   "prettierIgnore": [
     "out",
     "dist",
@@ -53,8 +47,8 @@
     "html-escaper": "^3.0.3",
     "just-diff": "^6.0.2",
     "just-diff-apply": "^5.5.0",
+    "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",
-    "prettier": "^3.0.3",
     "sass": "^1.101.0",
     "typescript": "^5.2.2",
     "unocss": "^66.7.4",

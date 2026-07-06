@@ -149,7 +149,9 @@ export function setEventHandlers(): void {
     store.set('labeledFilters', currentFilters)
 
     // 全てのオプションウィンドウに更新を通知
-    const optionWindows = BrowserWindow.getAllWindows().filter((win) => win.getTitle() === 'taskbar.fm')
+    const optionWindows = BrowserWindow.getAllWindows().filter(
+      (win) => win.getTitle() === 'taskbar.fm'
+    )
     optionWindows.forEach((win) => {
       if (!win.isDestroyed()) {
         win.webContents.send('labeledFiltersUpdated', currentFilters)

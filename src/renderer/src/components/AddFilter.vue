@@ -132,7 +132,6 @@ function cancelAdd(): void {
 </script>
 
 <style lang="scss" scoped>
-
 .add-filter-form {
   margin-top: 0.5rem;
   max-width: 100%;

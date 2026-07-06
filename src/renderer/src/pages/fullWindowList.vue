@@ -582,7 +582,8 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .full-window-list {
   /* 旧 fullWindowList.html の html/body 指定から移設（等幅フォントのデバッグ画面） */
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family:
+    'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   padding: 2rem;
   min-height: 100vh;
   background: hsl(0, 0%, 21%);
@@ -1100,5 +1101,4 @@ onBeforeUnmount(() => {
 }
 </style>
 
-<style lang="sass" scoped>
-</style>
+<style lang="sass" scoped></style>

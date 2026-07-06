@@ -31,7 +31,7 @@ const allPermissionsGranted = computed(() => {
 })
 
 // タイムアウト付きでPromiseを実行する汎用関数
-const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => {

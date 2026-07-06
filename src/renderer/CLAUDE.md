@@ -50,12 +50,12 @@ mise run dev
 エントリーポイントは **index.html / src/main.ts の1つ**で、URL の `?view=` パラメータで
 ビューを切り替えます（リアーキ Phase 1 スライス 1-B で統合。App.vue がビューホスト）:
 
-| view | コンポーネント | 内容 |
-|---|---|---|
-| （なし）/ `taskbar` | pages/index.vue | メインタスクバー UI |
-| `option` | pages/option.vue | 設定画面（レイアウト・フィルター・権限） |
-| `menu` | pages/menu.vue | 右クリックメニュー |
-| `fullWindowList` | pages/fullWindowList.vue | 全ウィンドウリスト（開発用、Cmd+Shift+W） |
+| view                | コンポーネント           | 内容                                      |
+| ------------------- | ------------------------ | ----------------------------------------- |
+| （なし）/ `taskbar` | pages/index.vue          | メインタスクバー UI                       |
+| `option`            | pages/option.vue         | 設定画面（レイアウト・フィルター・権限）  |
+| `menu`              | pages/menu.vue           | 右クリックメニュー                        |
+| `fullWindowList`    | pages/fullWindowList.vue | 全ウィンドウリスト（開発用、Cmd+Shift+W） |
 
 各ビューは App.vue で **動的 import** されるため、そのウィンドウに必要なモジュールと
 スタイルだけが読み込まれます（menu は bulma 非依存の独自リセットを維持）。
@@ -145,7 +145,7 @@ const unlisten = ipcListen<MacWindow[]>('process', (processes) => {
 __mockHelpers.updateWindows([
   {
     kCGWindowOwnerName: 'MyApp',
-    kCGWindowNumber: 999,
+    kCGWindowNumber: 999
     // ...
   }
 ])
@@ -165,9 +165,9 @@ __mockHelpers.triggerWindowReady()
 export const sampleWindows: MacWindow[] = [
   {
     kCGWindowOwnerName: 'TextEdit',
-    kCGWindowNumber: 123,
+    kCGWindowNumber: 123
     // ...
-  },
+  }
   // 追加のテストデータ
 ]
 ```
@@ -250,7 +250,6 @@ type MacWindow = {
   appIcon: string // Base64エンコードされたPNG
 }
 ```
-
 
 ## Key Technical Notes
 

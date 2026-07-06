@@ -30,8 +30,8 @@ description = "Xcodeヘルパープロジェクトを開く"
 run = "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace"
 
 [tasks.format]
-description = "Prettierでコードをフォーマット"
-run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
+description = "Oxfmtでコードをフォーマット"
+run = "bunx oxfmt src electron.vite.config.ts uno.config.ts"
 
 [tasks.lint]
 description = "Oxlintでコードをリント"

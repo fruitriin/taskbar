@@ -130,8 +130,8 @@ export function shouldSwap(input: SwapJudgeInput): boolean {
         ? input.ghostRect.right - input.targetRect.left
         : input.ghostRect.bottom - input.targetRect.top
       : input.horizontal
-      ? input.targetRect.right - input.ghostRect.left
-      : input.targetRect.bottom - input.ghostRect.top
+        ? input.targetRect.right - input.ghostRect.left
+        : input.targetRect.bottom - input.ghostRect.top
 
   return overlap >= threshold
 }
