@@ -34,8 +34,8 @@ description = "Prettierでコードをフォーマット"
 run = "bun prettier --write '**/*.{js,ts,vue,html,css}'"
 
 [tasks.lint]
-description = "ESLintでコードをリント"
-run = "bun eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mjs,.vue"
+description = "Oxlintでコードをリント"
+run = "bunx oxlint -c .oxlintrc.json ."
 
 [tasks.typecheck]
 description = "TypeScriptの型チェックを実行"

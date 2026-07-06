@@ -119,10 +119,10 @@ export function setEventHandlers(): void {
   ipcMain.on('restart', () => {
     App.relaunch()
     App.quit()
-  }),
-    ipcMain.on('exit', () => {
-      App.quit()
-    })
+  })
+  ipcMain.on('exit', () => {
+    App.quit()
+  })
 
   ipcMain.on('restartHelper', (_event, delay?: number) => {
     recreateAllWindows('restartHelper')

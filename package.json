@@ -30,79 +30,17 @@
     ".env",
     "build"
   ],
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "browser": true,
-      "commonjs": true,
-      "es6": true,
-      "node": true,
-      "vue/setup-compiler-macros": true
-    },
-    "extends": [
-      "plugin:vue/vue3-recommended",
-      "eslint:recommended",
-      "@vue/eslint-config-typescript/recommended",
-      "@vue/eslint-config-prettier"
-    ],
-    "rules": {
-      "@typescript-eslint/ban-ts-comment": [
-        "error",
-        {
-          "ts-ignore": "allow-with-description"
-        }
-      ],
-      "@typescript-eslint/explicit-function-return-type": "error",
-      "@typescript-eslint/explicit-module-boundary-types": "off",
-      "@typescript-eslint/no-empty-function": [
-        "error",
-        {
-          "allow": [
-            "arrowFunctions"
-          ]
-        }
-      ],
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/no-var-requires": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_",
-          "caughtErrorsIgnorePattern": "^_"
-        }
-      ],
-      "no-unused-vars": "off",
-      "vue/require-default-prop": "off",
-      "vue/multi-word-component-names": "off"
-    },
-    "overrides": [
-      {
-        "files": [
-          "*.js"
-        ],
-        "rules": {
-          "@typescript-eslint/explicit-function-return-type": "off"
-        }
-      }
-    ]
-  },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.1",
     "@fortawesome/fontawesome-free": "^7.3.0",
-    "@vue/eslint-config-prettier": "^8.0.0",
-    "@vue/eslint-config-typescript": "^12.0.0",
     "electron-updater": "^6.1.4",
-    "eslint-plugin-vue": "^9.18.1",
     "fast-sort": "^3.4.0",
     "riinlogger": "file:../RiinLogger"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@electron/notarize": "^2.1.0",
-    "@rushstack/eslint-patch": "^1.5.1",
     "@types/bun": "^1.3.14",
     "@types/node": "20.9.0",
     "@vitejs/plugin-vue": "^4.4.1",
@@ -112,10 +50,10 @@
     "electron-builder": "^24.6.4",
     "electron-store": "^8.1.0",
     "electron-vite": "^1.0.28",
-    "eslint": "^8.53.0",
     "html-escaper": "^3.0.3",
     "just-diff": "^6.0.2",
     "just-diff-apply": "^5.5.0",
+    "oxlint": "^1.72.0",
     "prettier": "^3.0.3",
     "sass": "^1.101.0",
     "typescript": "^5.2.2",
