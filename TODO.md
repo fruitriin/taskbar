@@ -12,7 +12,7 @@
 | 1 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 進行中（親計画。Phase 1 を詰め済み） |
 | 2 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | **完了（2026-07-07）** 🎉 全スライス消化・オーナー確認済み。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照）のみ |
 | 3 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | **完了（2026-07-07）** 🎉 全スライス消化（lint=oxlint / fmt=oxfmt / test=bun test 継続 / mise 廃止 → bun run） |
-| 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 未着手 |
+| 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 詰め済み（2026-07-07 鮮度更新・進め方案）。**キックオフ確認待ち（Questions Q4）** |
 | 5 | 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | 未着手 ※Phase 3 で Swift Helper 廃止予定のため要否確認 |
 | 6 | 単発 | [autoUpdate.md](docs/plans/autoUpdate.md) | 検討段階 |
 

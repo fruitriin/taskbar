@@ -7,6 +7,49 @@
 
 ---
 
+## 鮮度更新（2026-07-07。計画本文は 2026-03-18 時点の記述）
+
+Phase 1/2 の実施結果により、本文の以下の前提が変わっている:
+
+- **vp（Vite+）前提の廃止**: Phase 2 で vp ラッパーは不採用になった（oxlint / oxfmt 直接、
+  テストは bun test 継続）。本文の `vp dev` → `vite dev`（プレーンな vite）、`vp test` →
+  `bun run test:all`、`vp check` → `bun run lint && bun run typecheck` に読み替える。
+  3.1 の vite.config.ts は `from 'vite'`（vite-plus ではない）
+- **useReactiveStore は存在しない**: Phase 1 で実際に作ったのは `useOptions` / `useWindows`
+  （+ ipc.ts）。3.4 の差し替え対象は「useOptions の内部（updateOptions リスナー＋setOptions
+  送信）を tauri-plugin-store ベースへ」。本文の useReactiveStore 例示は参考実装として読む
+- **ipc.ts は計画どおりの seam として実在**（ipcInvoke / ipcListen / ipcSend）。ただし
+  **Tauri には fire-and-forget の send が無い** — 現行レンダラーは ipcSend を20チャンネルで
+  多用しており、3.4 で「ipcSend → invoke へのマッピング」の設計が必要（戻り値を待たない
+  invoke 呼び出しにするのが素直）
+- **移植対象チャンネルの実数**: 本文 3.2 の Tauri Commands は7個だが、実際の main 側
+  ハンドラは **20個**: activeWindow / addFilter / checkPermissions / clearSetting /
+  closeMenu / contextLogo / contextTask / dumpTaskbarInfo / exit / getExcludeWindows /
+  getLabeledFilters / grantPermission / openFullWindowList / openOption /
+  openSystemPreferences / restart / restartHelper / setLabeledFilters / setOptions /
+  windowReady。＋main→renderer イベント: process / iconUpdate / displayInfo /
+  updateOptions / allProcesses / catchExcludeWindow / labeledFiltersUpdated
+- **既存ユーザーの設定データ移行が未計画**: electron-store の config.json
+  （appOrder・labeledFilters 等）→ tauri-plugin-store への移行パスを 3.4 に追加すること
+  （初回起動時に旧パスから読み込むワンショット移行）
+- **エントリー統合済み**: 3.4「マルチウィンドウ結合」の前提（?view= 切替）は 1-B で実現済み。
+  App.vue / view-router.ts がそのまま使える
+- **crate バージョンは着手時に解決**: 本文の Cargo.toml のバージョン表記（objc2 0.6 等）は
+  3月時点の値。3.1 で `cargo add` により最新安定版を解決し直す（ここに書いた値を信じない）
+- **新規資産（3月以降）**: drag-session.ts / 純関数群 / テスト104件はレンダラー完結で
+  Tauri 移行の影響を受けない。Font Awesome は self-host 済み
+
+## 進め方（キックオフ案 — Questions Q4 でオーナー確認中）
+
+- 専用ブランチ `rearch/tauri-v2` で一気通貫。master は緊急修正用に凍結維持
+- 3.1〜3.5 をサブタスク単位で checkpoint コミット（各サイクルの引き継ぎは従来どおり
+  Progress 日記）。/addf-dev のループサイクル 10〜20 回分を見込む
+- 実機確認ポイント: 3.2 完了時（Rust 側でウィンドウリスト取得）、3.4 完了時（E2E 疎通）、
+  3.5（全機能）。それ以外はビルド不通を許容
+- リリースは v3.0.0（メジャー）。移行完了までは v2.1.x 系を master から出せる状態を保つ
+
+---
+
 ## 3.1 Tauri プロジェクト初期化
 
 ### Tauri セットアップ
