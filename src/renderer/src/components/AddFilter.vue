@@ -49,93 +49,85 @@
         >
           {{ filterIndex !== undefined ? '追加' : '作成' }}
         </button>
-        <button class="button is-small cancel-button" @click="cancelAdd">
-          キャンセル
-        </button>
+        <button class="button is-small cancel-button" @click="cancelAdd">キャンセル</button>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { ref } from 'vue'
+
 export type Filter = {
   property: string
   is: string | number | boolean
 }
 
-export default {
-  name: 'AddFilter',
-  props: {
-    filterIndex: {
-      type: Number,
-      required: false,
-      default: undefined
-    }
-  },
-  emits: ['add-filter'],
-  data(): { filter: Filter; isExpanded: boolean } {
-    return {
-      filter: {
-        property: '',
-        is: ''
-      },
-      isExpanded: false
-    }
-  },
-  methods: {
-    handleAddFilter(): void {
-      const convertedFilter = { ...this.filter }
+const props = withDefaults(defineProps<{ filterIndex?: number }>(), {
+  filterIndex: undefined
+})
 
-      // 型変換を行う
-      if (this.getInputType(this.filter.property) === 'number') {
-        const numValue = Number(this.filter.is)
-        convertedFilter.is = isNaN(numValue) ? this.filter.is : numValue
-      } else if (
-        this.filter.property === 'kCGWindowIsOnscreen' &&
-        typeof this.filter.is === 'string'
-      ) {
-        // booleanの場合
-        convertedFilter.is = this.filter.is === 'true' || this.filter.is === '1'
-      }
+const emit = defineEmits<{
+  (e: 'add-filter', payload: { filter: Filter; filterIndex?: number }): void
+}>()
 
-      this.$emit('add-filter', {
-        filter: convertedFilter,
-        filterIndex: this.filterIndex
-      })
-      this.filter.property = ''
-      this.filter.is = ''
-      this.isExpanded = false
-    },
-    cancelAdd(): void {
-      this.filter.property = ''
-      this.filter.is = ''
-      this.isExpanded = false
-    },
-    getInputType(property: string): string {
-      const numericProperties = [
-        'kCGWindowLayer',
-        'kCGWindowOwnerPID',
-        'kCGWindowNumber',
-        'kCGWindowIsOnscreen',
-        'kCGWindowSharingState',
-        'kCGWindowStoreType'
-      ]
-      return numericProperties.includes(property) ? 'number' : 'text'
-    },
-    getPlaceholder(property: string): string {
-      const placeholders: Record<string, string> = {
-        kCGWindowName: 'ウィンドウ名を入力...',
-        kCGWindowOwnerName: 'アプリケーション名を入力...',
-        kCGWindowOwnerPID: 'プロセスIDを入力...',
-        kCGWindowNumber: 'ウィンドウ番号を入力...',
-        kCGWindowLayer: 'レイヤー番号を入力...',
-        kCGWindowIsOnscreen: '0または1を入力...',
-        kCGWindowSharingState: '共有状態番号を入力...',
-        kCGWindowStoreType: 'ストアタイプ番号を入力...'
-      }
-      return placeholders[property] || '値を入力...'
-    }
+const filter = ref<Filter>({ property: '', is: '' })
+const isExpanded = ref(false)
+
+function getInputType(property: string): string {
+  const numericProperties = [
+    'kCGWindowLayer',
+    'kCGWindowOwnerPID',
+    'kCGWindowNumber',
+    'kCGWindowIsOnscreen',
+    'kCGWindowSharingState',
+    'kCGWindowStoreType'
+  ]
+  return numericProperties.includes(property) ? 'number' : 'text'
+}
+
+function getPlaceholder(property: string): string {
+  const placeholders: Record<string, string> = {
+    kCGWindowName: 'ウィンドウ名を入力...',
+    kCGWindowOwnerName: 'アプリケーション名を入力...',
+    kCGWindowOwnerPID: 'プロセスIDを入力...',
+    kCGWindowNumber: 'ウィンドウ番号を入力...',
+    kCGWindowLayer: 'レイヤー番号を入力...',
+    kCGWindowIsOnscreen: '0または1を入力...',
+    kCGWindowSharingState: '共有状態番号を入力...',
+    kCGWindowStoreType: 'ストアタイプ番号を入力...'
   }
+  return placeholders[property] || '値を入力...'
+}
+
+function handleAddFilter(): void {
+  const convertedFilter = { ...filter.value }
+
+  // 型変換を行う
+  if (getInputType(filter.value.property) === 'number') {
+    const numValue = Number(filter.value.is)
+    convertedFilter.is = isNaN(numValue) ? filter.value.is : numValue
+  } else if (
+    filter.value.property === 'kCGWindowIsOnscreen' &&
+    typeof filter.value.is === 'string'
+  ) {
+    // booleanの場合
+    convertedFilter.is = filter.value.is === 'true' || filter.value.is === '1'
+  }
+
+  emit('add-filter', {
+    filter: convertedFilter,
+    filterIndex: props.filterIndex
+  })
+  filter.value.property = ''
+  filter.value.is = ''
+  isExpanded.value = false
+}
+
+function cancelAdd(): void {
+  filter.value.property = ''
+  filter.value.is = ''
+  isExpanded.value = false
 }
 </script>
 

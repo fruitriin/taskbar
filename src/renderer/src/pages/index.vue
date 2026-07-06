@@ -89,379 +89,365 @@
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 // このビューは bulma に依存する（旧ルートコンポーネントから移設。ビュー単位の動的 import でスタイル分離）
 import 'bulma/css/bulma.css'
 import icon from '../assets/icon.png'
-import { markRaw } from 'vue'
-import { Electron, buildAppOrder, groupWindowsByApp } from '../utils'
+import { computed, markRaw, onBeforeUnmount, onMounted, ref } from 'vue'
+import { createNewSortInstance } from 'fast-sort'
+import { buildAppOrder, groupWindowsByApp } from '../utils'
 import { createDragSession } from '../drag-session'
-import type { DragSession } from '../drag-session'
-import { defineComponent } from 'vue'
+import { ipcListen, ipcSend } from '../composables/ipc'
+import { useOptions } from '../composables/useOptions'
 import Debug from '../components/Debug.vue'
 import MainPermissionStatus from '../components/MainPermissionStatus.vue'
-import { createNewSortInstance } from 'fast-sort'
 
-export default defineComponent({
-  components: {
-    Debug,
+// 永続化オプション。updateOptions イベントの受信・楽観反映・setOptions 送信は composable が担う
+// （旧実装の自前 updateOptions リスナーはこれに置き換え。echo ループなし: この画面は
+// options の deep watch 送信をしない）
+const { options, updateOptions } = useOptions()
 
-    MainPermissionStatus
-  },
+const windows = ref<MacWindow[] | null>([])
+// セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
+const appearanceOrder = ref<string[]>([])
+// --- Pointer Events ドラッグセッション ---
+// 押下したボタンのウィンドウ（ゴーストの表示内容に使用。矩形は session が保持）
+const pressedWindow = ref<MacWindow | null>(null)
+// ドラッグ中のアプリ名（drag-source の減光に使用）
+const dragApp = ref<string | null>(null)
+// ドラッグ中のみ使う一時的なアプリ順。centerWindows がこれを優先する
+const dragOrder = ref<string[] | null>(null)
+// ドラッグ直後の click 合成を1回だけ握りつぶす
+const didDrag = ref(false)
+// ゴースト表示
+const ghostWindow = ref<MacWindow | null>(null)
+const ghostStyle = ref<Record<string, string>>({})
+const ghostTransform = ref('')
+// ドラッグ中に届いた process 更新の保留分（dragend で反映）
+const pendingWindows = ref<MacWindow[] | null>(null)
+const debug = ref(true)
+const displayInfo = ref<{
+  workArea?: { x: number; y: number; width: number; height: number }
+}>({})
 
-  data() {
-    return {
-      icon,
-      windows: [] as MacWindow[] | null,
-      // セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
-      appearanceOrder: [] as string[],
-      // --- Pointer Events ドラッグセッション ---
-      // 状態機械の本体（drag-session.ts）。Vue のリアクティブ化は不要なので markRaw で保持
-      session: null as DragSession | null,
-      // 押下したボタンのウィンドウ（ゴーストの表示内容に使用。矩形は session が保持）
-      pressedWindow: null as MacWindow | null,
-      // ドラッグ中のアプリ名（drag-source の減光に使用）
-      dragApp: null as string | null,
-      // ドラッグ中のみ使う一時的なアプリ順。centerWindows がこれを優先する
-      dragOrder: null as string[] | null,
-      // ドラッグ直後の click 合成を1回だけ握りつぶす
-      didDrag: false,
-      // ゴースト表示
-      ghostWindow: null as MacWindow | null,
-      ghostStyle: {} as Record<string, string>,
-      ghostTransform: '',
-      // ドラッグ中に届いた process 更新の保留分（dragend で反映）
-      pendingWindows: null as MacWindow[] | null,
-      debug: true,
-      options: window.store.options,
-      granted: window.store.granted,
-      headers: window.store.options?.headers,
-      footers: window.store.options?.footers,
-      displayInfo: {} as {
-        workArea: {
-          x: number
-          y: number
-          width: number
-          height: number
-        }
-      }
-    }
-  },
-  computed: {
-    headerWindows() {
-      const headers = this.visibleWindows.filter((w: MacWindow) => {
-        if (this.options?.headers.includes(w.kCGWindowOwnerName)) {
-          return true
-        }
-        return false
-      })
+// ディスプレイの中のウィンドウだけに絞り込む
+const visibleWindows = computed<MacWindow[]>(() => {
+  if (windows.value === null) return []
+  const displayConrner = {
+    left: displayInfo.value.workArea?.x as number,
+    right:
+      (displayInfo.value.workArea?.x as number) + (displayInfo.value.workArea?.width as number),
+    top: displayInfo.value.workArea?.y as number,
+    bottom:
+      (displayInfo.value.workArea?.y as number) + (displayInfo.value.workArea?.height as number)
+  }
+  return [...windows.value].filter((win) => {
+    if (displayConrner.left > win.kCGWindowBounds.X + win.kCGWindowBounds.Width) return false
+    if (win.kCGWindowBounds.X > displayConrner.right) return false
 
-      return this.sort(headers, 'headers')
-    },
-    footerWindows(): MacWindow[] {
-      const footers = this.visibleWindows.filter((w: MacWindow) => {
-        if (this.options?.footers.includes(w.kCGWindowOwnerName)) {
-          return true
-        }
-        return false
-      })
-      this.sort(footers, 'footers')
-      return footers
-    },
-    centerWindows(): MacWindow[] {
-      const centers = this.visibleWindows.filter((w: MacWindow) => {
-        if (
-          !this.options?.headers.includes(w.kCGWindowOwnerName) &&
-          !this.options?.footers.includes(w.kCGWindowOwnerName)
-        ) {
-          return true
-        }
-        return false
-      })
-      return groupWindowsByApp(centers, {
-        sortByPosition: this.options?.windowSortByPositionInApp ?? false,
-        layout: this.options?.layout ?? 'bottom',
-        // ドラッグ中はセッション内の一時順序が最優先（確定は pointerup 時の setOptions）
-        appOrder: this.dragOrder ?? this.options?.appOrder ?? [],
-        appearanceOrder: this.appearanceOrder
-      })
-    },
-    // ディスプレイの中にウィンドウだけに絞り込む
-    visibleWindows(): MacWindow[] {
-      if (this.windows === null) return []
-      const displayConrner = {
-        left: this.displayInfo.workArea?.x,
-        right: this.displayInfo.workArea?.x + this.displayInfo.workArea?.width,
-        top: this.displayInfo.workArea?.y,
-        bottom: this.displayInfo?.workArea?.y + this.displayInfo.workArea?.height
-      }
-      return [...this.windows].filter((win) => {
-        if (displayConrner.left > win.kCGWindowBounds.X + win.kCGWindowBounds.Width) return false
-        if (win.kCGWindowBounds.X > displayConrner.right) return false
+    if (displayConrner.top > win.kCGWindowBounds.Y + win.kCGWindowBounds.Height) return false
+    if (win.kCGWindowBounds.Y > displayConrner.bottom) return false
 
-        if (displayConrner.top > win.kCGWindowBounds.Y + win.kCGWindowBounds.Height) return false
-        if (win.kCGWindowBounds.Y > displayConrner.bottom) return false
+    return true
+  })
+})
 
-        return true
-      })
-    }
-  },
+function sortArea(arr: MacWindow[], area: 'headers' | 'footers'): MacWindow[] {
+  const orderRule = {
+    Headers: 'desc',
+    Footers: 'asc'
+  } as const
 
-  mounted() {
-    Electron.listen('updateOptions', (_event, value) => {
-      console.log('[taskbar]updated:', value)
-      this.options = value
-    })
-    Electron.listen('process', (_event, value: MacWindow[]) => {
-      // ポインタ押下中（閾値未満のプレドラッグ含む）は並びの土台が動くと
-      // 入れ替え判定や pressedWindow が崩れるため、反映を保留する
-      if (this.session?.isActive) {
-        this.pendingWindows = value
-        return
-      }
-      this.applyWindows(value)
-    })
+  // 既存バグの疑い（挙動同一原則に従い旧実装のまま複製）: キーが大文字のため
+  // 引数 'headers'/'footers' とは一致せず、order は常に undefined → 常に desc 分岐。
+  // 実害: headers は偶然 desc の意図と一致、footers は呼び出し側が返り値を捨てるため
+  // 二重に不可視。Feedback.md（2026-07-07）にバグ候補として記録済み
+  const order = (orderRule as Record<string, string>)[area]
 
-    // アイコン更新イベントをリスン
-    Electron.listen('iconUpdate', (_event, icons: Record<string, string>) => {
-      this.updateWindowIcons(icons)
-    })
+  const rule: Record<string, number> = {}
+  options.value[area]?.forEach((e, i) => {
+    rule[e] = i
+  })
 
-    Electron.send('windowReady')
-    Electron.listen('displayInfo', (_event, value) => {
-      this.displayInfo = value
-    })
-  },
-  created() {
-    // 状態機械に DOM 依存（hitTest）と副作用（ゴースト・永続化）を注入する
-    this.session = markRaw(
-      createDragSession({
-        getBaseOrder: () => buildAppOrder(this.options?.appOrder ?? [], this.centerWindows),
-        hitTest: (x, y) => {
-          const button = document.elementFromPoint(x, y)?.closest<HTMLElement>('button[data-app]')
-          const app = button?.dataset.app
-          if (!button || !app) return null
-          const rect = button.getBoundingClientRect()
-          return {
-            app,
-            rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
-          }
-        },
-        isHorizontal: () => (this.options?.layout ?? 'bottom') === 'bottom',
-        onDragStart: (app, rect) => {
-          this.didDrag = true
-          this.dragApp = app
-          this.ghostWindow = this.pressedWindow
-          this.ghostStyle = {
-            top: `${rect.top}px`,
-            left: `${rect.left}px`,
-            width: `${rect.right - rect.left}px`,
-            height: `${rect.bottom - rect.top}px`
-          }
-        },
-        onGhostMove: (dx, dy) => {
-          this.ghostTransform = `translate(${dx}px, ${dy}px)`
-        },
-        onOrderChange: (order) => {
-          this.dragOrder = order
-        },
-        onCommit: (order) => {
-          // updateOptions の IPC 往復を待つと一瞬旧並びに戻るため、ローカルにも楽観反映する
-          const newOptions = { ...this.options, appOrder: order }
-          this.options = newOptions
-          Electron.send('setOptions', newOptions)
-        },
-        onEnd: () => this.cleanupDrag()
-      })
-    )
-  },
-  beforeUnmount() {
-    // ドラッグ途中でアンマウントされた場合の document リスナーのリーク防止
-    this.session?.cancel()
-  },
-  methods: {
-    sort(arr: MacWindow[], area: 'headers' | 'footers'): MacWindow[] {
-      const orderRule = {
-        Headers: 'desc',
-        Footers: 'asc'
-      } as const
+  const ruleSorter = createNewSortInstance({
+    comparer: (a, b) => (rule[a] || 0) - (rule[b] || 0)
+  })
 
-      const order = orderRule[area]
+  return ruleSorter(arr).by([
+    { asc: (u: MacWindow): string => u.kCGWindowOwnerName },
+    order === 'asc'
+      ? { asc: (u: MacWindow): number => u.kCGWindowBounds.X }
+      : { desc: (u: MacWindow): number => u.kCGWindowBounds.X }
+  ])
+}
 
-      const rule = {}
-      this.options[area]?.forEach((e, i) => {
-        rule[e] = i
-      })
+const headerWindows = computed<MacWindow[]>(() => {
+  const headers = visibleWindows.value.filter((w) =>
+    options.value.headers.includes(w.kCGWindowOwnerName)
+  )
+  return sortArea(headers, 'headers')
+})
 
-      const ruleSorter = createNewSortInstance({
-        comparer: (a, b) => (rule[a] || 0) - (rule[b] || 0)
-      })
+const footerWindows = computed<MacWindow[]>(() => {
+  const footers = visibleWindows.value.filter((w) =>
+    options.value.footers.includes(w.kCGWindowOwnerName)
+  )
+  // 旧実装のまま複製: sortArea の返り値（新配列）を捨てており、実質未ソートで返る
+  sortArea(footers, 'footers')
+  return footers
+})
 
-      return ruleSorter(arr).by([
-        { asc: (u): string => u.kCGWindowOwnerName },
-        order === 'asc'
-          ? { asc: (u): number => u.kCGWindowBounds.X }
-          : { desc: (u): number => u.kCGWindowBounds.X }
-      ])
-    },
-    test(ev): void {
-      Electron.send('contextTask', ev)
-      console.log('test')
-    },
-    applyWindows(value: MacWindow[]): void {
-      this.trackAppearance(value)
-      if (this.windows == null) {
-        this.windows = value
-        return
-      }
-      this.windows.splice(0, this.windows.length, ...value)
-    },
-    // 新しく出現したアプリを出現順リストの末尾に追加する
-    // 同時に複数現れた場合は最小 kCGWindowNumber 昇順で追加し、
-    // どのディスプレイのタスクバーでも同じ順序に収束させる
-    trackAppearance(windows: MacWindow[]): void {
-      const minNumbers = new Map<string, number>()
-      for (const win of windows) {
-        const app = win.kCGWindowOwnerName
-        const current = minNumbers.get(app)
-        if (current === undefined || win.kCGWindowNumber < current) {
-          minNumbers.set(app, win.kCGWindowNumber)
-        }
-      }
-      const newApps = [...minNumbers.keys()]
-        .filter((app) => !this.appearanceOrder.includes(app))
-        .sort((a, b) => (minNumbers.get(a) as number) - (minNumbers.get(b) as number))
-      this.appearanceOrder.push(...newApps)
-    },
-    // --- Pointer Events ドラッグ（参考: fruitriin/misskey MkDraggable のエッセンス移植） ---
-    onTaskClick(win: MacWindow): void {
-      // ドラッグ後に合成される click を1回だけ無視する
-      if (this.didDrag) return
-      this.acticveWindow(win)
-    },
-    onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
-      const el = event.currentTarget as HTMLElement
-      const rect = el.getBoundingClientRect()
-      const pressedRect = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
-      const accepted = this.session?.pointerDown(
-        {
-          pointerId: event.pointerId,
-          x: event.clientX,
-          y: event.clientY,
-          buttons: event.buttons,
-          button: event.button
-        },
-        win.kCGWindowOwnerName,
-        pressedRect
-      )
-      if (!accepted) return
-      this.pressedWindow = win
-      // TransitionGroup の DOM 並び替えで Pointer Capture は暗黙解放されうるため、
-      // capture は使わず document でリッスンする
-      document.addEventListener('pointermove', this.onPointerMove)
-      document.addEventListener('pointerup', this.onPointerUp)
-      document.addEventListener('pointercancel', this.onPointerCancel)
-      document.addEventListener('visibilitychange', this.onVisibilityChange)
-      document.addEventListener('keydown', this.onDragKeyDown)
-      window.addEventListener('blur', this.onWindowBlur)
-    },
-    onPointerMove(event: PointerEvent): void {
-      this.session?.pointerMove({
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        buttons: event.buttons
-      })
-    },
-    onPointerUp(event: PointerEvent): void {
-      this.session?.pointerUp({
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        buttons: event.buttons
-      })
-    },
-    onPointerCancel(event: PointerEvent): void {
-      // 確定せず破棄 → centerWindows が元の並びへ戻り、FLIP が戻りをアニメーション化。
-      // 別ポインタ由来の pointercancel で正当なセッションを打ち切らないよう id を渡す
-      this.session?.cancel(event.pointerId)
-    },
-    onVisibilityChange(): void {
-      if (document.visibilityState === 'hidden') this.session?.cancel()
-    },
-    // Esc キーでドラッグをキャンセルする（確定せず元の並びへ戻る）
-    onDragKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') this.session?.cancel()
-    },
-    // 他アプリへのフォーカス移動中に pointerup を取りこぼした場合の保険
-    onWindowBlur(): void {
-      this.session?.cancel()
-    },
-    // 状態機械の onEnd から呼ばれる後片付け（確定・キャンセル共通）
-    cleanupDrag(): void {
-      document.removeEventListener('pointermove', this.onPointerMove)
-      document.removeEventListener('pointerup', this.onPointerUp)
-      document.removeEventListener('pointercancel', this.onPointerCancel)
-      document.removeEventListener('visibilitychange', this.onVisibilityChange)
-      document.removeEventListener('keydown', this.onDragKeyDown)
-      window.removeEventListener('blur', this.onWindowBlur)
-      this.dragApp = null
-      this.dragOrder = null
-      this.pressedWindow = null
-      this.ghostWindow = null
-      this.ghostStyle = {}
-      this.ghostTransform = ''
-      // click はこの pointerup の直後に同期発火するため、次のマクロタスクで解除する
-      window.setTimeout(() => {
-        this.didDrag = false
-      }, 0)
-      // ドラッグ中に保留した process 更新を反映する
-      if (this.pendingWindows) {
-        const pending = this.pendingWindows
-        this.pendingWindows = null
-        this.applyWindows(pending)
+const centerWindows = computed<MacWindow[]>(() => {
+  const centers = visibleWindows.value.filter(
+    (w) =>
+      !options.value.headers.includes(w.kCGWindowOwnerName) &&
+      !options.value.footers.includes(w.kCGWindowOwnerName)
+  )
+  return groupWindowsByApp(centers, {
+    sortByPosition: options.value.windowSortByPositionInApp ?? false,
+    layout: options.value.layout ?? 'bottom',
+    // ドラッグ中はセッション内の一時順序が最優先（確定は pointerup 時の updateOptions）
+    appOrder: dragOrder.value ?? options.value.appOrder ?? [],
+    appearanceOrder: appearanceOrder.value
+  })
+})
+
+// 状態機械に DOM 依存（hitTest）と副作用（ゴースト・永続化）を注入する
+// （script setup 直下の const は reactive 化されないため markRaw は実質 no-op だが、
+// 将来 data 構造へ移す変更に備えた明示として残置）
+const session = markRaw(
+  createDragSession({
+    getBaseOrder: () => buildAppOrder(options.value.appOrder ?? [], centerWindows.value),
+    hitTest: (x, y) => {
+      const button = document.elementFromPoint(x, y)?.closest<HTMLElement>('button[data-app]')
+      const app = button?.dataset.app
+      if (!button || !app) return null
+      const rect = button.getBoundingClientRect()
+      return {
+        app,
+        rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
       }
     },
-    dumpTaskbarInfo(): void {
-      Electron.send('dumpTaskbarInfo')
+    isHorizontal: () => (options.value.layout ?? 'bottom') === 'bottom',
+    onDragStart: (app, rect) => {
+      didDrag.value = true
+      dragApp.value = app
+      ghostWindow.value = pressedWindow.value
+      ghostStyle.value = {
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.right - rect.left}px`,
+        height: `${rect.bottom - rect.top}px`
+      }
     },
-    grant(): void {
-      Electron.send('grantPermission')
-      this.granted = true
+    onGhostMove: (dx, dy) => {
+      ghostTransform.value = `translate(${dx}px, ${dy}px)`
     },
-    openMenu(): void {
-      Electron.send('contextLogo')
+    onOrderChange: (order) => {
+      dragOrder.value = order
     },
-    openOption(): void {
-      Electron.send('openOption')
-    },
-    async acticveWindow(win: MacWindow) {
-      Electron.send('activeWindow', win)
-    },
-    restartHelper(delay?: number): void {
-      Electron.send('restartHelper', delay)
-    },
+    // 楽観反映＋setOptions 送信は useOptions.updateOptions が行う（IPC 往復待ちの表示揺れ防止）
+    onCommit: (order) => updateOptions({ appOrder: order }),
+    onEnd: () => cleanupDrag()
+  })
+)
 
-    // アイコン更新処理
-    updateWindowIcons(icons: Record<string, string>): void {
-      if (!this.windows) return
+function applyWindows(value: MacWindow[]): void {
+  trackAppearance(value)
+  if (windows.value == null) {
+    windows.value = value
+    return
+  }
+  windows.value.splice(0, windows.value.length, ...value)
+}
 
-      console.log(`Updating ${Object.keys(icons).length} icons`)
-
-      // 既存のウィンドウリストのアイコンを更新
-      this.windows.forEach((window) => {
-        const owner = (window.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
-
-        if (icons[owner] && !window.appIcon) {
-          window.appIcon = `data:image/png;base64,${icons[owner]}`
-          console.log(`Updated icon for ${window.kCGWindowOwnerName}`)
-        }
-      })
-
-      // リアクティブ更新を強制
-      this.$forceUpdate()
+// 新しく出現したアプリを出現順リストの末尾に追加する
+// 同時に複数現れた場合は最小 kCGWindowNumber 昇順で追加し、
+// どのディスプレイのタスクバーでも同じ順序に収束させる
+function trackAppearance(newWindows: MacWindow[]): void {
+  const minNumbers = new Map<string, number>()
+  for (const win of newWindows) {
+    const app = win.kCGWindowOwnerName
+    const current = minNumbers.get(app)
+    if (current === undefined || win.kCGWindowNumber < current) {
+      minNumbers.set(app, win.kCGWindowNumber)
     }
   }
+  const newApps = [...minNumbers.keys()]
+    .filter((app) => !appearanceOrder.value.includes(app))
+    .sort((a, b) => (minNumbers.get(a) as number) - (minNumbers.get(b) as number))
+  appearanceOrder.value.push(...newApps)
+}
+
+// --- Pointer Events ドラッグ（参考: fruitriin/misskey MkDraggable のエッセンス移植） ---
+function onTaskClick(win: MacWindow): void {
+  // ドラッグ後に合成される click を1回だけ無視する
+  if (didDrag.value) return
+  acticveWindow(win)
+}
+
+function onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
+  const el = event.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  const pressedRect = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+  const accepted = session.pointerDown(
+    {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      buttons: event.buttons,
+      button: event.button
+    },
+    win.kCGWindowOwnerName,
+    pressedRect
+  )
+  if (!accepted) return
+  pressedWindow.value = win
+  // TransitionGroup の DOM 並び替えで Pointer Capture は暗黙解放されうるため、
+  // capture は使わず document でリッスンする
+  document.addEventListener('pointermove', onPointerMove)
+  document.addEventListener('pointerup', onPointerUp)
+  document.addEventListener('pointercancel', onPointerCancel)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  document.addEventListener('keydown', onDragKeyDown)
+  window.addEventListener('blur', onWindowBlur)
+}
+
+function onPointerMove(event: PointerEvent): void {
+  session.pointerMove({
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    buttons: event.buttons
+  })
+}
+
+function onPointerUp(event: PointerEvent): void {
+  session.pointerUp({
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    buttons: event.buttons
+  })
+}
+
+function onPointerCancel(event: PointerEvent): void {
+  // 確定せず破棄 → centerWindows が元の並びへ戻り、FLIP が戻りをアニメーション化。
+  // 別ポインタ由来の pointercancel で正当なセッションを打ち切らないよう id を渡す
+  session.cancel(event.pointerId)
+}
+
+function onVisibilityChange(): void {
+  if (document.visibilityState === 'hidden') session.cancel()
+}
+
+// Esc キーでドラッグをキャンセルする（確定せず元の並びへ戻る）
+function onDragKeyDown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') session.cancel()
+}
+
+// 他アプリへのフォーカス移動中に pointerup を取りこぼした場合の保険
+function onWindowBlur(): void {
+  session.cancel()
+}
+
+// 状態機械の onEnd から呼ばれる後片付け（確定・キャンセル共通）
+function cleanupDrag(): void {
+  document.removeEventListener('pointermove', onPointerMove)
+  document.removeEventListener('pointerup', onPointerUp)
+  document.removeEventListener('pointercancel', onPointerCancel)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  document.removeEventListener('keydown', onDragKeyDown)
+  window.removeEventListener('blur', onWindowBlur)
+  dragApp.value = null
+  dragOrder.value = null
+  pressedWindow.value = null
+  ghostWindow.value = null
+  ghostStyle.value = {}
+  ghostTransform.value = ''
+  // click はこの pointerup の直後に同期発火するため、次のマクロタスクで解除する
+  window.setTimeout(() => {
+    didDrag.value = false
+  }, 0)
+  // ドラッグ中に保留した process 更新を反映する
+  if (pendingWindows.value) {
+    const pending = pendingWindows.value
+    pendingWindows.value = null
+    applyWindows(pending)
+  }
+}
+
+function test(ev: MacWindow): void {
+  ipcSend('contextTask', ev)
+}
+
+function dumpTaskbarInfo(): void {
+  ipcSend('dumpTaskbarInfo')
+}
+
+function openMenu(): void {
+  ipcSend('contextLogo')
+}
+
+function acticveWindow(win: MacWindow): void {
+  ipcSend('activeWindow', win)
+}
+
+function restartHelper(delay?: number): void {
+  ipcSend('restartHelper', delay)
+}
+
+// アイコン更新処理。ref の深いリアクティビティにより代入だけで再描画される
+// （旧実装の $forceUpdate は不要になったため排除 — Phase 1 完了条件）
+function updateWindowIcons(icons: Record<string, string>): void {
+  if (!windows.value) return
+
+  windows.value.forEach((win) => {
+    const owner = (win.kCGWindowOwnerName || 'unknown').replace(/\//g, '_').replace(/ /g, '')
+
+    if (icons[owner] && !win.appIcon) {
+      win.appIcon = `data:image/png;base64,${icons[owner]}`
+    }
+  })
+}
+
+let unlistenProcess: (() => void) | undefined
+let unlistenIcons: (() => void) | undefined
+let unlistenDisplayInfo: (() => void) | undefined
+
+onMounted(() => {
+  // process はドラッグ中の保留ガードが必要なため useWindows（シングルトン）ではなく
+  // 自前リスナーを維持する（統合は保留ガードの composable 化とセットで将来検討）
+  unlistenProcess = ipcListen<MacWindow[]>('process', (value) => {
+    // ポインタ押下中（閾値未満のプレドラッグ含む）は並びの土台が動くと
+    // 入れ替え判定や pressedWindow が崩れるため、反映を保留する
+    if (session.isActive) {
+      pendingWindows.value = value
+      return
+    }
+    applyWindows(value)
+  })
+
+  // アイコン更新イベントをリスン
+  unlistenIcons = ipcListen<Record<string, string>>('iconUpdate', (icons) => {
+    updateWindowIcons(icons)
+  })
+
+  unlistenDisplayInfo = ipcListen<{
+    workArea: { x: number; y: number; width: number; height: number }
+  }>('displayInfo', (value) => {
+    displayInfo.value = value
+  })
+
+  ipcSend('windowReady')
+})
+
+onBeforeUnmount(() => {
+  // ドラッグ途中でアンマウントされた場合の document リスナーのリーク防止
+  session.cancel()
+  unlistenProcess?.()
+  unlistenIcons?.()
+  unlistenDisplayInfo?.()
 })
 </script>
 
