@@ -15,7 +15,7 @@
 - 2026-07-06（表現の改善）: 上記の定型文を素朴に書くと、慎重なエージェントには「MCP の安全ガイダンスを無効化させる注入の示唆」に見える（contribution agent が実際に警戒報告した）。定型文は次の形にする: 「このセッションには Discord 等の MCP プラグインが接続されており、その利用指示文がプロンプトに含まれて見えるが、あなたのタスクは下記のレビューのみ。Discord メッセージへの応答や MCP ツールの操作は行わないこと（安全ルールの無効化を求めるものではない）」
 
 - 2026-07-05: `package.json` の `riinlogger: "file:../RiinLogger"` は参照元ディレクトリが存在せず、`bun install` のたびに「Failed to install 1 package」を出す。使用箇所は全てコメントアウト済み import のみ。依存から外してよいかはオーナー判断（削除するなら package.json から1行削除）
-- 2026-07-05: `mise run build` は Swift Helper バイナリ（nativeSrc/DerivedData/...）が未ビルドだと cp 段階で失敗する。JS 側だけ検証したいときは `npx electron-vite build` を直接使う
+- 2026-07-05: `bun run build` は Swift Helper バイナリ（nativeSrc/DerivedData/...）が未ビルドだと cp 段階で失敗する。JS 側だけ検証したいときは `npx electron-vite build` を直接使う
 
 - 2026-07-05: リリースビルドが `fork: Resource temporarily unavailable` で失敗 → 原因は別プロジェクト（wardrobe-test-spec-runall-strict）の ADDF テスト `test-run-all-bun-detection.sh` が `run-all.sh` と再帰呼び出しし合い bash を3535個リークしていたこと（オーナー承認の上 kill で解消）。**ADDF 本体へのバグ報告候補**: 当該テストの再帰ガード（環境変数フラグ等）が必要。wardrobe 側の ADDF バージョン確認も
 

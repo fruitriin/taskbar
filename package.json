@@ -6,7 +6,21 @@
   "author": "FruitRiin",
   "homepage": "https://www.electronjs.org",
   "scripts": {
-    "moved": "mise run"
+    "dev": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper & npx electron-vite dev",
+    "build": "cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && npx electron-vite build",
+    "swiftbuild": "xcodebuild -project nativeSrc/taskbar.helper.xcodeproj -scheme taskbar.helper -configuration Release -derivedDataPath nativeSrc/DerivedData/taskbar.helper build && echo '[COPY]binary copy to resouces' && cp nativeSrc/DerivedData/taskbar.helper/Build/Products/Release/taskbar.helper resources/TaskbarHelper && echo '[COPY] done.'",
+    "build:mac": "bun run build && npx electron-builder --mac --universal",
+    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a dist/mac-universal/taskbar.fm.app /Applications/taskbar.fm.app",
+    "helper": "open nativeSrc/taskbar.helper.xcodeproj/project.xcworkspace",
+    "format": "bunx oxfmt src electron.vite.config.ts uno.config.ts",
+    "lint": "bunx oxlint -c .oxlintrc.json .",
+    "typecheck": "bun run typecheck:node && bun run typecheck:web",
+    "typecheck:node": "npx tsc --noEmit -p src/main/tsconfig.node.json --composite false",
+    "typecheck:web": "npx vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false",
+    "test": "cd src/main && bun test tests/ --preload ./tests/setup.ts",
+    "test:renderer": "cd src/renderer && bun test tests/ --preload ./tests/setup.ts --env happy-dom",
+    "test:all": "bun run test && bun run test:renderer",
+    "test:swift": "cd nativeSrc && swift test"
   },
   "prettierIgnore": [
     "out",

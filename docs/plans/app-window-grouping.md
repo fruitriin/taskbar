@@ -55,7 +55,7 @@
 2. **center エリアへの適用**: index.vue の `centerWindows` に純関数を接続。ブラウザモック（`__mockHelpers.updateWindows`）で並びの安定性を確認
 3. **設定 UI**: option.vue に「アプリ内の並び順（起動順/座標順）」トグルを追加
 4. **D&D 並び替え**: タスクバー上のグループ D&D → `appOrder` 永続化。Playwright MCP で操作テスト
-5. **リリース確認**: `mise run test:all` / `typecheck` / 実機で Helper 込み動作確認
+5. **リリース確認**: `bun run test:all` / `typecheck` / 実機で Helper 込み動作確認
 
 ステップ 1〜3 だけでも「並びが揺れない・アプリでまとまる」という主要価値が出るため、D&D（ステップ4）は独立してリリース可能。
 

@@ -273,7 +273,7 @@ export {}
 
 ## 完了条件
 
-- [ ] `mise run dev` で Electron アプリが起動し、全画面（タスクバー、設定、メニュー、ウィンドウリスト）が正常動作
+- [ ] `bun run dev` で Electron アプリが起動し、全画面（タスクバー、設定、メニュー、ウィンドウリスト）が正常動作
 - [ ] vue-router, unplugin-vue-router, pinia, bulma, less, dart-sass が package.json から消えている
 - [ ] 全コンポーネントが `<script setup lang="ts">` 形式
 - [ ] `$forceUpdate()` がコードベースに存在しない

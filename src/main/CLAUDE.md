@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # メインプロセスの全テストを実行
-mise run test
+bun run test
 
 # 特定のテストファイルを実行
 cd src/main && bun test tests/funcs/store.test.ts --preload ./tests/setup.ts
@@ -27,7 +27,7 @@ bun test src/main/tests/funcs/helper.test.ts --preload src/main/tests/setup.ts
 
 ```bash
 # メインプロセスの型チェック
-mise run typecheck:node
+bun run typecheck:node
 ```
 
 ## Architecture
@@ -179,7 +179,7 @@ tests/
 
 ```bash
 # すべてのテストを実行（リポジトリルートから）
-mise run test
+bun run test
 
 # 特定のテストファイルを実行
 cd src/main

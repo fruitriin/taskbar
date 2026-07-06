@@ -1,5 +1,8 @@
 # Taskbar.fm リアーキテクチャ計画書
 
+> 注記（2026-07-07）: Phase 2 の 2-D で mise は廃止済み。本文中の「現行 = mise run」系の記述は
+> 計画作成時（2026-03-18）のスナップショットであり、現行は package.json scripts（bun run）。
+
 ## Vue + UnoCSS + Vite+ (vp) + Tauri v2 への移行
 
 **作成日**: 2026-03-18

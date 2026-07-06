@@ -31,10 +31,10 @@ docs/
 
 ```bash
 # Swift helperをビルド
-mise run swiftbuild
+bun run swiftbuild
 
 # または、Xcodeで開く
-mise run helper
+bun run helper
 ```
 
 ### 2. デバッグ出力のキャプチャ
@@ -58,7 +58,7 @@ mise run helper
 ./resources/TaskbarHelper debug
 
 # または、開発環境から
-mise run swiftbuild && ./resources/TaskbarHelper debug
+bun run swiftbuild && ./resources/TaskbarHelper debug
 ```
 
 ### 3. フィクスチャーの更新
@@ -94,7 +94,7 @@ export const realWorldSample: MacWindow[] = [
 
 ```bash
 # 全テストを実行
-mise run test
+bun run test
 
 # フィルタリング関連のテストのみ実行
 npx vitest tests/funcs/helper-filtering.test.ts
@@ -239,7 +239,7 @@ it('大量のウィンドウを効率的に処理する', () => {
 
 ```bash
 # Swiftヘルパーをビルド
-mise run swiftbuild
+bun run swiftbuild
 
 # パスを確認
 ls -la resources/TaskbarHelper
@@ -262,7 +262,7 @@ chmod +x resources/TaskbarHelper
 ./resources/TaskbarHelper debug | jq '.'
 
 # エラーがある場合は、Swiftコードを再ビルド
-mise run swiftbuild
+bun run swiftbuild
 ```
 
 ## 継続的インテグレーション
@@ -271,17 +271,17 @@ GitHub Actionsでのテスト実行例：
 
 ```yaml
 - name: Build Swift Helper
-  run: mise run swiftbuild
+  run: bun run swiftbuild
 
 - name: Run Tests with Real Data
   run: |
     if [ -f "resources/TaskbarHelper" ]; then
       ./resources/TaskbarHelper debug > debug-output.json
       # フィクスチャーを更新してテスト実行
-      mise run test
+      bun run test
     else
       echo "TaskbarHelper not available in CI, skipping real data tests"
-      mise run test --exclude=*real-data*
+      bun run test --exclude=*real-data*
     fi
 ```
 

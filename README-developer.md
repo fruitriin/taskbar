@@ -2,7 +2,7 @@
 
 ### 開発ツール
 
-- **タスクランナー**: mise - すべての開発・ビルドタスクの実行に使用
+- **タスクランナー**: package.json scripts（`bun run <task>`）
 - **パッケージマネージャ**: bun - 依存関係管理とスクリプト実行に使用
 
 ### ディレクトリ構成
@@ -21,18 +21,18 @@
 ### 開発方法
 
 ```bash
-mise run helper    # TaskbarHelperをビルドする
-mise run dev       # 開発環境が立ち上がる
-mise run build:mac # mac用のバイナリができる
-mise run install-app # /Applications ディレクトリに放り込む
+bun run helper     # Xcode の Helper プロジェクトを開く
+bun run dev        # 開発環境が立ち上がる
+bun run build:mac  # mac用のバイナリができる
+bun run install-app  # /Applications ディレクトリに放り込む
 ```
 
 build:win と build:linuxはあるけどTaskbarHelper相当のものがないので実質ビルドできない
 
 ### 利用可能なスクリプト
 
-- `format`: prettier --write .
-- `lint`: eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix
+- `format`: oxfmt（bun run format）
+- `lint`: oxlint（bun run lint）
 - `typecheck:node`: tsc --noEmit -p src/main/tsconfig.node.json --composite false
 - `typecheck:web`: vue-tsc --noEmit -p src/renderer/tsconfig.web.json --composite false
 - `typecheck`: npm run typecheck:node && npm run typecheck:web
