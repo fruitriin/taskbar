@@ -82,7 +82,7 @@
 #### サブタスクチェックリスト（3.1〜3.5 はサブタスク単位で checkpoint コミット）
 
 - [x] 3.1 Tauri 初期化 **完了（2026-07-10）**: scaffold・tauri 2.11.3・tauri.conf.json（taskbar ウィンドウ /?view=taskbar）・プレーン vite 併存・cargo check 通過
-- [ ] 3.2 Rust 基盤: window_manager（CGWindowList）・filter・commands（**20チャンネル** — 鮮度更新の一覧参照）・window_observer（NSWorkspace 通知＋500ms デバウンス）
+- [x] 3.2 Rust 基盤 **完了（2026-07-10）**: window_manager・filter・observer・commands 22本・store.rs。Rust テスト23件。AX/権限/アイコンは 3.3 スタブ
 - [ ] 3.3 Rust 機能: icon_manager（FS キャッシュ）・window_actions（AXUIElement）・permission_manager・store・マルチディスプレイ
 - [ ] 3.4 フロント接続: ipc.ts 差し替え（**ipcSend→invoke マッピング設計**）・useOptions を tauri-plugin-store へ・**electron-store からのユーザーデータ移行**・tauri-mocks.ts・マルチウィンドウ結合
 - [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
@@ -112,6 +112,12 @@
 **今の見立て**: 3.2 残は commands 一括（20チャンネル）と、observer→store 連携（フィルタ設定の実読み込み、現状空スライス TODO）。
 **次の自分へ**: 次サイクルは commands.rs 一括実装を委譲: 20チャンネルの対応表は計画の鮮度更新節。設計指針: (1) setOptions/getLabeledFilters 系は tauri-plugin-store 直結（store.rs ヘルパー経由）(2) activeWindow/closeWindow は window_actions.rs（AXUIElement — 3.3 の前倒し）が必要なので、このサイクルでは**スタブ（todo!() でなく Err("not implemented")）にして配線だけ**先に通すのも可 (3) windowReady は observer の refresh_and_emit を即時1回呼ぶ＋displayInfo/updateOptions/iconUpdate の初期 emit (4) restart/exit は tauri の app handle 経由。
 **気になっていること**: フィルタ設定の JSON 形（electron-store の labeledFilters）と tauri-plugin-store のキー設計。3.4 のデータ移行と整合させること。
+
+##### 2026-07-10 — 3.2 完了
+**やったこと**: commands 22本＋store.rs（委譲第3弾）。DIP 変換・store 共有インスタンス等の重要判断はコミットメッセージとコード内に記録。
+**今の見立て**: 実機確認ポイント1は計画では「3.2 後」だが、フロントがまだ electron モックで動くため実質の疎通確認は 3.4 後が妥当 → **確認ポイントを 3.4 後に統合**（計画から の逸脱、ここに記録）。
+**次の自分へ**: 次は 3.3 を2分割で委譲: (a) window_actions.rs（AXUIElement で activate/close — Swift の AppleScript 置換）+ permission_manager.rs（AXIsProcessTrusted / SCShareableContent 100ms timeout）でスタブ解消 (b) icon_manager.rs（NSRunningApplication.icon → png base64、FS キャッシュ ~/Library/Application Support/taskbar.fm/icons/、段階ロード）+ マルチディスプレイ（displayInfo の複数モニタ＋ウィンドウ動的生成）。
+**気になっていること**: AX 操作は実機でしか本当の検証ができない（アクセシビリティ権限必要）。ユニットは構造のみ、実挙動は 3.4 後の実機で。
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
