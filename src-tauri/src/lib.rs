@@ -1,5 +1,7 @@
 pub mod commands;
+pub mod filter;
 pub mod window_manager;
+pub mod window_observer;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +15,8 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            // NSWorkspace 通知の監視を開始（setup はメインスレッドで実行される）
+            window_observer::start_observation(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
