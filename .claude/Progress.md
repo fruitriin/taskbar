@@ -101,5 +101,11 @@
 **次の自分へ**: 3.2 は (1) `cargo add objc2 objc2-core-graphics objc2-app-kit objc2-accessibility` を機能フラグ付きで（計画のフラグ名は3月時点 — cargo/docs.rs で現行名を確認）(2) 移植順は window_manager → commands（最初は window_ready と get_windows だけの縦切り）→ filter → observer。Swift 原本は nativeSrc/taskbar.helper/main.swift（行範囲は計画に記載）(3) Rust ゲート: cargo check + clippy + test を Stage 1 に追加 (4) 縦切りが通ったら `bun run tauri:dev` で実機スモーク（オーナー声かけポイント1）。
 **気になっていること**: CGWindowList 系 API の objc2 バインディングの成熟度。ダメなら core-graphics crate か直接 FFI にフォールバック。
 
+##### 2026-07-10 — 3.2 縦切り第1弾完了（委譲パターン確立）
+**やったこと**: window_manager.rs（CGWindowList 移植・serde キー名一致・UE 対策）＋ get_windows コマンドを general-purpose エージェント委譲で実装。全ゲート＋実機疎通（WindowServer 取得 0.04s）。objc2-core-foundation で CF パース、Value→MacWindow 変換を純関数化。
+**今の見立て**: 委譲＋ゲート反復のパターンが機能する。3.2 残: filter.rs / window_observer.rs（NSWorkspace 通知＋500ms デバウンス・windows-updated emit）/ 残りコマンド。
+**次の自分へ**: 次サイクルは filter.rs（Swift main.swift:123-459。labeledFilters の構造は src/renderer/src/types.ts の LabeledFilters と一致させる）と window_observer.rs を同じ委譲パターンで。observer は AppHandle 経由の emit が必要なので tauri::AppHandle を持つ設計に。その次で commands 残り（20チャンネル一覧は計画の鮮度更新節）を一括。
+**気になっていること**: NSWorkspace 通知の objc2-app-kit バインディング（ブロックベース observer）。
+
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
