@@ -107,5 +107,11 @@
 **次の自分へ**: 次サイクルは filter.rs（Swift main.swift:123-459。labeledFilters の構造は src/renderer/src/types.ts の LabeledFilters と一致させる）と window_observer.rs を同じ委譲パターンで。observer は AppHandle 経由の emit が必要なので tauri::AppHandle を持つ設計に。その次で commands 残り（20チャンネル一覧は計画の鮮度更新節）を一括。
 **気になっていること**: NSWorkspace 通知の objc2-app-kit バインディング（ブロックベース observer）。
 
+##### 2026-07-10 — 3.2 第2弾完了（filter + observer）
+**やったこと**: filter.rs（判定表コメント＋テスト11件、原本の死んだ X/Y/W/H 条件を発見→Feedback 記録）と window_observer.rs（block observer → trailing デバウンス500ms → 'process' emit、仮想時計テスト）。Rust テスト計17件。
+**今の見立て**: 3.2 残は commands 一括（20チャンネル）と、observer→store 連携（フィルタ設定の実読み込み、現状空スライス TODO）。
+**次の自分へ**: 次サイクルは commands.rs 一括実装を委譲: 20チャンネルの対応表は計画の鮮度更新節。設計指針: (1) setOptions/getLabeledFilters 系は tauri-plugin-store 直結（store.rs ヘルパー経由）(2) activeWindow/closeWindow は window_actions.rs（AXUIElement — 3.3 の前倒し）が必要なので、このサイクルでは**スタブ（todo!() でなく Err("not implemented")）にして配線だけ**先に通すのも可 (3) windowReady は observer の refresh_and_emit を即時1回呼ぶ＋displayInfo/updateOptions/iconUpdate の初期 emit (4) restart/exit は tauri の app handle 経由。
+**気になっていること**: フィルタ設定の JSON 形（electron-store の labeledFilters）と tauri-plugin-store のキー設計。3.4 のデータ移行と整合させること。
+
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
