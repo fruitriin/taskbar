@@ -134,5 +134,15 @@
 **次の自分へ**: オーナーの実機確認待ち: `bun run tauri:dev`。確認観点: (1) タスクバーが各ディスプレイに出るか (2) ウィンドウリスト表示（本物のデータ！）(3) クリックでアクティブ化（AX 権限プロンプト→許可後）(4) 設定画面（ロゴ→設定）とフィルター (5) D&D (6) 旧設定（appOrder 等）が移行されているか。問題が出たらログは tauri_plugin_log（stdout）。cargo test -- --ignored の実機4本も。OK が出たら 3.5（統合・Electron/Swift 削除・署名・ドキュメント）。ElectronAPI 型依存（utils.ts declare global）と Electron.listen 残骸の掃除も 3.5 で。
 **気になっていること**: 初回 tauri dev は Rust の release ビルドで数分かかる。menu ウィンドウのカーソル位置配置は TODO(3.4) のまま（固定位置）— 実機確認で気になれば調整。
 
+##### 2026-07-11 — 実機フィードバック第2ラウンド対応（メニュー座標のタスクバー基準化＋設定初期値バグ）
+
+**やったこと**: (1) context_logo に `window: tauri::WebviewWindow`（呼び出し元タスクバー）を追加し、outer_position/outer_size（物理→論理変換）＋ store の layout からメニュー位置を計算する menu_position_from_taskbar を新設（Electron 原本 optionWindows.ts:124-142 の移植: bottom=タスクバー左上にメニュー左下 / left=右上に左上 / right=左上に右上）。カーソル位置はフォールバックに降格。(2) main.ts のモック注入条件に `!('__TAURI_INTERNALS__' in window)` を追加 — tauri:dev も vite DEV なのでモックの window.store（layout: bottom）が実設定を隠していたのが「設定画面の初期値が保存値を反映しない」の真因。全ゲート通過（cargo check/clippy/test 37 pass、oxlint/typecheck 0、renderer 63 pass、vite build、tauri release build）。
+
+**今の見立て**: 第2ラウンドの指摘2件（メニュー座標・設定初期値）はどちらも根治。権限表示とアイコンドラッグはオーナー確認 OK 済み。
+
+**次の自分へ**: オーナーの再実機確認待ち: `bun run tauri:dev` で (1) 各 layout（bottom/left/right）でスタートメニューがタスクバーに接して重ならず出るか (2) 表示位置を right にして設定画面を閉じ→開き直して right のままか。OK が出たら 3.5 へ。
+
+**気になっていること**: layout 変更直後はタスクバーウィンドウ自体の再配置が走るため、メニュー位置が一瞬古い bounds を参照する可能性（実害があれば実機で判明する）。
+
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）

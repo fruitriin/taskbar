@@ -344,8 +344,11 @@ pub fn open_full_window_list(app: AppHandle) -> Result<(), String> {
 /// TODO(3.4 マルチウィンドウ結合): タスクバー位置・layout に応じた配置
 /// （optionWindows.ts:123-160）と blur 時の自動クローズ。暫定で固定位置に生成する
 #[tauri::command]
-pub fn context_logo(app: AppHandle) -> Result<(), String> {
-    let position = menu_position(&app)?;
+pub fn context_logo(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+    // 呼び出し元タスクバーの bounds と layout からメニュー位置を決める
+    // （Electron 原本 events.ts:187-200 → optionWindows.ts:124-142 の移植）。
+    // 取得に失敗した場合は原本同様カーソル位置にフォールバック
+    let position = menu_position_from_taskbar(&app, &window).or_else(|_| menu_position(&app))?;
 
     if let Some(window) = app.get_webview_window(MENU_LABEL) {
         window
@@ -376,6 +379,34 @@ pub fn context_logo(app: AppHandle) -> Result<(), String> {
         }
     });
     Ok(())
+}
+
+/// タスクバーの位置・layout からメニュー位置（論理座標）を決める。
+/// bottom: タスクバーの左上にメニューの左下が接する / left: 右上に左上 / right: 左上に右上
+/// （Electron 原本 optionWindows.ts:124-142。実機指摘: タスクバー幅・高さを考慮した配置）
+fn menu_position_from_taskbar(
+    app: &AppHandle,
+    taskbar: &tauri::WebviewWindow,
+) -> Result<(f64, f64), String> {
+    let scale = taskbar.scale_factor().map_err(|e| e.to_string())?;
+    let pos = taskbar
+        .outer_position()
+        .map_err(|e| e.to_string())?
+        .to_logical::<f64>(scale);
+    let size = taskbar
+        .outer_size()
+        .map_err(|e| e.to_string())?
+        .to_logical::<f64>(scale);
+    let layout = store::get_options(app)
+        .map(|o| o.layout)
+        .unwrap_or(store::Layout::Bottom);
+    let (x, y) = match layout {
+        store::Layout::Left => (pos.x + size.width, pos.y),
+        store::Layout::Right => (pos.x - MENU_WIDTH, pos.y),
+        // Bottom: メニューの左下がタスクバーの左上に接する
+        store::Layout::Bottom => (pos.x, pos.y - MENU_HEIGHT),
+    };
+    Ok((x, y))
 }
 
 /// メニューの表示位置（論理座標）をカーソル位置から決める。
