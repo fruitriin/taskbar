@@ -16,6 +16,7 @@ pub fn run() {
             commands::get_windows,
             commands::window_ready,
             commands::set_options,
+            commands::get_options,
             commands::get_labeled_filters,
             commands::set_labeled_filters,
             commands::add_filter,
@@ -50,6 +51,9 @@ pub fn run() {
             display_manager::sync_taskbar_windows(app.handle())?;
             // スクリーン構成変更（モニタ増減・解像度変更）の監視を開始
             display_manager::start_screen_observation(app.handle().clone());
+            // Electron 版からの設定ワンショット移行（冪等。Phase 3.4）
+            store::migrate_from_electron(app.handle());
+
             // NSWorkspace 通知の監視を開始（setup はメインスレッドで実行される）
             window_observer::start_observation(app.handle().clone());
             Ok(())

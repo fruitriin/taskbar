@@ -84,7 +84,7 @@
 - [x] 3.1 Tauri 初期化 **完了（2026-07-10）**: scaffold・tauri 2.11.3・tauri.conf.json（taskbar ウィンドウ /?view=taskbar）・プレーン vite 併存・cargo check 通過
 - [x] 3.2 Rust 基盤 **完了（2026-07-10）**: window_manager・filter・observer・commands 22本・store.rs。Rust テスト23件。AX/権限/アイコンは 3.3 スタブ
 - [x] 3.3 Rust 機能 **完了（2026-07-10）**: window_actions・permission_manager・icon_manager・display_manager。Rust テスト35件（実機 ignored 4）
-- [ ] 3.4 フロント接続: ipc.ts 差し替え（**ipcSend→invoke マッピング設計**）・useOptions を tauri-plugin-store へ・**electron-store からのユーザーデータ移行**・tauri-mocks.ts・マルチウィンドウ結合
+- [ ] 3.4 フロント接続（進行中）: ipc.ts をランタイム切替（Tauri→Electron/モック）に。ARG_KEYS で位置引数→名前付き引数変換。useOptions は ipc.ts 経由で無変更の見込み。モックは Electron 経路が残るため tauri-mocks 不要の見込み。データ移行は Rust 側ワンショット
 - [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
 - [ ] 完了条件: rearch-phase3.md 末尾のリスト
 

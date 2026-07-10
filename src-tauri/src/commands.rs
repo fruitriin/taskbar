@@ -112,6 +112,13 @@ pub fn set_options(app: AppHandle, options: Options) -> Result<(), String> {
 /// フィルター設定の取得。
 ///
 /// Electron 原本: events.ts:138-140（getLabeledFilters）
+/// 設定の取得（Tauri 版では preload の window.store が無いため、
+/// option ビューが初期値をこれで取得する）
+#[tauri::command]
+pub fn get_options(app: AppHandle) -> Result<Options, String> {
+    store::get_options(&app)
+}
+
 #[tauri::command]
 pub fn get_labeled_filters(app: AppHandle) -> Result<Vec<LabeledFilters>, String> {
     store::get_labeled_filters(&app)

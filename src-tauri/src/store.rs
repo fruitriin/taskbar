@@ -332,3 +332,89 @@ mod tests {
         assert_eq!(twice[1].filters, vec![filter]);
     }
 }
+
+// --- Electron 版からのワンショット移行（Phase 3.4） ---
+// 旧 electron-store の設定ファイル（~/Library/Application Support/taskbar.fm/config.json）から
+// options / labeledFilters を取り込む。Tauri ストアに options が既にあれば何もしない（冪等）。
+
+/// 旧 electron-store の JSON から移行対象を抽出する純関数
+pub fn extract_electron_config(
+    raw: &serde_json::Value,
+) -> (Option<serde_json::Value>, Option<serde_json::Value>) {
+    let options = raw.get("options").cloned();
+    let filters = raw.get("labeledFilters").cloned();
+    (options, filters)
+}
+
+/// 旧 Electron 版の設定ファイルパス（productName "taskbar.fm" の userData 直下）
+fn electron_config_path() -> Option<std::path::PathBuf> {
+    dirs_home().map(|h| h.join("Library/Application Support/taskbar.fm/config.json"))
+}
+
+fn dirs_home() -> Option<std::path::PathBuf> {
+    std::env::var_os("HOME").map(std::path::PathBuf::from)
+}
+
+/// 初回起動時の移行。Tauri ストアが未初期化（options キーなし）かつ旧ファイルが
+/// 存在する場合のみ取り込む。失敗は起動を止めずログに留める
+pub fn migrate_from_electron<R: Runtime>(app: &AppHandle<R>) {
+    let store = match open(app) {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("移行スキップ（store open 失敗）: {e}");
+            return;
+        }
+    };
+    if store.get("options").is_some() {
+        return; // 既に初期化済み
+    }
+    let Some(path) = electron_config_path() else {
+        return;
+    };
+    let Ok(raw_text) = std::fs::read_to_string(&path) else {
+        return; // 旧ファイルなし = 新規ユーザー
+    };
+    let Ok(raw) = serde_json::from_str::<serde_json::Value>(&raw_text) else {
+        log::warn!(
+            "移行スキップ（旧 config.json のパース失敗）: {}",
+            path.display()
+        );
+        return;
+    };
+    let (options, filters) = extract_electron_config(&raw);
+    if let Some(o) = options {
+        store.set("options", o);
+    }
+    if let Some(f) = filters {
+        store.set("labeledFilters", f);
+    }
+    if let Err(e) = store.save() {
+        log::warn!("移行結果の保存に失敗: {e}");
+        return;
+    }
+    log::info!("Electron 版の設定を移行しました: {}", path.display());
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn 旧設定から_options_と_labeled_filters_を抽出する() {
+        let raw = json!({
+            "options": { "layout": "left", "appOrder": ["A"] },
+            "labeledFilters": [{ "label": "x", "filters": [] }],
+            "filters_backup": []
+        });
+        let (o, f) = extract_electron_config(&raw);
+        assert_eq!(o.unwrap()["layout"], "left");
+        assert_eq!(f.unwrap()[0]["label"], "x");
+    }
+
+    #[test]
+    fn キーが無ければ_none_を返す() {
+        let (o, f) = extract_electron_config(&json!({}));
+        assert!(o.is_none() && f.is_none());
+    }
+}
