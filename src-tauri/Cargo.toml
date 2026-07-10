@@ -25,3 +25,5 @@ tauri = { version = "2.11.3", features = ["macos-private-api"] }
 tauri-plugin-log = "2"
 tauri-plugin-store = "2.4.3"
 tokio = { version = "1.52.3", features = ["full"] }
+objc2-core-graphics = "0.3.2"
+objc2-core-foundation = "0.3"
