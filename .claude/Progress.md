@@ -83,7 +83,7 @@
 
 - [x] 3.1 Tauri 初期化 **完了（2026-07-10）**: scaffold・tauri 2.11.3・tauri.conf.json（taskbar ウィンドウ /?view=taskbar）・プレーン vite 併存・cargo check 通過
 - [x] 3.2 Rust 基盤 **完了（2026-07-10）**: window_manager・filter・observer・commands 22本・store.rs。Rust テスト23件。AX/権限/アイコンは 3.3 スタブ
-- [ ] 3.3 Rust 機能: icon_manager（FS キャッシュ）・window_actions（AXUIElement）・permission_manager・store・マルチディスプレイ
+- [x] 3.3 Rust 機能 **完了（2026-07-10）**: window_actions・permission_manager・icon_manager・display_manager。Rust テスト35件（実機 ignored 4）
 - [ ] 3.4 フロント接続: ipc.ts 差し替え（**ipcSend→invoke マッピング設計**）・useOptions を tauri-plugin-store へ・**electron-store からのユーザーデータ移行**・tauri-mocks.ts・マルチウィンドウ結合
 - [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
 - [ ] 完了条件: rearch-phase3.md 末尾のリスト
@@ -123,6 +123,11 @@
 **やったこと**: window_actions / permission_manager（委譲第4弾）。スタブ5本解消。Rust テスト26件。
 **次の自分へ**: 次は 3.3 後半: icon_manager.rs（NSRunningApplication.icon → png base64 'data:image/png;base64,' 形式はフロント updateWindowIcons の期待形 = icons[owner] の生 base64。**events.ts の iconUpdate ペイロード形（Record<owner置換名, base64>）を必ず確認**。owner 名の置換規則 /\//g→_ と / /g→'' も再現）＋FS キャッシュ＋段階ロード、マルチディスプレイ（displayInfo 複数化・taskbar ウィンドウの動的生成・layout 位置計算 — Electron 版 windows.ts の windowPosition を原本に）。その次が 3.4（ipc.ts 差し替え・useOptions・electron-store データ移行・モック）→ 実機確認ポイント。
 **気になっていること**: 実機 ignored テスト4本は 3.4 後の実機確認でまとめて回す。
+
+##### 2026-07-10 — 3.3 完了（Rust 側全機能そろう）
+**やったこと**: icon_manager＋display_manager（委譲第5弾）。残る Rust TODO は context_task/context_logo の配置調整（3.4）と restart_helper 整理（3.5）のみ。
+**次の自分へ**: 3.4 はフロント側なので委譲でなく自分でやる方が速い可能性が高い（ipc.ts は30行、useOptions 差し替え、electron-store→tauri-plugin-store データ移行、tauri-mocks）。手順: (1) ipc.ts を @tauri-apps/api（invoke/listen/emit）実装に差し替え — ipcSend は「コマンド名 = チャンネル名の snake_case 変換」が必要（commands.rs の対応表参照: activeWindow→active_window 等）。引数も Electron の位置引数から Tauri の名前付き引数への変換が要る — **ここが 3.4 最大の設計点**（コマンドごとの引数名マップを ipc.ts に持つ）(2) useOptions は 'updateOptions' listen＋set_options invoke で実は現行のまま動くかも — 要確認 (3) データ移行: 旧 electron-store の userData/config.json を読む Rust コマンド or 初回起動時に旧パス（~/Library/Application Support/taskbar.fm/config.json — electron の userData パスを確認）から tauri store へコピー (4) mocks: electron-mocks を tauri-mocks に（window.__TAURI_INTERNALS__ モック or ipc.ts レベルでモック分岐 — 後者が簡単）。
+**気になっていること**: フロントは window.electron 前提の型（utils.ts declare global）。3.4 で ElectronAPI 型依存を抜く。
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
