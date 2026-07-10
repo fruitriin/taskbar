@@ -1,6 +1,8 @@
 pub mod commands;
 pub mod filter;
+pub mod permission_manager;
 pub mod store;
+pub mod window_actions;
 pub mod window_manager;
 pub mod window_observer;
 

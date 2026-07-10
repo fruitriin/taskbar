@@ -33,7 +33,9 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::filter::{Filter, LabeledFilters};
+use crate::permission_manager;
 use crate::store::{self, Options};
+use crate::window_actions;
 use crate::window_manager::{self, MacWindow};
 use crate::window_observer;
 
@@ -219,44 +221,30 @@ pub async fn get_exclude_windows(app: AppHandle) -> Result<(), String> {
 }
 
 // ---------------------------------------------------------------------------
-// ウィンドウ操作（スタブ — 3.3 window_actions.rs で実装）
+// ウィンドウ操作
 // ---------------------------------------------------------------------------
 
 /// ウィンドウのアクティブ化。
 ///
-/// Electron 原本: events.ts:54-56 → helper.ts:551-573（AppleScript 実行）
-///
-/// TODO(3.3 window_actions.rs): AXUIElement によるアクティブ化に置き換える
-/// （計画書 3.3 window_actions 節）。現状は配線のみのスタブ
+/// Electron 原本: events.ts:54-56 → helper.ts:551-573（AppleScript 実行）。
+/// Rust 版は window_actions.rs の AXUIElement 実装に委譲する
 #[tauri::command]
-pub fn active_window(win: MacWindow) -> Result<(), String> {
-    log::info!(
-        "active_window called (stub): {} ({})",
-        win.owner_name,
-        win.window_number
-    );
-    Err("not implemented: 3.3 window_actions".to_string())
+pub async fn active_window(win: MacWindow) -> Result<(), String> {
+    window_actions::activate(win).await
 }
 
 /// ウィンドウのクローズ。
 ///
 /// Electron 原本: contextTask メニューの「閉じる」（events.ts:216-223）→
-/// helper.ts:576-616（AppleScript 実行）
-///
-/// TODO(3.3 window_actions.rs): AXCloseButton の PerformAction に置き換える
-/// （計画書 3.3 window_actions 節）。現状は配線のみのスタブ
+/// helper.ts:576-616（AppleScript 実行）。
+/// Rust 版は window_actions.rs の AXCloseButton + AXPress 実装に委譲する
 #[tauri::command]
-pub fn close_window(win: MacWindow) -> Result<(), String> {
-    log::info!(
-        "close_window called (stub): {} ({})",
-        win.owner_name,
-        win.window_number
-    );
-    Err("not implemented: 3.3 window_actions".to_string())
+pub async fn close_window(win: MacWindow) -> Result<(), String> {
+    window_actions::close(win).await
 }
 
 // ---------------------------------------------------------------------------
-// 権限（スタブ — 3.3 permission_manager.rs で実装）
+// 権限
 // ---------------------------------------------------------------------------
 
 /// checkPermissions の戻り値。Electron 原本（helper.ts:428-431）と同形
@@ -267,41 +255,52 @@ pub struct PermissionStatus {
     pub screen_recording: bool,
 }
 
-/// スクリーン収録権限のリクエスト。
+/// 権限のリクエスト（未許可なら OS のダイアログ表示＋システム設定への登録）。
 ///
 /// Electron 原本: events.ts:99-102（grantPermission。helper の grant コマンド起動
-/// ＋ store.set('granted', true)）
-///
-/// TODO(3.3 permission_manager.rs): CGRequestScreenCaptureAccess 等による
-/// 権限リクエストと store への granted 記録を実装する。現状は no-op スタブ
+/// ＝スクリーン収録のみ）。Rust 版はアクセシビリティも合わせて要求する
+/// （原本ではヘルパー側の osascript 実行時に OS が自動プロンプトしていたが、
+/// Tauri 版は AX API 直叩きのため明示リクエストが必要）。
+/// 原本の store.set('granted', true)（events.ts:101）は、granted キーが
+/// どこからも読まれていない書き込み専用キーだったため移植しない
 #[tauri::command]
 pub fn grant_permission() {
-    log::info!("grant_permission called (stub): TODO(3.3 permission_manager)");
+    let screen_recording = permission_manager::request_screen_recording();
+    let accessibility = permission_manager::request_accessibility();
+    log::info!(
+        "grant_permission: screenRecording={screen_recording} accessibility={accessibility}"
+    );
 }
 
 /// 権限状態の確認。
 ///
-/// Electron 原本: events.ts:104-106 → helper.ts:428-480（check-permissions コマンド）
-///
-/// TODO(3.3 permission_manager.rs): AXIsProcessTrusted / SCShareableContent による
-/// 実チェックに置き換える。暫定で両方 true を返して UI（権限警告表示）を塞がない
+/// Electron 原本: events.ts:104-106 → helper.ts:428-480（check-permissions
+/// コマンドの JSON から accessibility / screenRecording を取り出して返す）。
+/// フロント（PermissionStatus.vue:61-65 / MainPermissionStatus.vue:46-53）は
+/// { accessibility, screenRecording } の bool 2キーを参照する
 #[tauri::command]
 pub fn check_permissions() -> PermissionStatus {
     PermissionStatus {
-        accessibility: true,
-        screen_recording: true,
+        accessibility: permission_manager::check_accessibility(),
+        screen_recording: permission_manager::check_screen_recording(),
     }
 }
 
 /// システム環境設定（画面収録のプライバシー設定）を開く。
 ///
 /// Electron 原本: events.ts:108-113（shell.openExternal で
-/// x-apple.systempreferences:...Privacy_ScreenCapture を開く）
-///
-/// TODO(3.3 permission_manager.rs): URL オープンを実装する。現状は no-op スタブ
+/// x-apple.systempreferences:...Privacy_ScreenCapture を開く）。
+/// Rust 版はこの1箇所のために tauri-plugin-opener を足さず、
+/// macOS 標準の /usr/bin/open コマンドで同じ URL を開く
 #[tauri::command]
-pub fn open_system_preferences() {
-    log::info!("open_system_preferences called (stub): TODO(3.3 permission_manager)");
+pub fn open_system_preferences() -> Result<(), String> {
+    const URL: &str =
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
+    std::process::Command::new("open")
+        .arg(URL)
+        .spawn()
+        .map_err(|e| format!("failed to open system preferences: {e}"))?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

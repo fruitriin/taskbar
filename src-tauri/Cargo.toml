@@ -28,9 +28,17 @@ tokio = { version = "1.52.3", features = ["full"] }
 objc2-core-graphics = "0.3.2"
 objc2-core-foundation = "0.3"
 objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", features = ["NSWorkspace"] }
+objc2-app-kit = { version = "0.3.2", features = [
+    "NSWorkspace",
+    "NSRunningApplication",
+    "libc",
+] }
 objc2-foundation = "0.3.2"
 block2 = "0.6.2"
+# AX API（AXUIElement / AXIsProcessTrusted）バインディング。
+# libc feature は AXUIElementCreateApplication(pid_t) 等の pid 型に必要
+objc2-application-services = { version = "0.3.2", features = ["libc"] }
+libc = "0.2"
 
 [dev-dependencies]
 tokio = { version = "1.52.3", features = ["test-util", "macros", "time"] }
