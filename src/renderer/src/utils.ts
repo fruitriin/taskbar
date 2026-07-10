@@ -5,8 +5,9 @@ import { ipcSend } from './composables/ipc'
 
 declare global {
   interface Window {
+    // Tauri 実行時はどちらも存在しない（ipc.ts がランタイム判定する）ため optional
     electron: ElectronAPI
-    store: Store
+    store?: Store
   }
 }
 

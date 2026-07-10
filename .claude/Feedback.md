@@ -17,7 +17,7 @@
 - 2026-07-05: `package.json` の `riinlogger: "file:../RiinLogger"` は参照元ディレクトリが存在せず、`bun install` のたびに「Failed to install 1 package」を出す。使用箇所は全てコメントアウト済み import のみ。依存から外してよいかはオーナー判断（削除するなら package.json から1行削除）
 - 2026-07-05: `bun run build` は Swift Helper バイナリ（nativeSrc/DerivedData/...）が未ビルドだと cp 段階で失敗する。JS 側だけ検証したいときは `npx electron-vite build` を直接使う
 
-- 2026-07-05: リリースビルドが `fork: Resource temporarily unavailable` で失敗 → 原因は別プロジェクト（wardrobe-test-spec-runall-strict）の ADDF テスト `test-run-all-bun-detection.sh` が `run-all.sh` と再帰呼び出しし合い bash を3535個リークしていたこと（オーナー承認の上 kill で解消）。**ADDF 本体へのバグ報告候補**: 当該テストの再帰ガード（環境変数フラグ等）が必要。wardrobe 側の ADDF バージョン確認も
+- 2026-07-05: リリースビルドが `fork: Resource temporarily unavailable` で失敗 → 原因は別プロジェクト（wardrobe-test-spec-runall-strict）の ADDF テスト `test-run-all-bun-detection.sh` が `run-all.sh` と再帰呼び出しし合い bash を3535個リークしていたこと（オーナー承認の上 kill で解消）。**ADDF 本体へのバグ報告候補**: 当該テストの再帰ガード（環境変数フラグ等）が必要。wardrobe 側の ADDF バージョン確認も。**2026-07-10 に同一パターンで再発**（bash 3477個、前回承認に基づき同パターン kill で解消）— wardrobe 側の修正が済むまで再発し続けるため、オーナーは wardrobe リポジトリの当該テストに再帰ガードを入れるか無効化を推奨
 
 - 2026-07-07: 既存バグ疑い2件（1-E の挙動同一変換中に発見、旧実装のまま複製済み）: (1) index.vue sortArea の orderRule キーが大文字（Headers/Footers）で引数（headers/footers）と不一致 → order 常に undefined で desc 分岐固定（偶然 Headers の意図と一致し可視の実害なし）。(2) footerWindows が sortArea の返り値（新配列）を捨てて未ソートの filter 結果を返す。直す場合は「headers/footers エリアの並び順仕様を決め直す」独立プランとして起こすこと
 

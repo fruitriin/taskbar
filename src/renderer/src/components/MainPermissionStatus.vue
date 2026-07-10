@@ -20,6 +20,8 @@
 </template>
 
 <script setup lang="ts">
+import { ipcInvoke } from '../composables/ipc'
+type PermissionResult = { accessibility: boolean; screenRecording: boolean }
 import { ref, computed, onMounted } from 'vue'
 
 const accessibilityStatus = ref<boolean>(true)
@@ -43,7 +45,7 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
 const checkPermissions = async (): Promise<void> => {
   try {
     // 5秒のタイムアウトを設定
-    const result = await withTimeout(window.electron.ipcRenderer.invoke('checkPermissions'), 5000)
+    const result = await withTimeout(ipcInvoke<PermissionResult>('checkPermissions'), 5000)
 
     if (result) {
       accessibilityStatus.value = result.accessibility

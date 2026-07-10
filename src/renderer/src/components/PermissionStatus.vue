@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { ipcInvoke, ipcSend } from '../composables/ipc'
 import { ref, onMounted } from 'vue'
 
 const accessibilityStatus = ref<boolean>(false)
@@ -58,7 +59,9 @@ const isChecking = ref<boolean>(false)
 const checkPermissions = async (): Promise<void> => {
   isChecking.value = true
   try {
-    const result = await window.electron.ipcRenderer.invoke('checkPermissions')
+    const result = await ipcInvoke<{ accessibility: boolean; screenRecording: boolean }>(
+      'checkPermissions'
+    )
     if (result) {
       accessibilityStatus.value = result.accessibility
       screenRecordingStatus.value = result.screenRecording
@@ -71,7 +74,7 @@ const checkPermissions = async (): Promise<void> => {
 }
 
 const openSystemPreferences = (): void => {
-  window.electron.ipcRenderer.send('openSystemPreferences')
+  ipcSend('openSystemPreferences')
 }
 
 onMounted(() => {

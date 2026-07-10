@@ -251,7 +251,7 @@ const defaultOptions: Options = {
   headers: [],
   footers: []
 }
-const options = ref<Options>({ ...defaultOptions, ...(window.store?.options ?? {}) })
+const options = ref<Options>({ ...defaultOptions, ...window.store?.options })
 const sortRule = ref<Array<{ name: 'headers' | 'footers'; label: string }>>([
   { name: 'headers', label: '先頭' },
   { name: 'footers', label: '末尾' }

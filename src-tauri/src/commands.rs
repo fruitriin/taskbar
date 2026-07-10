@@ -345,23 +345,57 @@ pub fn open_full_window_list(app: AppHandle) -> Result<(), String> {
 /// （optionWindows.ts:123-160）と blur 時の自動クローズ。暫定で固定位置に生成する
 #[tauri::command]
 pub fn context_logo(app: AppHandle) -> Result<(), String> {
+    let position = menu_position(&app)?;
+
     if let Some(window) = app.get_webview_window(MENU_LABEL) {
+        window
+            .set_position(tauri::LogicalPosition::new(position.0, position.1))
+            .map_err(|e| e.to_string())?;
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(&app, MENU_LABEL, WebviewUrl::App("/?view=menu".into()))
+    let window = WebviewWindowBuilder::new(&app, MENU_LABEL, WebviewUrl::App("/?view=menu".into()))
         .title("Taskbar.fm - メニュー")
         .inner_size(MENU_WIDTH, MENU_HEIGHT)
-        .position(100.0, 100.0) // TODO(3.4): 暫定の固定位置
+        .position(position.0, position.1)
         .resizable(false)
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)
         .build()
         .map_err(|e| format!("failed to create menu window: {e}"))?;
+
+    // メニュー外クリック（フォーカス喪失）で自動的に閉じる
+    // （Electron 原本 optionWindows.ts の blur → close の移植。実機指摘 #5）
+    let handle = window.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Focused(false) = event {
+            let _ = handle.close();
+        }
+    });
     Ok(())
+}
+
+/// メニューの表示位置（論理座標）をカーソル位置から決める。
+/// メニューがモニタ外にはみ出す場合は収まるようにクランプする
+/// （Electron 原本 optionWindows.ts:123-160 の簡略移植。実機指摘 #1）
+fn menu_position(app: &AppHandle) -> Result<(f64, f64), String> {
+    let cursor = app
+        .cursor_position()
+        .map_err(|e| format!("cursor_position failed: {e}"))?;
+    let monitor = app
+        .monitor_from_point(cursor.x, cursor.y)
+        .map_err(|e| e.to_string())?
+        .ok_or("no monitor at cursor")?;
+    let scale = monitor.scale_factor();
+    let pos = monitor.position().to_logical::<f64>(scale);
+    let size = monitor.size().to_logical::<f64>(scale);
+    let (mut x, mut y) = (cursor.x / scale, cursor.y / scale);
+    x = x.min(pos.x + size.width - MENU_WIDTH).max(pos.x);
+    y = y.min(pos.y + size.height - MENU_HEIGHT).max(pos.y);
+    Ok((x, y))
 }
 
 /// タスク右クリック時のコンテキストメニュー。
