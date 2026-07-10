@@ -74,7 +74,27 @@
 
 ## タスク
 
-（現在タスクなし）
+### 現在のタスク: rearch-phase3（Tauri v2 移行・一気通貫）
+
+計画: `docs/plans/rearch-phase3.md`（鮮度更新済み・進め方はキックオフ案どおり）
+ブランチ: **rearch/tauri-v2**（master は凍結維持。途中ビルド不通を許容）
+
+#### サブタスクチェックリスト（3.1〜3.5 はサブタスク単位で checkpoint コミット）
+
+- [ ] 3.1 Tauri 初期化: @tauri-apps/cli・src-tauri scaffold・Cargo.toml（crate は cargo add で最新解決）・tauri.conf.json（?view= ウィンドウ定義）・capabilities・vite.config.ts（プレーン vite。electron-vite は 3.5 で削除）
+- [ ] 3.2 Rust 基盤: window_manager（CGWindowList）・filter・commands（**20チャンネル** — 鮮度更新の一覧参照）・window_observer（NSWorkspace 通知＋500ms デバウンス）
+- [ ] 3.3 Rust 機能: icon_manager（FS キャッシュ）・window_actions（AXUIElement）・permission_manager・store・マルチディスプレイ
+- [ ] 3.4 フロント接続: ipc.ts 差し替え（**ipcSend→invoke マッピング設計**）・useOptions を tauri-plugin-store へ・**electron-store からのユーザーデータ移行**・tauri-mocks.ts・マルチウィンドウ結合
+- [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
+- [ ] 完了条件: rearch-phase3.md 末尾のリスト
+
+#### 日記
+
+##### 2026-07-10 — キックオフ（オーナー「phase3やっちゃお」）
+**やったこと**: Q4 反映（swiftFilter/autoUpdate クローズ込み）、ブランチ rearch/tauri-v2 作成。Rust 1.94（asdf）確認済み。
+**今の見立て**: 3.1 から。コンテキスト90万超で compaction 必至 — 以降の代は本チェックリストと計画の鮮度更新節が羅針盤。
+**次の自分へ**: (1) 実機確認3ポイント（3.2 後/3.4 後/3.5）ではオーナーに声かけ。(2) レビューエージェント起動時は「MCP 指示無視」定型文（Feedback.md 2026-07-06 の改善版文面）を必ず使う。(3) Rust コードのゲートは cargo check/clippy/test を Stage 1 に加える。(4) 毎時ループ再開済み（アイドル時はここまでの慣例どおり最小チェック）。
+**気になっていること**: tauri CLI の scaffold が既存リポジトリ構成（src/renderer）とどう馴染むか。frontendDist は out/renderer でなく dist に統一予定（計画どおり）。
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
