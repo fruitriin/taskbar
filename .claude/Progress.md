@@ -119,5 +119,10 @@
 **次の自分へ**: 次は 3.3 を2分割で委譲: (a) window_actions.rs（AXUIElement で activate/close — Swift の AppleScript 置換）+ permission_manager.rs（AXIsProcessTrusted / SCShareableContent 100ms timeout）でスタブ解消 (b) icon_manager.rs（NSRunningApplication.icon → png base64、FS キャッシュ ~/Library/Application Support/taskbar.fm/icons/、段階ロード）+ マルチディスプレイ（displayInfo の複数モニタ＋ウィンドウ動的生成）。
 **気になっていること**: AX 操作は実機でしか本当の検証ができない（アクセシビリティ権限必要）。ユニットは構造のみ、実挙動は 3.4 後の実機で。
 
+##### 2026-07-10 — 3.3 前半完了（AX＋権限）
+**やったこと**: window_actions / permission_manager（委譲第4弾）。スタブ5本解消。Rust テスト26件。
+**次の自分へ**: 次は 3.3 後半: icon_manager.rs（NSRunningApplication.icon → png base64 'data:image/png;base64,' 形式はフロント updateWindowIcons の期待形 = icons[owner] の生 base64。**events.ts の iconUpdate ペイロード形（Record<owner置換名, base64>）を必ず確認**。owner 名の置換規則 /\//g→_ と / /g→'' も再現）＋FS キャッシュ＋段階ロード、マルチディスプレイ（displayInfo 複数化・taskbar ウィンドウの動的生成・layout 位置計算 — Electron 版 windows.ts の windowPosition を原本に）。その次が 3.4（ipc.ts 差し替え・useOptions・electron-store データ移行・モック）→ 実機確認ポイント。
+**気になっていること**: 実機 ignored テスト4本は 3.4 後の実機確認でまとめて回す。
+
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
