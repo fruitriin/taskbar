@@ -37,6 +37,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 use crate::filter::{self, LabeledFilters};
+use crate::store;
 use crate::window_manager::{self, MacWindow};
 
 /// デバウンス時間（Swift 原本 main.swift:926 の 500ms 遅延に対応）
@@ -95,12 +96,14 @@ pub fn start_observation(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         // 初回のウィンドウ情報を遅延なしで送信
         // （Swift 原本 main.swift:1161-1162 の watch モード初回出力に対応）
-        refresh_and_emit(&app).await;
+        let _ = refresh_and_emit(&app).await;
 
         let app_for_action = app.clone();
         debounce_loop(rx, DEBOUNCE, move || {
             let app = app_for_action.clone();
-            async move { refresh_and_emit(&app).await }
+            async move {
+                let _ = refresh_and_emit(&app).await;
+            }
         })
         .await;
     });
@@ -131,22 +134,32 @@ where
 
 /// ウィンドウリストを再取得・フィルタし、通過リストを Tauri イベント 'process' で
 /// 全ウィンドウへ emit する。除外リストは ExcludedWindows State に保持する。
+/// 成功時は (通過リスト, 除外リスト) を返す（getExcludeWindows コマンド等が
+/// emit 後のリストを再利用するため）。
 ///
 /// Swift 原本: windowDidChange の遅延実行部（main.swift:928-944）＋
 /// getWindowInfoListData のフィルタ適用（main.swift:844-848）
-async fn refresh_and_emit(app: &AppHandle) {
-    // TODO(3.4): tauri-plugin-store からフィルタ設定（labeledFilters）を読み込む。
-    // store 連携は後続タスクのため、暫定で空スライス（＝サイズフィルタのみ有効）
-    let filters: &[LabeledFilters] = &[];
+pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<MacWindow>)> {
+    // フィルタ設定を tauri-plugin-store（config.json の labeledFilters）から読む。
+    // Electron 原本では updateProcessList のたびに exportFiltersToSwift で
+    // filter.json に書き出していた（helper.ts:134-151）のと同じく、毎回最新値を読む
+    let filters: Vec<LabeledFilters> = match store::get_labeled_filters(app) {
+        Ok(filters) => filters,
+        Err(e) => {
+            // ストアが読めない場合はフィルタなし（サイズフィルタのみ）で続行
+            log::warn!("failed to load labeledFilters from store: {e}");
+            Vec::new()
+        }
+    };
 
     match window_manager::get_window_list().await {
         Ok(windows) => {
-            let (passed, excluded) = filter::filter_windows(windows, filters);
+            let (passed, excluded) = filter::filter_windows(windows, &filters);
 
             // 除外リストを保持（'catchExcludeWindow' / getExcludeWindows 用）
             if let Some(state) = app.try_state::<ExcludedWindows>() {
                 if let Ok(mut guard) = state.0.lock() {
-                    *guard = excluded;
+                    guard.clone_from(&excluded);
                 }
             }
 
@@ -155,10 +168,13 @@ async fn refresh_and_emit(app: &AppHandle) {
             if let Err(e) = app.emit("process", &passed) {
                 log::warn!("failed to emit 'process' event: {e}");
             }
+
+            Some((passed, excluded))
         }
         Err(e) => {
             // 取得失敗はログのみ（Swift 原本もエラー時は出力せず次の通知を待つ）
             log::warn!("get_window_list failed in observer: {e}");
+            None
         }
     }
 }

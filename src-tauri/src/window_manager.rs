@@ -17,12 +17,15 @@ use std::time::Duration;
 
 use objc2_core_foundation::{CFBoolean, CFDictionary, CFNumber, CFRetained, CFString, CFType};
 use objc2_core_graphics::{kCGNullWindowID, CGWindowListCopyWindowInfo, CGWindowListOption};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// kCGWindowBounds の中身。フロントの TS 型（src/main/type.d.ts）と
 /// キー名を完全一致させる（X / Y / Width / Height）
-#[derive(Debug, Clone, PartialEq, Serialize)]
+///
+/// Deserialize はフロントからのコマンド引数（activeWindow / closeWindow /
+/// contextTask が MacWindow を丸ごと送ってくる）を受けるために必要
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowBounds {
     #[serde(rename = "X")]
     pub x: f64,
@@ -36,7 +39,7 @@ pub struct WindowBounds {
 
 /// CGWindowListCopyWindowInfo の1エントリ。
 /// フィールド名はフロントの TS 型 MacWindow（src/main/type.d.ts）と完全一致
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MacWindow {
     #[serde(rename = "kCGWindowLayer")]
     pub layer: i64,
@@ -61,8 +64,9 @@ pub struct MacWindow {
     pub store_type: Option<i64>,
     #[serde(rename = "kCGWindowBounds")]
     pub bounds: WindowBounds,
-    /// 現段階では常に空文字（アイコン取得は 3.3 icon_manager.rs で実装予定）
-    #[serde(rename = "appIcon")]
+    /// 現段階では常に空文字（アイコン取得は 3.3 icon_manager.rs で実装予定）。
+    /// deserialize 時はキー欠落を空文字として受ける
+    #[serde(rename = "appIcon", default)]
     pub app_icon: String,
 }
 
