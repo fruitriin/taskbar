@@ -84,7 +84,7 @@
 - [x] 3.1 Tauri 初期化 **完了（2026-07-10）**: scaffold・tauri 2.11.3・tauri.conf.json（taskbar ウィンドウ /?view=taskbar）・プレーン vite 併存・cargo check 通過
 - [x] 3.2 Rust 基盤 **完了（2026-07-10）**: window_manager・filter・observer・commands 22本・store.rs。Rust テスト23件。AX/権限/アイコンは 3.3 スタブ
 - [x] 3.3 Rust 機能 **完了（2026-07-10）**: window_actions・permission_manager・icon_manager・display_manager。Rust テスト35件（実機 ignored 4）
-- [ ] 3.4 フロント接続（進行中）: ipc.ts をランタイム切替（Tauri→Electron/モック）に。ARG_KEYS で位置引数→名前付き引数変換。useOptions は ipc.ts 経由で無変更の見込み。モックは Electron 経路が残るため tauri-mocks 不要の見込み。データ移行は Rust 側ワンショット
+- [x] 3.4 フロント接続 **完了（2026-07-10）**: ipc.ts ランタイム切替・ARG_KEYS 変換・データ移行（Rust 冪等）・get_options 新設・option.vue の window.store 非依存化。**実機初起動待ち**
 - [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
 - [ ] 完了条件: rearch-phase3.md 末尾のリスト
 
@@ -128,6 +128,11 @@
 **やったこと**: icon_manager＋display_manager（委譲第5弾）。残る Rust TODO は context_task/context_logo の配置調整（3.4）と restart_helper 整理（3.5）のみ。
 **次の自分へ**: 3.4 はフロント側なので委譲でなく自分でやる方が速い可能性が高い（ipc.ts は30行、useOptions 差し替え、electron-store→tauri-plugin-store データ移行、tauri-mocks）。手順: (1) ipc.ts を @tauri-apps/api（invoke/listen/emit）実装に差し替え — ipcSend は「コマンド名 = チャンネル名の snake_case 変換」が必要（commands.rs の対応表参照: activeWindow→active_window 等）。引数も Electron の位置引数から Tauri の名前付き引数への変換が要る — **ここが 3.4 最大の設計点**（コマンドごとの引数名マップを ipc.ts に持つ）(2) useOptions は 'updateOptions' listen＋set_options invoke で実は現行のまま動くかも — 要確認 (3) データ移行: 旧 electron-store の userData/config.json を読む Rust コマンド or 初回起動時に旧パス（~/Library/Application Support/taskbar.fm/config.json — electron の userData パスを確認）から tauri store へコピー (4) mocks: electron-mocks を tauri-mocks に（window.__TAURI_INTERNALS__ モック or ipc.ts レベルでモック分岐 — 後者が簡単）。
 **気になっていること**: フロントは window.electron 前提の型（utils.ts declare global）。3.4 で ElectronAPI 型依存を抜く。
+
+##### 2026-07-10 — 3.4 完了、実機確認ポイント到達
+**やったこと**: ipc.ts 差し替え（自作業）＋移行＋get_options。全ゲート緑（Rust 37 / front 104 / 両ビルド）。
+**次の自分へ**: オーナーの実機確認待ち: `bun run tauri:dev`。確認観点: (1) タスクバーが各ディスプレイに出るか (2) ウィンドウリスト表示（本物のデータ！）(3) クリックでアクティブ化（AX 権限プロンプト→許可後）(4) 設定画面（ロゴ→設定）とフィルター (5) D&D (6) 旧設定（appOrder 等）が移行されているか。問題が出たらログは tauri_plugin_log（stdout）。cargo test -- --ignored の実機4本も。OK が出たら 3.5（統合・Electron/Swift 削除・署名・ドキュメント）。ElectronAPI 型依存（utils.ts declare global）と Electron.listen 残骸の掃除も 3.5 で。
+**気になっていること**: 初回 tauri dev は Rust の release ビルドで数分かかる。menu ウィンドウのカーソル位置配置は TODO(3.4) のまま（固定位置）— 実機確認で気になれば調整。
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
