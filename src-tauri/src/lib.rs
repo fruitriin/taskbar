@@ -1,5 +1,7 @@
 pub mod commands;
+pub mod display_manager;
 pub mod filter;
+pub mod icon_manager;
 pub mod permission_manager;
 pub mod store;
 pub mod window_actions;
@@ -42,6 +44,12 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            // 全モニタ分のタスクバーウィンドウを生成
+            // （tauri.conf.json の静的定義は動的生成へ一本化するため削除済み —
+            // 判断コメントは display_manager.rs 冒頭参照）
+            display_manager::sync_taskbar_windows(app.handle())?;
+            // スクリーン構成変更（モニタ増減・解像度変更）の監視を開始
+            display_manager::start_screen_observation(app.handle().clone());
             // NSWorkspace 通知の監視を開始（setup はメインスレッドで実行される）
             window_observer::start_observation(app.handle().clone());
             Ok(())

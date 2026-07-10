@@ -37,6 +37,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
 use crate::filter::{self, LabeledFilters};
+use crate::icon_manager;
 use crate::store;
 use crate::window_manager::{self, MacWindow};
 
@@ -113,9 +114,13 @@ pub fn start_observation(app: AppHandle) {
 /// 来なくなるまで待ち、1回だけ action を実行する。チャンネルが閉じたら終了する
 /// （閉鎖時にシグナルが溜まっていれば最後の1回を実行してから終了）。
 ///
-/// 時間は tokio の仮想時計に依存するため、テストでは start_paused で検証できる
-async fn debounce_loop<F, Fut>(mut rx: UnboundedReceiver<()>, delay: Duration, mut action: F)
-where
+/// 時間は tokio の仮想時計に依存するため、テストでは start_paused で検証できる。
+/// display_manager のスクリーン構成変更監視からも共用される
+pub(crate) async fn debounce_loop<F, Fut>(
+    mut rx: UnboundedReceiver<()>,
+    delay: Duration,
+    mut action: F,
+) where
     F: FnMut() -> Fut,
     Fut: Future<Output = ()>,
 {
@@ -154,7 +159,12 @@ pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<Ma
 
     match window_manager::get_window_list().await {
         Ok(windows) => {
-            let (passed, excluded) = filter::filter_windows(windows, &filters);
+            let (mut passed, excluded) = filter::filter_windows(windows, &filters);
+
+            // FS キャッシュ済みアイコンを appIcon に適用してから emit する
+            // （Electron 原本 helper.ts:513-529 applyProcessChange と同じ順序。
+            // キャッシュ済みアプリは 'process' の時点でアイコン付きになる）
+            icon_manager::apply_cached_icons(&mut passed).await;
 
             // 除外リストを保持（'catchExcludeWindow' / getExcludeWindows 用）
             if let Some(state) = app.try_state::<ExcludedWindows>() {
@@ -168,6 +178,11 @@ pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<Ma
             if let Err(e) = app.emit("process", &passed) {
                 log::warn!("failed to emit 'process' event: {e}");
             }
+
+            // キャッシュミス分のアイコンを非同期で取得して 'iconUpdate' で後追い送信
+            // （段階ロード。Swift 原本 ProgressiveIconLoader の簡素化版 —
+            // 判断コメントは icon_manager.rs 冒頭参照）
+            icon_manager::load_missing_icons_and_emit(app.clone(), &passed);
 
             Some((passed, excluded))
         }

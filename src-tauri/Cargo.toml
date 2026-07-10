@@ -39,6 +39,8 @@ block2 = "0.6.2"
 # libc feature は AXUIElementCreateApplication(pid_t) 等の pid 型に必要
 objc2-application-services = { version = "0.3.2", features = ["libc"] }
 libc = "0.2"
+# アイコン PNG の base64 エンコード（iconUpdate ペイロード / FS キャッシュ読み出し）
+base64 = "0.22"
 
 [dev-dependencies]
 tokio = { version = "1.52.3", features = ["test-util", "macros", "time"] }

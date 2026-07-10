@@ -12,17 +12,7 @@
   "app": {
     "withGlobalTauri": false,
     "macOSPrivateApi": true,
-    "windows": [
-      {
-        "label": "taskbar",
-        "url": "/?view=taskbar",
-        "decorations": false,
-        "alwaysOnTop": true,
-        "transparent": true,
-        "skipTaskbar": true,
-        "visible": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     }

@@ -32,7 +32,9 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
+use crate::display_manager;
 use crate::filter::{Filter, LabeledFilters};
+use crate::icon_manager;
 use crate::permission_manager;
 use crate::store::{self, Options};
 use crate::window_actions;
@@ -53,25 +55,6 @@ pub async fn get_windows() -> Result<Vec<MacWindow>, String> {
 // 初期化プロトコル
 // ---------------------------------------------------------------------------
 
-/// 'displayInfo' イベントの形。Electron 原本（windows.ts:105-109）の
-/// { label, id, workArea } に対応する。id は Tauri の Monitor に安定した数値 ID が
-/// 無いため省略（フロントは workArea のみ参照: src/renderer/src/pages/index.vue:127-129）
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DisplayInfo {
-    pub label: String,
-    pub work_area: WorkArea,
-}
-
-/// Electron の display.workArea（DIP 座標）に一致する形
-#[derive(Debug, Clone, Serialize)]
-pub struct WorkArea {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
-}
-
 /// レンダラー準備完了通知。初期データ一式を emit する。
 ///
 /// Electron 原本: events.ts:68-76（windowReady）＋ windows.ts:102-112
@@ -80,7 +63,10 @@ pub struct WorkArea {
 /// リセットが目的だが、Rust 版は毎回全量 emit なので不要。
 #[tauri::command]
 pub async fn window_ready(app: AppHandle) -> Result<(), String> {
-    // 1. 'process': observer の refresh_and_emit 相当を即時1回
+    // 1. 'process': observer の refresh_and_emit 相当を即時1回。
+    // FS キャッシュ済みアイコンは appIcon 適用済みで載り、キャッシュミス分は
+    // refresh_and_emit 内の段階ロードが 'iconUpdate' で後追い送信する
+    // （Electron 原本で helper の iconUpdate 通知（helper.ts:32-56）が担っていた役割）
     let _ = window_observer::refresh_and_emit(&app).await;
 
     // 2. 'updateOptions': store の options を送る
@@ -88,42 +74,12 @@ pub async fn window_ready(app: AppHandle) -> Result<(), String> {
     app.emit("updateOptions", &options)
         .map_err(|e| format!("failed to emit 'updateOptions': {e}"))?;
 
-    // 3. 'displayInfo': 暫定でメインモニタの情報を送る。
-    // TODO(3.3 マルチディスプレイ対応): Electron 原本はタスクバーごとに
-    // 「そのウィンドウが属するディスプレイ」の workArea を送っていた
-    // （windows.ts:102-112）。各ディスプレイへの WebviewWindow 動的生成と
-    // あわせて 3.3 で置き換える
-    let info = primary_display_info(&app)?;
-    app.emit("displayInfo", &info)
-        .map_err(|e| format!("failed to emit 'displayInfo': {e}"))?;
-
-    // TODO(3.3 icon_manager.rs): 'iconUpdate'（アイコンキャッシュの初期送信）。
-    // Electron 原本では helper の iconUpdate 通知（helper.ts:32-56）が担っていた
+    // 3. 'displayInfo': 各タスクバーへ「自分のモニタ」の workArea を送る。
+    // Electron 原本（windows.ts:102-112）も、どのウィンドウの windowReady でも
+    // 全タスクバーが自分のディスプレイ情報を受け直す構造だった
+    display_manager::emit_display_info(&app);
 
     Ok(())
-}
-
-/// メインモニタの workArea を Electron の DIP 座標系（論理ピクセル）で組む
-fn primary_display_info(app: &AppHandle) -> Result<DisplayInfo, String> {
-    let monitor = app
-        .primary_monitor()
-        .map_err(|e| format!("failed to get primary monitor: {e}"))?
-        .ok_or_else(|| "no primary monitor found".to_string())?;
-
-    // Tauri の Monitor は物理ピクセル。Electron の workArea は DIP（論理）なので変換する
-    let scale = monitor.scale_factor();
-    let position = monitor.work_area().position.to_logical::<f64>(scale);
-    let size = monitor.work_area().size.to_logical::<f64>(scale);
-
-    Ok(DisplayInfo {
-        label: monitor.name().cloned().unwrap_or_default(),
-        work_area: WorkArea {
-            x: position.x,
-            y: position.y,
-            width: size.width,
-            height: size.height,
-        },
-    })
 }
 
 // ---------------------------------------------------------------------------
@@ -131,19 +87,25 @@ fn primary_display_info(app: &AppHandle) -> Result<DisplayInfo, String> {
 // ---------------------------------------------------------------------------
 
 /// 設定を保存し、全ウィンドウへ 'updateOptions' を emit する。
+/// layout が変わった場合は全タスクバーを再配置する。
 ///
 /// Electron 原本: events.ts:78-97（setOptions）
 #[tauri::command]
 pub fn set_options(app: AppHandle, options: Options) -> Result<(), String> {
+    // layout 変更検知のため保存前の値を先に読む（events.ts:79 の store.get に対応）
+    let previous = store::get_options(&app)?;
+
     store::set_options(&app, &options)?;
 
     // app.emit は全ウィンドウへブロードキャスト（原本の taskbars 全走査 send に対応）
     app.emit("updateOptions", &options)
         .map_err(|e| format!("failed to emit 'updateOptions': {e}"))?;
 
-    // TODO(3.3 マルチディスプレイ対応): layout 変更時のタスクバーウィンドウの
-    // 位置・サイズ再計算（events.ts:87-95 の setBounds(windowPosition(...)) 相当）。
-    // タスクバーウィンドウの動的生成とあわせて 3.3 で実装する
+    // layout 変更時のタスクバー再配置（events.ts:87-95 の
+    // setBounds(windowPosition(targetDisplay, value.layout)) に対応）
+    if previous.layout != options.layout {
+        display_manager::apply_layout(&app, options.layout)?;
+    }
     Ok(())
 }
 
@@ -205,14 +167,16 @@ pub fn add_filter(app: AppHandle, payload: AddFilterPayload) -> Result<(), Strin
 /// 結果は window_observer の ExcludedWindows State にも保持される）。
 /// 'allProcesses' は原本では applyProcessChange（helper.ts:539-541）が
 /// fullWindowList ウィンドウに送っていたフィルタ通過済みリスト。
-///
-/// TODO(3.3 icon_manager.rs): 原本の除外プロセスへのアイコン付与
-/// （events.ts:169-180）。現状 appIcon は常に空文字
+/// 除外プロセスへのアイコン付与は原本（events.ts:169-180）と同じく
+/// キャッシュ済み分のみ（未キャッシュ分の取得までは行わない）
 #[tauri::command]
 pub async fn get_exclude_windows(app: AppHandle) -> Result<(), String> {
-    let Some((passed, excluded)) = window_observer::refresh_and_emit(&app).await else {
+    let Some((passed, mut excluded)) = window_observer::refresh_and_emit(&app).await else {
         return Err("failed to refresh window list".to_string());
     };
+
+    // 除外プロセスにもキャッシュ済みアイコンを適用（events.ts:169-180 に対応）
+    icon_manager::apply_cached_icons(&mut excluded).await;
 
     app.emit("catchExcludeWindow", &excluded)
         .map_err(|e| format!("failed to emit 'catchExcludeWindow': {e}"))?;
