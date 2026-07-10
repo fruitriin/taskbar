@@ -12,9 +12,7 @@
 | 1 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | 進行中（親計画。Phase 1 を詰め済み） |
 | 2 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | **完了（2026-07-07）** 🎉 全スライス消化・オーナー確認済み。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照）のみ |
 | 3 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | **完了（2026-07-07）** 🎉 全スライス消化（lint=oxlint / fmt=oxfmt / test=bun test 継続 / mise 廃止 → bun run） |
-| 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | 詰め済み（2026-07-07 鮮度更新・進め方案）。**キックオフ確認待ち（Questions Q4）** |
-| 5 | 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | 未着手 ※Phase 3 で Swift Helper 廃止予定のため要否確認 |
-| 6 | 単発 | [autoUpdate.md](docs/plans/autoUpdate.md) | 検討段階 |
+| 4 | リアーキ Phase 3 | [rearch-phase3.md](docs/plans/rearch-phase3.md) | **進行中（2026-07-10 キックオフ）**: ブランチ rearch/tauri-v2 で 3.1 から一気通貫 |
 
 ※優先度は導入時の仮置き。オーナーが並べ替えてください。
 
@@ -24,6 +22,8 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| 単発 | [swiftFilter.md](docs/plans/swiftFilter.md) | クローズ（Q4 回答: Phase 3 で Swift Helper ごと廃止のため不要） |
+| 単発 | [autoUpdate.md](docs/plans/autoUpdate.md) | クローズ（Q4 回答: Phase 3 完了後に tauri-plugin-updater 前提で再起票する） |
 | 単発 | [drag-state-machine-tests.md](docs/plans/drag-state-machine-tests.md) | 完了（2026-07-05。DI 抽出方式に方針変更、High 退行1件を検出・修正） |
 | 単発 | [pointer-drag-animation.md](docs/plans/pointer-drag-animation.md) | 完了（2026-07-05。実機確認項目の消化が残） |
 | 単発 | [app-window-grouping.md](docs/plans/app-window-grouping.md) | 完了（2026-07-05。D&D 実機確認済み。リリース時に version 2.1.1+ 必須） |
