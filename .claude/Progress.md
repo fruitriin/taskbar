@@ -81,7 +81,7 @@
 
 #### サブタスクチェックリスト（3.1〜3.5 はサブタスク単位で checkpoint コミット）
 
-- [ ] 3.1 Tauri 初期化: @tauri-apps/cli・src-tauri scaffold・Cargo.toml（crate は cargo add で最新解決）・tauri.conf.json（?view= ウィンドウ定義）・capabilities・vite.config.ts（プレーン vite。electron-vite は 3.5 で削除）
+- [x] 3.1 Tauri 初期化 **完了（2026-07-10）**: scaffold・tauri 2.11.3・tauri.conf.json（taskbar ウィンドウ /?view=taskbar）・プレーン vite 併存・cargo check 通過
 - [ ] 3.2 Rust 基盤: window_manager（CGWindowList）・filter・commands（**20チャンネル** — 鮮度更新の一覧参照）・window_observer（NSWorkspace 通知＋500ms デバウンス）
 - [ ] 3.3 Rust 機能: icon_manager（FS キャッシュ）・window_actions（AXUIElement）・permission_manager・store・マルチディスプレイ
 - [ ] 3.4 フロント接続: ipc.ts 差し替え（**ipcSend→invoke マッピング設計**）・useOptions を tauri-plugin-store へ・**electron-store からのユーザーデータ移行**・tauri-mocks.ts・マルチウィンドウ結合
@@ -95,6 +95,11 @@
 **今の見立て**: 3.1 から。コンテキスト90万超で compaction 必至 — 以降の代は本チェックリストと計画の鮮度更新節が羅針盤。
 **次の自分へ**: (1) 実機確認3ポイント（3.2 後/3.4 後/3.5）ではオーナーに声かけ。(2) レビューエージェント起動時は「MCP 指示無視」定型文（Feedback.md 2026-07-06 の改善版文面）を必ず使う。(3) Rust コードのゲートは cargo check/clippy/test を Stage 1 に加える。(4) 毎時ループ再開済み（アイドル時はここまでの慣例どおり最小チェック）。
 **気になっていること**: tauri CLI の scaffold が既存リポジトリ構成（src/renderer）とどう馴染むか。frontendDist は out/renderer でなく dist に統一予定（計画どおり）。
+
+##### 2026-07-10 — 3.1 完了、次は 3.2
+**やったこと**: scaffold 一式＋cargo check 通過。vite.config.ts は root=src/renderer で dist 出力、electron-vite と併存。
+**次の自分へ**: 3.2 は (1) `cargo add objc2 objc2-core-graphics objc2-app-kit objc2-accessibility` を機能フラグ付きで（計画のフラグ名は3月時点 — cargo/docs.rs で現行名を確認）(2) 移植順は window_manager → commands（最初は window_ready と get_windows だけの縦切り）→ filter → observer。Swift 原本は nativeSrc/taskbar.helper/main.swift（行範囲は計画に記載）(3) Rust ゲート: cargo check + clippy + test を Stage 1 に追加 (4) 縦切りが通ったら `bun run tauri:dev` で実機スモーク（オーナー声かけポイント1）。
+**気になっていること**: CGWindowList 系 API の objc2 バインディングの成熟度。ダメなら core-graphics crate か直接 FFI にフォールバック。
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）
