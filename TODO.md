@@ -9,7 +9,7 @@
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | v3.0.0 リリース | （/addf-release で実施） | **未着手**: rearch/tauri-v2 の master マージ＋バージョン確定＋リリース。CI（tauri-action）は初回タグまで未検証な点に注意 |
+| 1 | v3.0.0 リリース | （/addf-release で実施） | **draft 作成済み・オーナーの公開待ち（2026-07-14）**: master マージ・タグ push・CI 成功（universal DMG・notarize・staple 検証済み）・ノート設定済み。残りは GitHub 上の Publish ボタンのみ |
 | 2 | autoUpdate 再起票 | （Q4 回答: Phase 3 完了につき起票可能に） | 未起票: tauri-plugin-updater 前提で設計する |
 
 ※優先度は仮置き。オーナーが並べ替えてください。
