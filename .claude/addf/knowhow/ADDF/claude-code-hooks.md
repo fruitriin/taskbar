@@ -190,3 +190,4 @@ worktree 作成時に `.claude` ディレクトリを自動コピー（CLAUDE.md
 - [ワークフローをフックで自動化する](https://code.claude.com/docs/ja/hooks-guide)
 - Everything Claude Code の hooks/ ディレクトリ
 - 関連 knowhow: [pretooluse-block-with-rationale.md](pretooluse-block-with-rationale.md) — 根拠提示型ブロックの設計パターン
+- 関連 knowhow: [context-and-transcript.md](context-and-transcript.md) — トランスクリプト JSONL の構造・resume との非対称双方向性・能動 compaction の限界

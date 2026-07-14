@@ -41,6 +41,7 @@ TARGETS = [
     '.claude/addf/Release.addf.md',
     '.claude/commands/addf-init.md',
     '.claude/commands/addf-migrate.md',
+    '.claude/commands/addf-plan-audit.md',
     '.claude/addf/templates/ProgressTemplate.addf.md',
     '.claude/addf/templates/ProgressTemplate.md',
 ]

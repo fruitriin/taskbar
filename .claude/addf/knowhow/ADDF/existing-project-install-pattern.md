@@ -1,7 +1,7 @@
 ---
 title: 既存プロジェクトへの ADDF 導入パターン
 created: 2026-03-21
-last_verified: 2026-03-21
+last_verified: 2026-07-06
 depends_on: []
 status: active
 ---
@@ -46,9 +46,9 @@ ADDF はプラグインマーケットプレイスの「1スキルをインス�
 
 | カテゴリ | 処理 | 例 |
 |---|---|---|
-| 無条件コピー | `addf-` プレフィックスで衝突リスクなし | commands/, agents/, hooks/ |
-| インテリジェントマージ | 既存を保持しつつ ADDF エントリを追加 | settings.json, .gitignore, CLAUDE.md |
-| プロジェクト固有生成 | ダウンストリーム体裁で新規作成 | CLAUDE.repo.md, TODO.md, Progress.md |
+| 無条件コピー | `addf-` プレフィックス／専用ディレクトリで衝突リスクなし。ただし `*.addf.md` は**コピーしない**（ADDF 本体専用サフィックス — 存在ベース判定を汚染するため） | commands/addf-*.md, agents/addf-*.md, hooks/, .claude/addf/knowhow/ADDF/, .claude/addf/guides/, addfTools/, tests/, templates/, optional/ |
+| インテリジェントマージ | 既存を保持しつつ ADDF エントリを追加 | settings.json, .gitignore（マーカーブロックはクローン元をそのままコピー — 列挙を持たない）, CLAUDE.md |
+| プロジェクト固有生成 | ダウンストリーム体裁で新規作成 | CLAUDE.repo.md, TODO.md, Progress.md, addf-lock.json |
 
 ### .gitignore マーカーブロック
 
@@ -63,11 +63,30 @@ ADDF エントリを `# --- ADDF Framework ---` で囲むことで:
 
 `addf-init.md` の Phase 1 で以下の4分岐を行う:
 1. `addf-lock.json` あり → 導入済み
-2. `addf-*.md` あり but lock なし → Template 経由の新規プロジェクト
+2. `addf-*.md` あり but lock なし → **Template 経由の新規プロジェクト** または **部分導入プロジェクト**
+   （手縫い導入・旧版の部分コピー）。どちらかをユーザーに確認する。部分導入なら
+   スキル冒頭の「部分導入からの正規化」モードに合流する（既存 ADDF 由来ファイルは
+   最新版で上書き、プロジェクト固有ファイルは保護、完了時に lock 生成 → 以後は
+   `/addf-migrate` の系譜に載る）
 3. `CLAUDE.md` or `.claude/` あり → 既存プロジェクト導入モード
 4. 何もなし → 新規セットアップ
 
 外部起動（WebFetch 経由）の場合は必ず「ADDF 利用プロジェクト」（ダウンストリーム）として扱う。
+
+### `*.addf.md` の除外原則（存在≠所有）
+
+無条件コピーのカテゴリでも、**`*.addf.md` サフィックスのファイルはコピーしない**。
+理由: `.addf.md` は「ADDF 本体専用ファイル」を示すサフィックスであり、ダウンストリームに
+物理配置すると「存在ベースの upstream/downstream 判定ロジック」が「ADDF 本体」と誤認する
+根源になる（存在≠所有 の原則）。
+
+具体的な除外対象例:
+- `ProgressTemplate.addf.md`（テンプレート）
+- `Release.addf.md`（リリース手順）
+- `INDEX.addf.md`（knowhow インデックス — ダウンストリームは `INDEX.md` に一本化）
+
+判定ロジック側では、CLAUDE.repo.md の種別宣言＋`addf-lock.json` の明示シグナルで
+所有を判断する（詳細は [sync-lint-design.md](sync-lint-design.md) の「存在≠所有」）。
 
 ### 既存ファイルからの情報自動取得
 
@@ -86,6 +105,22 @@ ADDF エントリを `# --- ADDF Framework ---` で囲むことで:
 
 ## 参照
 
-- `.claude/commands/addf-init.md` — 外部起動セクション、Phase 2.5 干渉チェック、Phase 2.7 導入前レビュー
+- `.claude/commands/addf-init.md` — 外部起動セクション、部分導入からの正規化、Phase 2.5 干渉チェック、Phase 2.7 導入前レビュー
 - `.claude/addf/plans-add/0015-existing-project-install.md` — 設計計画
 - `.claude/addf/knowhow/ADDF/upstream-downstream-separation.md` — 分離パターンの全体像
+
+## 関連ノウハウ
+
+- [アップストリーム/ダウンストリーム分離パターン](upstream-downstream-separation.md) — `.addf.md` / `ADDF/` / `addf-` の3分離パターン
+- [同期 lint の設計](sync-lint-design.md) — 「存在≠所有」の判定ロジック、部分導入プロジェクトの検出との関係
+
+## 訂正履歴
+
+### 2026-07-06
+- 外部起動の判定に「部分導入プロジェクト」ケースを追記
+  （根拠: 現行 `.claude/commands/addf-init.md` の Phase 1 分岐 2 が「Template 経由 または 部分導入」に拡張されており、
+  スキル冒頭に「部分導入からの正規化」モードが独立節として存在する）
+- 無条件コピーカテゴリに「`*.addf.md` を除外する」原則を追記
+  （根拠: 現行 `addf-init.md` の Phase 3 カテゴリ1 に「除外規則: `*.addf.md` に該当するファイルはコピーしない」が明記。
+  存在≠所有 の分離規約に対応）
+- 干渉チェック3カテゴリの例示リストを現状追従（.claude/addf/knowhow/ADDF/, .claude/addf/guides/, optional/, tests/ 等を追加）

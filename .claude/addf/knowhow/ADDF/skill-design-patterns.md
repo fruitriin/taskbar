@@ -1,7 +1,7 @@
 ---
 title: スキル設計パターン（Anthropic 社内知見ベース）
 created: 2026-03-19
-last_verified: 2026-03-21
+last_verified: 2026-07-06
 depends_on: []
 status: active
 ---
@@ -95,7 +95,22 @@ status: active
 
 - **段階的開示の深化**: 現在の ADDF スキルは単一 .md ファイル。`references/` や `examples/` フォルダを設けてコンテキスト消費を削減できる
 - **description の見直し**: 現行スキルの description を「いつトリガーすべきか」の観点で再点検する価値がある
-- **計測フックの導入**: PreToolUse フックでスキル使用頻度をログし、改善の優先度判断に使う
+- ~~**計測フックの導入**: PreToolUse フックでスキル使用頻度をログし、改善の優先度判断に使う~~ → **実装済み**（`.claude/hooks/skill-usage-log.sh` を `PreToolUse: Skill` で配線・2026-07-06 確認）
+
+### ADDF 独自パターンの発展（Anthropic 記事にない）
+
+Anthropic 記事の 9 カテゴリ・段階的開示・Gotchas 育成に加え、ADDF は運用実績から
+以下のパターンを確立している。詳細は個別 knowhow を参照:
+
+- **検出＝スクリプト・解釈＝エージェント**: 決定的な検出は Python/Shell に任せ、意味的な
+  解釈と修復はエージェント側で行う。ドリフト検出（`lint-template-sync.py`）や
+  裏付け検査（`lint-checklist.py`）で採用。詳細は [sync-lint-design.md](sync-lint-design.md)
+- **exit code の3値化**: `0=OK` / `1=WARNING` / `2=ERROR` を統一し、run-all 側で
+  責務（ERROR で失敗にする／WARNING は通す）を機械化する。詳細は [sync-lint-design.md](sync-lint-design.md)
+- **同期契約の lint 化**: 「同期しろ」を意思で守るのではなくペア（ソース↔ミラー）を
+  lint で機械的に検出する。ペア1〜7 の運用実績あり。詳細は [sync-lint-design.md](sync-lint-design.md) / [checklist-backing-lint.md](checklist-backing-lint.md)
+- **オプトイン式スキル**: 常用しないスキルは `.claude/addf/optional/` に退避し、
+  `enable = true` で有効化コピーを作る。詳細は [optional-skill-optin.md](optional-skill-optin.md)
 
 ## 注意点・制約
 
@@ -113,4 +128,14 @@ status: active
 
 ## 関連ノウハウ
 
-- [同期 lint の設計 — 検出はツール、解釈と修復はエージェント](sync-lint-design.md) — addfTools へのスクリプト同梱構成の実例（lint-template-sync.py）
+- [同期 lint の設計 — 検出はツール、解釈と修復はエージェント](sync-lint-design.md) — addfTools へのスクリプト同梱構成の実例（lint-template-sync.py）・exit3値・SKIP 設計
+- [手順書チェックリストの裏付け lint](checklist-backing-lint.md) — 検出＝スクリプト・解釈＝エージェントの応用例。責めないトーン設計
+- [オプトイン式スキルの退避＋有効化コピー設計](optional-skill-optin.md) — スキル配布のもうひとつの選択肢（マーケットプレイスに載せない小規模チーム向け）
+
+## 訂正履歴
+
+### 2026-07-06
+- 「改善の余地: 計測フックの導入」を実装済みに修正
+  （根拠: `.claude/settings.json` の `PreToolUse: Skill` に `.claude/hooks/skill-usage-log.sh` が配線されている）
+- ADDF 独自パターンとして「検出＝スクリプト・解釈＝エージェント」「exit 3値」「同期契約の lint 化」
+  「オプトイン式スキル」を追記（根拠: それぞれ knowhow として独立している運用実績）

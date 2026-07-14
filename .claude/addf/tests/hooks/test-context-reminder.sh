@@ -96,6 +96,9 @@ assert_contains "実測値の注入" "約 150,000 トークン" "$out"
 assert_contains "モデル名の注入" "claude-opus-4-8" "$out"
 assert_contains "モデル別目安の注入" "約 200,000 トークン" "$out"
 assert_contains "安心文" "作業を縮小・切り上げる指示ではない" "$out"
+# Plan 0041: 「満杯時の出口」教義 — 止まらないことの行動指針が入る
+assert_contains "止まらない教義" "止まらないこと" "$out"
+assert_contains "harness と復帰フックの役割分担" "compaction を起こすのは harness の" "$out"
 rm -rf "$box"
 
 # テスト 3: 再通知抑制 — 通知後、増分が renotify_step 未満なら沈黙、超えたら再通知

@@ -14,7 +14,7 @@ On session start, read these files in order:
 3. `.claude/addf/Progress.md` — Continue in-progress tasks or select next
    - If the in-progress task has a diary (日記) section, read the last 3 entries to pick up the predecessor's situation, judgments, and concerns before starting (see Progress.md operating rules for the diary format)
 4. If no pending tasks:
-   - If `.claude/addf/plans/` has no plan files (first-time project): scan the project, then ask the owner to choose: (A) guided Q&A (what to build, pain points, target platform, why existing tools don't work) or (B) free-form explanation. Create 2-3 initial plan files, register in TODO.md, and generate project-specific `CLAUDE.repo.md` (as downstream "ADDF利用プロジェクト")
+   - If `.claude/addf/plans/` has no plan files (first-time project): scan the project, then ask the owner to choose: (A) guided Q&A (what to build, pain points, target platform, why existing tools don't work) or (B) free-form explanation. Create 2-3 initial plan files (following `.claude/addf/templates/PlanTemplate.md`), register in TODO.md, and generate project-specific `CLAUDE.repo.md` (as downstream "ADDF利用プロジェクト")
    - Otherwise: ask the owner for the next task
 5. Before starting a plan, read relevant files in `.claude/addf/knowhow/` directly
 

@@ -61,3 +61,4 @@ B型部分は `<!-- human-judgment -->` で分離する（Plan 0027 のドクト
 - [同期 lint の設計](sync-lint-design.md) — 引用突合・サンドボックステスト作法の供給元
 - [ルール配置と実行保証](rule-placement-execution-guarantee.md) — 「どこに書けば実行されるか」は詰め段階で決める
 - [チェックリスト裏付け lint](checklist-backing-lint.md) — 完了条件のA型/B型分離の根拠
+- [実測ベース判断 Plan の探索条件バイアス](measurement-sampling-bias.md) — 「決定の材料は実物確認」の一歩手前、探索条件自体が母集団を偏らせる罠

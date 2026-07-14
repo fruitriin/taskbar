@@ -1,7 +1,7 @@
 ---
 title: 権限要求パターンと settings ファイルの使い分け
 created: 2026-03-19
-last_verified: 2026-03-19
+last_verified: 2026-07-06
 depends_on: []
 status: active
 ---
@@ -167,11 +167,24 @@ status: active
 
 ### 破壊的操作のテンプレート除外方針
 
-`mv`, `rm`, `chmod` は汎用的なファイル操作だが、**破壊的な副作用を持つため settings.json（テンプレート）には含めない**。`git push` が `ask` に入っているのと同じ判断基準。
+テンプレート（`settings.json`、ダウンストリームに配布）に含めるかどうかは
+「**破壊が主目的か副作用か**」で分類する（完全に一貫はしない実務的境界）:
 
-- テンプレート（settings.json）には安全な操作のみ含める
-- 慣れた開発者は自分の責任で settings.local.json に `allow` として追加する
-- これにより、ダウンストリームの新規プロジェクトがデフォルトで安全な状態で始まる
+| 分類 | 例 | 配置 | 理由 |
+|---|---|---|---|
+| 作成が主・上書きは副作用 | `cp`, `mkdir`, `mktemp`, `git clone` | `settings.json` | 通常は新規ファイル作成。上書きはワイルドカード指定時の副作用 |
+| 元状態を消す・変えるのが主目的 | `mv`, `rm`, `chmod` | `settings.local.json` | 副作用ではなく破壊が動作の主眼 |
+| 元に戻せない | `git push`, `git reset --hard`, `git clean` | `settings.json` の `ask` | 遠隔状態やインデックスに不可逆な影響 |
+
+- `cp` は「上書きしうる」点で完全に無害ではないが、通常運用（`cp src/foo dst/foo`）で
+  副作用リスクは低い。ワイルドカード + 既存ディレクトリ書き換えの組み合わせでのみ問題化する
+- 「上書き副作用も禁止したい」プロジェクトは `settings.json` の `ask` に `Bash(cp * /*)` 等を
+  追加するか、`deny` で特定パス（`Bash(cp * ./src/**)`）を明示する — が、テンプレートには含めない
+  （運用ノイズが増える vs 実害率のトレードオフ。**深追い設計の Plan 化余地あり**）
+- 慣れた開発者は自分の責任で `settings.local.json` に `mv`/`rm`/`chmod` を `allow` として追加する
+  （本リポジトリの `settings.local.json` はまさにこの形）
+- これにより、ダウンストリームの新規プロジェクトがデフォルトで**破壊主目的の操作は不許可**の
+  安全な状態で始まる
 
 ### gh コマンドの read/write 分離
 
@@ -191,18 +204,21 @@ status: active
 
 ### settings.json と settings.local.json の役割分担まとめ
 
-**settings.json（テンプレート）** — 副作用のない安全な操作のみ:
-- 組み込みツール（Read, Edit, Write, Glob, Grep, Agent, Skill 等）
-- `--help`, `--version`
-- ファイル操作: `cp`, `mkdir`, `ls`, `tail`, `cd`（mv/rm/chmod は除外）
-- git 参照系 + commit/add（push は ask）
+**settings.json（テンプレート）** — 破壊主目的でない安全な操作:
+- 組み込みツール（Read, Edit, Write, Glob, Grep, Agent, Skill, LSP, ToolSearch, TaskCreate/Update/List/Get/Output/Stop, TeamCreate/Delete, SendMessage）
+- `Bash(* --help)`, `Bash(* --help *)`, `Bash(* --version)`
+- ファイル操作（作成主目的）: `cp`, `mkdir`, `mktemp`, `ls`, `tail`, `cd`, `which`（mv/rm/chmod は除外）
+- git 参照系 + commit/add + `git clone`, `git -C *`（push は ask）
 - gh 参照系: `view`, `list`, `status`, `diff`, `checks`, `checkout`, `clone`
-- フレームワークツール: テスト実行、lint スクリプト
+- フレームワークツール: `bash .claude/addf/tests/run-all.sh *`, `uv run --python 3.11 .claude/addf/addfTools/lint *`
+
+> 実際の一覧はドリフトするため、正は `.claude/settings.json` を参照する。上記は「テンプレートに何を入れる／入れないか」の**基準**の例示。
 
 **settings.local.json（パワーユーザー向け）** — 自己責任で許可:
-- 破壊的ファイル操作: `mv`, `rm`, `chmod`
-- ADDF 開発ツール: `sed`, `find`, `swiftc`, `addfTools/build.sh`
-- gh 更新系: `create`, `comment`, `close`, `edit`, `merge`, `review`, `fork`
+- 破壊主目的のファイル操作: `mv`, `rm`, `chmod`
+- ADDF 開発ツール: `sed`, `find`, `swiftc`, `addfTools/build.sh`, `git rev-parse`
+- gh 更新系: `create`, `comment`, `close`, `edit`, `merge`, `review`, `fork`, `gh release`
+- `uv run:*`（Python スクリプトの汎用実行）
 - `gh api` は含めない（都度確認）
 
 ## 注意点・制約
@@ -219,3 +235,17 @@ status: active
 - `.claude/settings.json` — プロジェクト共有設定
 - `.claude/settings.local.json` — ローカル設定
 - `.claude/addf/knowhow/ADDF/upstream-downstream-separation.md` — 分離パターンの全体像
+
+## 訂正履歴
+
+### 2026-07-06
+- 「破壊的操作のテンプレート除外方針」の基準を「破壊が主目的か副作用か」に整理した
+  → 従来は「破壊的な副作用を持つため mv/rm/chmod を除外」としながら、`cp *` も上書きしうる（副作用）
+  ことに触れておらず、cp 許可・mv/rm/chmod 除外の基準が不統一だった（Plan 0026 レビュー指摘）。
+  分類を明示し、「上書き副作用まで禁止したい場合の追加設計」は本記事の外に Plan 化余地として明記
+  （根拠: 現行 `.claude/settings.json` は `Bash(cp *)` を allow、`.claude/settings.local.json` は
+  `mv`/`rm`/`chmod` を allow に置いており、両者の境界は本記事の新しい基準と整合する）
+- 例示 settings.json の一覧を現状に追従（`Bash(* --help)` / `Bash(* --help *)` / `Bash(* --version)`
+  ・`Bash(git clone *)` / `Bash(git -C *)` / `Bash(mktemp *)` / `Bash(which *)`・
+  gh 参照系サブコマンド群を追記）。settings.local.json 側にも `uv run:*` / `gh release *` を反映
+  （根拠: 現行 `.claude/settings.json` / `.claude/settings.local.json`）

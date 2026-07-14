@@ -3,6 +3,8 @@
 # speculate-integrate.py の統合ふるまいを mktemp サンドボックスで検証する。
 # fake git リポジトリに speculative/ ブランチ群を作り、
 # 「2 feature の統合成功」「片方衝突時の記録と integration 再生成」を機械検証する（Plan 0028 フェーズ2）。
+# なお Test 12 のみ speculate-integrate.py ではなく addf-speculate.md 手順3 の
+# .claude 複製コマンド（cp + find + checkout）の検証である。
 
 set -uo pipefail
 
@@ -50,6 +52,9 @@ g() { git -C "$repo" -c user.name=t -c user.email=t@t "$@"; }
 (
   cd "$repo"
   git init -q -b main .
+  # CI 等グローバル gitconfig の無い環境向け: スクリプト（speculate-integrate.py）が
+  # この repo 内で行う commit にも効くよう、repo ローカル設定として永続化する
+  git config user.name t && git config user.email t@t
   printf 'line1\n' > shared.txt
   git -c user.name=t -c user.email=t@t add shared.txt
   git -c user.name=t -c user.email=t@t commit -qm init
@@ -139,6 +144,75 @@ printf 'uncommitted memo\n' > "$wt/memo.txt"
 out="$(run_integrate --name integration/loop-test speculative/a)"; code=$?
 check "dirty worktree の破棄を WARNING" 0 "$code" "$out" "WARNING: .*未コミット変更を破棄"
 assert "作り直しは続行される" test -f "$wt/a.txt"
+
+echo "Test 10: --base 省略・remote なしでは main にフォールバックする"
+out="$(run_integrate --name integration/loop-test speculative/a)"; code=$?
+check "remote なしで base=main" 0 "$code" "$out" "base=main"
+
+echo "Test 11: --base 省略時は origin の default branch（非 main）を自動検出する"
+repo2="$box/repo2"
+mkdir -p "$repo2"
+g2() { git -C "$repo2" -c user.name=t -c user.email=t@t "$@"; }
+(
+  cd "$repo2"
+  git init -q -b trunk .
+  git config user.name t && git config user.email t@t
+  printf 'base\n' > base.txt
+  git -c user.name=t -c user.email=t@t add base.txt
+  git -c user.name=t -c user.email=t@t commit -qm init
+)
+g2 checkout -q -b speculative/z trunk
+printf 'feature-z\n' > "$repo2/z.txt"
+g2 add z.txt
+g2 commit -qm z
+g2 checkout -q trunk
+git clone -q --bare "$repo2" "$box/origin2.git"
+g2 remote add origin "$box/origin2.git"
+g2 fetch -q origin
+g2 remote set-head origin trunk
+out="$(cd "$repo2" && python3 "$INTEGRATE" --name integration/loop-test speculative/z 2>&1)"; code=$?
+check "default branch trunk が自動検出される" 0 "$code" "$out" "base=trunk"
+check "trunk 起点で統合成功" 0 "$code" "$out" "integrated=speculative/z"
+assert "trunk 起点の worktree に z.txt がある" test -f "$box/repo2-integration/z.txt"
+
+echo "Test 12: 手順3の .claude 複製で .venv 等は除外される（venv は relocatable でない — Issue #18）"
+mkdir -p "$repo/.claude/mcps/fake-mcp/.venv/lib"
+printf 'marker\n' > "$repo/.claude/mcps/fake-mcp/.venv/lib/marker.txt"
+printf 'exp\n' > "$repo/.claude/fake.exp.md"
+# 依存をあえて git 追跡下にコミットしている構成（名前ベース除去からの復元対象）
+mkdir -p "$repo/.claude/vendored/node_modules"
+printf 'tracked\n' > "$repo/.claude/vendored/node_modules/lib.js"
+g add .claude/vendored/node_modules/lib.js
+g commit -qm vendored
+spec_wt="$box/repo-spec-copytest"
+g worktree add -q "$spec_wt" -b speculative/copytest main
+mkdir -p "$spec_wt/.claude"
+# addf-speculate.md 手順3 の複製コマンド（cp + find + checkout の3行構成）をそのまま再現する
+cp -r "$repo/.claude/." "$spec_wt/.claude/"
+find "$spec_wt/.claude" \( -name .venv -o -name venv -o -name node_modules -o -name __pycache__ \) \( -type d -o -type l \) -prune -exec rm -rf {} +
+git -C "$spec_wt" checkout -- .claude 2>/dev/null || true
+assert "gitignore 対象（.exp.md）は複製される" test -f "$spec_wt/.claude/fake.exp.md"
+assert ".venv はコピー先に存在しない" test ! -e "$spec_wt/.claude/mcps/fake-mcp/.venv"
+assert ".venv の親（mcps 配下）は残る" test -d "$spec_wt/.claude/mcps/fake-mcp"
+assert "コピー元の .venv は無傷" test -f "$repo/.claude/mcps/fake-mcp/.venv/lib/marker.txt"
+assert "git 追跡下の node_modules は checkout で復元される" test -f "$spec_wt/.claude/vendored/node_modules/lib.js"
+
+echo "Test 13: fetch 済み・ローカル default branch 無しでは origin/<name> を起点にする（CI/コンテナ環境）"
+repo3="$box/repo3"
+git clone -q -b speculative/z "$box/origin2.git" "$repo3"
+out="$(cd "$repo3" && python3 "$INTEGRATE" --name integration/loop-test speculative/z 2>&1)"; code=$?
+check "remote-tracking の origin/trunk が起点になる" 0 "$code" "$out" "base=origin/trunk"
+check "origin/trunk 起点で統合成功" 0 "$code" "$out" "integrated=speculative/z"
+assert "origin/trunk 起点の worktree に z.txt がある" test -f "$box/repo3-integration/z.txt"
+
+echo "Test 14: origin/HEAD 未設定＋stale なローカル main → main フォールバックが NOTE で可視化される"
+repo4="$box/repo4"
+git clone -q -b speculative/z "$box/origin2.git" "$repo4"
+git -C "$repo4" remote set-head origin --delete
+git -C "$repo4" branch -q --no-track main origin/trunk  # stale になりうるローカル main
+out="$(cd "$repo4" && python3 "$INTEGRATE" --name integration/loop-test speculative/z 2>&1)"; code=$?
+check "main にフォールバックして統合される" 0 "$code" "$out" "base=main"
+check "フォールバックがサイレントでない（NOTE が出る）" 0 "$code" "$out" "NOTE: origin の default branch を検出できず"
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

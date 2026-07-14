@@ -34,6 +34,28 @@ assert_file_exists() {
   fi
 }
 
+# disabled 判定に失敗すると実際の GUI 情報取得処理に入り、権限ダイアログ待ちで
+# 無期限にハングしうる（Issue #26 実測: 移行直後の旧パス参照で window-info が
+# 9時間ハング）。原因によらず時間で打ち切るガードレールとして timeout でラップする。
+# GNU coreutils の timeout/gtimeout が無い環境向けに手動 kill フォールバックを持つ。
+run_with_timeout() {
+  local secs="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$secs" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "$secs" "$@"
+  else
+    "$@" &
+    local pid=$!
+    ( sleep "$secs" && kill -9 "$pid" 2>/dev/null ) &
+    local watchdog=$!
+    wait "$pid" 2>/dev/null
+    local exit_code=$?
+    kill "$watchdog" 2>/dev/null
+    return $exit_code
+  fi
+}
+
 echo "=== test-tools.sh ==="
 
 # テスト 1: バイナリの存在確認
@@ -52,7 +74,7 @@ if [ "$(uname -s)" != "Darwin" ]; then
 else
   # テスト 2: window-info (disabled 状態で実行)
   echo "Test 2: window-info (gui-test disabled)"
-  stdout=$("$TOOLS_DIR/window-info" dummy 2>/dev/null) || true
+  stdout=$(run_with_timeout 10 "$TOOLS_DIR/window-info" dummy 2>/dev/null) || true
   if echo "$stdout" | grep -q '"disabled"'; then
     echo "  PASS: window-info returns disabled JSON"
     PASS=$((PASS + 1))

@@ -41,7 +41,7 @@ user_invocable: true
 
 ### 3. リリース手順の実行
 
-読み込んだリリース手順（ADDF-Release.addf.md または addf-release.exp.md）に記載された内容を上から順に実行する。
+読み込んだリリース手順（Release.addf.md または addf-release.exp.md）に記載された内容を上から順に実行する。
 
 ### 4. 経験の更新
 

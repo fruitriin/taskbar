@@ -34,7 +34,7 @@ ADDF が提供するスキル（`/コマンド名` で呼び出し）:
 
 | スキル | 呼び出し | 説明 |
 |---|---|---|
-| **addf-experience** | `/addf-experience` | スキル経験ファイル（`.exp.md`）のファイルメンション書式を検証 |
+| **addf-experience** | `/addf-experience` | スキル経験ファイル（`.exp.md`）参照の自己整合性・書式健全性を検証 |
 
 ## GUI テスト（オプション）
 

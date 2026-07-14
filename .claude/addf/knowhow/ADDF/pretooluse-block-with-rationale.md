@@ -1,7 +1,7 @@
 ---
 title: PreToolUse ブロックフックの設計パターン — 根拠提示型ガード
 created: 2026-03-19
-last_verified: 2026-03-19
+last_verified: 2026-07-06
 depends_on: []
 status: active
 ---
@@ -132,6 +132,7 @@ export CLAUDE_CODE_TMPDIR=/path/to/custom/tmp
 - ブロックパターンの文字列をフック自身のソースコードに直書きすると、フックの Edit/Write 時に自己ブロックする。文字列結合で動的構築するか、`.md` 拡張子を除外する
 - `decision: "block"` は exit 0 + JSON stdout で返す方法と、exit 2 + stderr で返す方法がある。JSON 方式のほうが構造化されており推奨
 - PreToolUse フックは全ツール呼び出しに対して実行されるため、パフォーマンスに注意。マッチャーで対象ツールを絞ること
+- **ブロックせず理由だけ添えるパターン（未検証・要実機確認）**: 「ブロックはしないが permission ダイアログの前後で参照される根拠メッセージを添えたい」場合、exit 0 + stderr の実効性は不確実（`claude-code-hooks.md` の exit コード表では stderr が Claude にフィードバックされるのは exit 2 の場合のみと明記）。実効性が観測されない場合は JSON stdout の `hookSpecificOutput.permissionDecisionReason` を返して `permissionDecision` を省略する方式に切り替える。Plan 0043 の `destructive-git-guard.sh` はこの未検証パターンで実装されており、実効性の観測結果が集まったら本節を更新する
 
 ## 参照
 

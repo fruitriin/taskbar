@@ -86,3 +86,4 @@ Q: このファイルはダウンストリームでも使う？
 ## 関連ノウハウ
 
 - [同期 lint の設計 — 検出はツール、解釈と修復はエージェント](sync-lint-design.md) — この分離規約を lint で機械的に守らせる設計と、ダウンストリーム配布時の SKIP 設計
+- [既存プロジェクトへの導入パターン](existing-project-install-pattern.md) — `.addf.md` / `ADDF/` / `addf-` の3分離パターンを引用する側

@@ -12,9 +12,11 @@ user_invocable: true
 
 ## インデックスファイルの選択
 
-- ADD フレームワーク本体（このリポジトリ）では `.claude/addf/knowhow/INDEX.addf.md` を使用する
-- ダウンストリームプロジェクトでは `.claude/addf/knowhow/INDEX.md` を使用する
-- 判定方法: `INDEX.addf.md` が存在すればそちらを優先する
+- ADDF 開発プロジェクト（フレームワーク本体）では `.claude/addf/knowhow/INDEX.addf.md` を使用する
+- ADDF 利用プロジェクト（ダウンストリーム）では `.claude/addf/knowhow/INDEX.md` を使用する
+- 判定方法（`INDEX.addf.md` の**存在で判定しない** — 配布によりダウンストリームにも物理存在しうる。存在≠所有）:
+  1. **一次根拠**: `CLAUDE.repo.md` のプロジェクト種別宣言を読む。「ADDF 開発プロジェクト」なら `INDEX.addf.md`、「ADDF 利用プロジェクト」なら `INDEX.md`（宣言が `@メンション` 先のファイルにある場合はそれを辿る。コードブロック内の書き換え例は宣言として扱わない）
+  2. **フォールバック**（宣言が見つからない場合）: `.claude/addf/lock.json` が存在すればダウンストリームとして `INDEX.md` を使用する。それも無ければ ADDF 本体として `INDEX.addf.md` を使用する
 
 ## 引数
 - **引数なし**: インデックスファイルを読み、内容をそのまま返す

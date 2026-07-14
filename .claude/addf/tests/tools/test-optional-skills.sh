@@ -108,7 +108,7 @@ rm -rf "$box"
 # テスト 5: .claude/addf/optional/ が無い環境 → SKIP で exit=0
 echo "Test 5: optional 不在時の SKIP"
 box="$(mktemp -d)"
-mkdir -p "$box/.claude"
+mkdir -p "$box/.claude/addf"
 output=$(run_sync "$box")
 assert_exit "optional 不在で OK" 0 $?
 assert_contains "SKIP 表示" "SKIP: .claude/addf/optional が存在しない" "$output"

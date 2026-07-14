@@ -34,19 +34,20 @@
 ├── TODO.md                      # タスクバックログ
 ├── CONTRIBUTING.md              # コントリビューションガイド
 ├── .claude/
-│   ├── addf-lock.json           # ADDF バージョンロック
-│   ├── Progress.md              # 現在のタスク進捗
-│   ├── Feedback.md              # 問題記録・改善アクション
-│   ├── Progresses/              # 完了タスクのアーカイブ
-│   ├── templates/               # テンプレートファイル
-│   ├── commands/                # スキル定義
-│   ├── agents/                  # サブエージェント定義
-│   ├── hooks/                   # Claude Code Hooks
-│   └── addfTools/               # GUI テストツール（macOS/Swift）
-├── docs/
-│   ├── plans/                   # 実装計画ファイル
-│   ├── knowhow/                 # 実装知見の蓄積
-│   └── guides/                  # ガイドドキュメント
+│   ├── addf/                    # ADDF 占有名前空間（v0.6.0〜）
+│   │   ├── lock.json            # ADDF バージョンロック
+│   │   ├── Progress.md          # 現在のタスク進捗
+│   │   ├── Feedback.md          # 問題記録・改善アクション
+│   │   ├── Progresses/          # 完了タスクのアーカイブ
+│   │   ├── templates/           # テンプレートファイル
+│   │   ├── plans/               # 実装計画ファイル
+│   │   ├── knowhow/             # 実装知見の蓄積
+│   │   ├── guides/              # ガイドドキュメント
+│   │   └── addfTools/           # lint・migrate・speculate 等のツール群（GUI テスト用 Swift バイナリ含む）
+│   ├── commands/                # スキル定義（Claude Code 規約位置・不動）
+│   ├── agents/                  # サブエージェント定義（同上）
+│   └── hooks/                   # Claude Code Hooks（同上）
+├── docs/                        # ADDF は使わない（GitHub Pages 等の一般用途に明け渡し）
 └── .gitignore / .claudeignore
 ```
 
@@ -72,5 +73,6 @@
 - **`.claude/addf/plans-add/`** — ADDF 自身の開発計画。Plan の書き方・粒度の実例
 - **`.claude/addf/knowhow/ADDF/`** — 開発で蓄積されたノウハウ
 - **`.claude/settings.json`** — ダウンストリームテンプレートの実例
+- **`.github/workflows/test.yml`** — CI 品質ゲート（run-all.sh + lint 一式）の実例。ダウンストリームには配布されないが、同じゲートを組みたい場合は雛形として参照できる。CI が落ちたらローカルで `/addf-lint`（lint 一式）または `bash .github/scripts/run-lint.sh <lintスクリプト>` で再現できる
 - **`.claude/addf/Progresses/`** — 完了タスクのアーカイブ
 - **`git log`** — コミットログ規約・品質ゲートの適用結果

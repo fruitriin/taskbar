@@ -1,8 +1,9 @@
 ---
 name: addf-lint
 description: |
-  ADDF フレームワークの整合性をチェックする。settings.json 構文・hooks 実行権限・
-  スキル frontmatter・Behavior.toml・knowhow INDEX 整合・テンプレート同期を検証する。
+  ADDF フレームワークの整合性をチェックする。settings.json 構文・hooks 実行権限/配線・
+  スキル frontmatter・Behavior.toml・knowhow INDEX 整合/鮮度/双方向リンク・
+  テンプレート同期・チェックリスト裏付け・オプショナルスキル同期・Plan 状態整合を検証する。
   品質ゲート前、CI、設定変更後に使う。
 context: fork
 user_invocable: true
@@ -63,7 +64,7 @@ INDEX ファイルからリンクを抽出するには、テーブル行の `[�
 
 ## 6. テンプレート同期チェック
 
-同期が必要な6つのファイルペアのドリフトを検出する:
+同期が必要な8つのファイルペアのドリフトを検出する:
 
 | ペア | 検証内容 | 重要度 |
 |---|---|---|
@@ -73,6 +74,8 @@ INDEX ファイルからリンクを抽出するには、テーブル行の `[�
 | 4. `CLAUDE.md` ⇔ `.claude/addf/guides/development-process.md` | ブートシーケンス概要の手順番号の対応 | WARNING |
 | 5. `CLAUDE.md` ⇔ `.claude/commands/addf-init.md` コピーリスト | 参照ファイルのカバレッジ（.gitignore ADDF ブロック含む） | WARNING |
 | 6. TODO（`TODO.md` / `.claude/addf/plans-add/TODO.addf.md`）⇔ Plan の `## 実装状況:` ヘッダ | 状態の矛盾・参照切れ・登録漏れ・表記ゆれヘッダ（`## 状態:` 等）。ヘッダ無し Plan は対象外 | WARNING |
+| 7. `.claude/addf/addfTools/verify-checksums.sh` ⇔ `.claude/addf/addfTools/lint-template-sync.py` | `detect_repo_kind()` Python⇔Bash 実装の同期契約文言の存在チェック（挙動比較は困難なため契約明示を機械保証） | WARNING |
+| 8. `README.md` / `README.en.md` ⇔ `.claude/commands/addf-*.md`（`*.exp.md` 除く） | スキルテーブルへの掲載漏れ（新設スキルが README のドキュメント公開から漏れていないか）。upstream 限定（downstream は独自 README のため SKIP） | WARNING |
 
 ※ lint にペアを追加・変更したら、この表とスクリプト docstring も同時に更新する。
 
@@ -81,7 +84,7 @@ uv run --python 3.11 .claude/addf/addfTools/lint-template-sync.py
 ```
 
 exit code: 0 = 全一致 / 1 = ERROR / 2 = WARNING のみ。
-ダウンストリームプロジェクトでは ADDF 本体固有ファイル（`.addf.md` 版・`AGENTS.md` 等）が存在しないペアは SKIP され、ペア1は `ProgressTemplate.md` を正として比較する。
+upstream/downstream の判定は明示シグナルで行う（一次根拠: `CLAUDE.repo.md` の種別宣言 / フォールバック: `.claude/addf/lock.json` の存在。ファイルの存在では判定しない — 存在≠所有）。ダウンストリームではペア1は `ProgressTemplate.md` を正として比較し（`.addf.md` 版が物理存在しても比較しない）、ペア2・ペア3は SKIP される（独自 `AGENTS.md` の誤報防止）。その他のペアも対象ファイルが存在しなければ SKIP される。
 WARNING には git log による最終更新日ヒントが併記される。**どちらを正として同期するかはエージェントが文脈で判断する**（通常は新しい側が正だが、誤編集の巻き戻しもありうる）。修正後は再実行して確認する。
 
 ## 7. Knowhow 鮮度チェック
@@ -102,7 +105,8 @@ WARNING には git log による最終更新日ヒントが併記される。**�
 
 ## 9. チェックリスト裏付け検査
 
-手順書（`ADDF-Release.addf.md` / `addf-init.md` / `addf-migrate.md` / `ProgressTemplate` 系）の
+手順書（`Release.addf.md` / `addf-init.md` / `addf-migrate.md` / `addf-plan-audit.md` /
+`ProgressTemplate` 系）の
 「確認/検証」ステップに裏付け（実行可能チェックまたは `<!-- human-judgment -->` マーカー）が
 あるかを点検する:
 
@@ -132,6 +136,55 @@ exit code: 0 = 整合 / 1 = ERROR（`enable` が真偽値でない等の設定�
 直接編集は原本に対して行う）。`.claude/addf/optional/` または Behavior.toml が無い場合、
 Behavior.toml が構文エラーの場合（セクション4の責務）は SKIP される。
 
+## 11. Hooks 配線チェック
+
+`.claude/hooks/*.sh` の各ファイルが `settings.json` の hooks セクションに配線されているかを
+突合する（セクション2の実行権限チェックと対: 権限があっても配線がなければ実行されない）:
+
+```bash
+uv run --python 3.11 .claude/addf/addfTools/lint-hooks-wiring.py
+```
+
+exit code: 0 = 全配線済み / 2 = WARNING（未配線フックあり。ダウンストリームが意図的に
+外している可能性があるため ERROR にしない）。tomllib 不要のためシステム python3 でも動く。
+突合は境界チェック付き（`count.sh` が `reset-turn-count.sh` の配線にマッチする
+部分文字列誤判定を防ぐ）。`settings.local.json` のみでの配線は有効だが OK と区別して
+`NOTE: <hook> は settings.local.json 経由（他環境・CI には適用されない）` が出る（exit 0 のまま）。
+フックのコメントヘッダに `# hooks-wiring: indirect` を置くと検査対象外（NOTE 表示。
+他スクリプト経由の間接参照用エスケープハッチ）。配線例は ADDF リポジトリの
+`.claude/settings.json`（https://github.com/fruitriin/ADDF/blob/main/.claude/settings.json）を参照。
+`settings.json` 不在、`.claude/hooks/*.sh` 不在、settings.json が不正 JSON の場合
+（セクション1の責務）、settings.json が読めない場合（OSError）は SKIP される。
+
+## 12. Plan 状態整合チェック（誤完了防止）
+
+`.claude/addf/plans-add/`・`.claude/addf/plans/` の Plan ファイルについて、`## 実装状況:` ヘッダが
+「完了」で始まるのに完了条件セクションに未チェック `- [ ]` が残っている矛盾
+（フェーズ分割 Plan の途中マージで「済み」に見える誤完了）を検出する:
+
+```bash
+uv run --python 3.11 .claude/addf/addfTools/lint-plan-status.py
+```
+
+exit code: 0 = OK / 1 = ERROR / 2 = WARNING（表記ゆれ状態ヘッダ。ERROR 優先）。
+チェックボックスは GFM タスクリスト全形式（`-`・`*`・`+`・番号付き `1.` / `1)`）を検出する。
+「一部完了」「未着手」等の中間状態ヘッダとヘッダ無しの旧 Plan は正当な対象外。
+ただし表記ゆれ状態ヘッダ（`## 状態:`・`## ステータス:`・`## 進捗:`・レベル違いの
+`### 実装状況:`・コロン無しの `## 実装状況 完了` 等）を持ちチェックボックスを含む Plan は
+無言スキップにせず WARNING で「`## 実装状況:` への統一」を促す（セクション6ペア6の
+表記ゆれ検出と同旨）。完了条件がチェックボックス形式でない旧書式 Plan は SKIP される
+（明示出力・件数計上・ファイル名列挙。チェックボックス化は強制しない）。
+コードフェンス（```・~~~・4連以上のバッククォート）内のチェックボックス例示は無視される。
+完了条件セクションの見出しは「完了条件」を**含む**もの（`### フェーズA: 完了条件` 等）を
+拾うが、含まない見出しのセクションは検出不能（スクリプト docstring の制約参照）。
+ERROR が出たら**ヘッダとチェックボックスのどちらが実態かを確認して直す**
+（残作業があるならヘッダを「一部完了（残り: …）」へ / 実施済みならチェックを付ける。
+lint を通すために完了状態を機械的に書き換えない）。
+セクション6のペア6（TODO ⇔ ヘッダ）が「ヘッダが実態を語っている」前提で動くのに対し、
+本チェックはその手前（ヘッダ ⇔ 完了条件の実態）を担う。stdlib のみのため
+システム python3 でも動く。対象ディレクトリが無い場合は SKIP、検査対象 0 件の場合は
+`NOTE: 検査対象 0 件 — リポジトリルートで実行しているか確認` が出る（いずれも exit 0）。
+
 ## 結果報告
 
 全チェックの結果を以下の形式でまとめる:
@@ -151,4 +204,6 @@ Behavior.toml が構文エラーの場合（セクション4の責務）は SKIP
 8. Knowhow リンク     ✓ / ⚠
 9. チェックリスト裏付け ✓ / ⚠
 10. オプショナルスキル同期 ✓ / ⚠
+11. Hooks 配線         ✓ / ⚠
+12. Plan 状態整合      ✓ / ⚠ / ✗
 ```

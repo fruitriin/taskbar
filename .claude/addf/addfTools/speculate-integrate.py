@@ -15,10 +15,17 @@ speculative/ ブランチを1本ずつ squash マージして「1 feature = 1コ
 tomllib を使わないため、システム python3（3.9 等）でそのまま動く（uv 不要）。
 
 使い方:
-  python3 speculate-integrate.py [--base main] [--name integration/loop-<日付>] \
+  python3 speculate-integrate.py [--base <branch>] [--name integration/loop-<日付>] \
       speculative/<concept> [speculative/<concept> ...]
 
-  --base: 統合の起点ブランチ（デフォルト: main）
+  --base: 統合の起点ブランチ。省略時は `git symbolic-ref refs/remotes/origin/HEAD` から
+      origin の default branch（origin/<name> の <name>）を自動検出する。
+      検出した <name> のローカルブランチが無い場合（fetch 済み・ローカルブランチ無しの
+      CI/コンテナ環境）は remote-tracking ref の origin/<name> を起点にする。
+      検出できない場合（remote なし・未設定）は NOTE を stdout に出して main に
+      フォールバックする（サイレントにしない）。
+      remote 名は origin 固定を前提とする — fork ワークフロー（upstream が権威）等、
+      origin が権威でない構成では --base を明示指定すること
   --name: integration ブランチ名（デフォルト: integration/loop-<今日 YYYY-MM-DD>）
   worktree は base リポジトリの隣（../<リポジトリ名>-integration）に作る。
   同名の integration ブランチ・worktree が既にあれば除去して作り直す（使い捨て）。
@@ -66,6 +73,28 @@ def branch_exists(name):
     return run(['rev-parse', '--verify', '--quiet', f'refs/heads/{name}']).returncode == 0
 
 
+def detect_default_branch():
+    """origin の default branch を検出する。検出できなければ NOTE を出して main にフォールバックする。
+
+    remote 名は origin 固定を前提とする（fork ワークフローでは --base を明示指定）。
+    検出した <name> のローカルブランチが無い場合（fetch 済み・ローカルブランチ無しの
+    CI/コンテナ環境）は remote-tracking ref の origin/<name> を返す。
+    """
+    prefix = 'refs/remotes/origin/'
+    head = run(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'])
+    ref = head.stdout.strip()
+    if head.returncode == 0 and ref.startswith(prefix):
+        name = ref[len(prefix):]
+        if branch_exists(name):
+            return name
+        if run(['rev-parse', '--verify', '--quiet', f'origin/{name}']).returncode == 0:
+            return f'origin/{name}'
+        return name
+    print('NOTE: origin の default branch を検出できず main を既定値として使用'
+          '（誤りなら --base で明示指定）')
+    return 'main'
+
+
 def force_remove_worktree(path):
     """worktree を除去する。未コミットの変更は破棄されるため、あれば警告してから消す"""
     dirty = run(['status', '--porcelain'], cwd=path)
@@ -89,7 +118,10 @@ def remove_worktree_of_branch(branch):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base', default='main')
+    parser.add_argument('--base', default=None,
+                        help='統合の起点ブランチ。省略時は origin の default branch を自動検出'
+                             '（remote 名は origin 固定 — fork ワークフロー等 origin が権威で'
+                             'ない構成では明示指定する。検出不能時は NOTE を出して main）')
     parser.add_argument('--name', default=None)
     parser.add_argument('features', nargs='+')
     opts = parser.parse_args()
@@ -100,6 +132,9 @@ def main():
     if toplevel.returncode != 0:
         die('git リポジトリ外で実行された')
     repo_root = toplevel.stdout.strip()
+
+    if opts.base is None:
+        opts.base = detect_default_branch()
 
     if run(['rev-parse', '--verify', '--quiet', opts.base]).returncode != 0:
         die(f'base ブランチ {opts.base} が存在しない')

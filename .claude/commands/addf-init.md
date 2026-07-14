@@ -32,6 +32,50 @@ user_invocable: true
 
 ---
 
+## 部分導入からの正規化
+
+lock ファイル（`.claude/addf/lock.json`。旧配布の位置は `.claude/addf-lock.json`）が無いまま <!-- residual-path: allow -->
+ADDF 由来ファイル（`.claude/commands/addf-*.md` 等）の一部が
+存在するプロジェクト（手縫い導入・旧版の部分コピー）を、正規の導入状態に揃えるモード。
+`/addf-migrate` は lock 不在かつ部分導入を検出したとき、このモードを提案して誘導する。
+
+> 本節で参照するカテゴリ1〜3 の定義は、後述の init モード「Phase 3: ファイルコピー & マージ」を参照。
+
+上記「外部からの起動」の手順（URL 検証とクローン → init モード Phase 1〜4）に合流し、
+以下だけ読み替える:
+
+- **カテゴリ1（ADDF 由来ファイル）は既存でも最新版（クローン元）で上書きする** —
+  通常 init の「既存ファイルは上書きしない」原則の例外。ただし**存在≠所有**
+  （ファイル名の一致は ADDF 由来の証明にならない）のため、2群に分けて扱う:
+  - **安全一括上書き** — `addf-` プレフィックスや専用ディレクトリで ADDF 所有と識別できるもの:
+    `.claude/commands/addf-*.md`・`.claude/agents/addf-*.md`・`.claude/addf/knowhow/ADDF/`・
+    `.claude/addf/addfTools/`・`.claude/addf/tests/`・`.claude/addf/templates/`。
+    一覧を提示してまとめて承認を得る <!-- human-judgment -->
+  - **個別確認必須** — プレフィックス識別が効かない、または設定値・プロジェクト独自ファイルの可能性があるもの:
+    - `.claude/hooks/*.sh` — 既存との diff を提示し、1ファイルずつ承認を得る <!-- human-judgment -->
+    - `AGENTS.md` — ADDF ブートシーケンス見出しの有無で所有を確認する:
+      `grep -q '^## Boot Sequence' AGENTS.md`。見出しが無ければ
+      プロジェクト独自の同名無関係ファイルとみなし、上書きしない（実例あり — 存在≠所有）
+    - `.claude/addf/Behavior.toml` — 上書きではなく、既存の `enable` 値等の設定値を
+      保持して最新版の構造にマージする
+  - 上書き前の差分確認は、既存ファイルごとに以下を実行して裏付ける。
+    **差分が非空のファイルは安全一括上書きの群から外し、個別確認に回す**
+    （差分ゼロの上書きだけを一括承認の対象にする）:
+    ```bash
+    git diff --no-index <既存ファイル> <tmp>/addf-source/<同パス>
+    ```
+- 最新版（クローン元）に存在しない ADDF 由来ファイル（リネーム前の旧名残留等）は
+  削除を提案する <!-- human-judgment -->
+- プロジェクト固有ファイルは従来どおり保護する（`.claude/commands/*.exp.md`・
+  `.claude/addf/Progress.md`・`.claude/addf/Feedback.md`・`CLAUDE.repo.md`・`TODO.md` 等。
+  カテゴリ2 のマージ・カテゴリ3 の生成は既存があれば上書きしない）
+- 完了時に `.claude/addf/lock.json` をクローン元の `ref` で生成する（カテゴリ3 と同じ手順）。
+  以後のアップグレードは `/addf-migrate` が使える
+- 正規化完了後に `/addf-plan-audit` の初回実行を案内する（部分導入で運用してきた
+  プロジェクトこそ「完了扱いだが未完了タスクが残っている計画」を抱えている母集団のため）
+
+---
+
 ## 引数
 
 - **引数なし**: 初期セットアップ（init モード）
@@ -45,7 +89,7 @@ user_invocable: true
 
 1. 既に ADDF 導入済みか判定する:
    - `.claude/addf/lock.json` が存在する → 「ADDF は導入済みです。`/addf-init check` で構造を検証できます」と案内して終了
-   - `.claude/commands/addf-*.md` が存在するが `addf-lock.json` がない → **Template 経由の新規プロジェクト**（ADDF ファイルは同梱済み、ロックファイルのみ未生成）。Phase 2 に進む
+   - `.claude/commands/addf-*.md` が存在するが lock ファイルがない（旧位置 `.claude/addf-lock.json` にもない）<!-- residual-path: allow --> → **Template 経由の新規プロジェクト**（ADDF ファイルは同梱済み、ロックファイルのみ未生成）または**部分導入プロジェクト**（過去に手動で ADDF ファイルの一部を導入した状態）。どちらかをユーザーに確認する <!-- human-judgment -->。Template 経由なら Phase 2 に進む。部分導入なら上記「部分導入からの正規化」に従う（既存ファイルが最新版と差分なしなら lock 再生成のみで完了する）
    - `CLAUDE.md` または `.claude/` が存在するが ADDF ファイルがない → **既存プロジェクト導入モード**。「既存プロジェクトに ADDF を導入します。続行しますか？」と確認を求める <!-- human-judgment -->
    - どちらも存在しない → 初期セットアップを開始
 
@@ -113,12 +157,18 @@ user_invocable: true
 
    ■ Hooks（セッション中に自動実行されるコマンド）
      + SessionStart: reset-turn-count.sh → ターンカウンターリセット
+     + SessionStart (compact): post-compact-recovery.sh → コンパクション後の復帰
      + UserPromptSubmit: turn-reminder.sh → ターンリマインダー
+     + PreCompact: pre-compact-archive.sh → トランスクリプトアーカイブ（オプトイン）
      + PreToolUse (Skill): skill-usage-log.sh → スキル使用ログ
+     + PreToolUse (Bash): destructive-git-guard.sh → 破壊的 git 操作の理由提示（Plan 0043 項目3）
 
    ■ 権限変更（settings.json）
      allow に追加: Read, Edit, Write, Agent, Skill, Bash(git *), ...
-     ask に追加: Bash(git push *), Bash(git reset --hard *), ...
+     ask に追加: Bash(git push *), Bash(git reset --hard *), Bash(git branch -D *),
+                Bash(git checkout -- *), Bash(git restore .), Bash(git clean *)
+     deny に追加: Bash(rm -rf /), Bash(chmod 777 /), Bash(dd if=* of=/dev/*),
+                Bash(mkfs.*), Bash(shutdown *), Bash(reboot *), ...（極端な破壊操作 11 パターン・Plan 0043 項目1）
 
    ■ CLAUDE.md
      + ブートシーケンス（Feedback → TODO → Progress 自動読み込み）
@@ -136,23 +186,45 @@ ADDF ファイルの配置元を決定する:
 - **Template 経由**: ADDF ファイルは既にプロジェクト内に存在（コピー不要）
 - **既存ファイルは上書きしない**（存在する場合はスキップして通知）
 
+#### Phase 3 前置: バイナリ実物の preview（Plan 0043 項目2）
+
+コピー実行の**前に**、配布バイナリの実物 preview をオーナーに提示する。
+Plan 0031 の checksums 照合の**上流**として位置付ける — 照合は改竄検出、preview は
+意図の確認。「不便のない範囲」の実装として、以下の最小構成で行う <!-- human-judgment -->:
+
+1. `<tmp>/addf-source/.claude/addf/addfTools/checksums.sha256` を読み、記載された
+   実行可能バイナリ（Swift ツール群 4本: annotate-grid / capture-window / clip-image /
+   window-info）の SHA-256 と、`file`/`stat` によるサイズ・種別を1行ずつ表示する
+2. ダウンストリームでは通常 **skip** で構わない（バイナリを利用する GUI テスト
+   機能自体がオプトインのため）。オーナーに「preview 表示 / skip」の選択を提示する
+3. skip を選ばれた場合は verify-checksums.sh を Phase 4（変更確認）の直前で1度実行し、
+   改竄検出だけは残す（意図の確認は諦めるが、改竄検出は担保する）<!-- human-judgment -->
+4. preview を選ばれた場合はハッシュ・サイズ・種別を表示 → オーナーが問題なしと
+   判断したら続行、疑わしければ導入を中止する <!-- human-judgment -->
+
+以下のカテゴリのファイル（バイナリ以外）は preview 対象外 — テキストなので addf-init 実行前後の `git diff` でオーナーが直接内容を確認できる。
+
 #### カテゴリ1: 無条件コピー（外部起動の場合のみ）
+
+**除外規則: `*.addf.md` に該当するファイルはコピーしない**（ADDF 本体専用。
+`.addf.md` をダウンストリームに物理的に置くと、存在ベースの判定ロジックが
+「ADDF 本体」と誤認する根源になる — 分離規約 / 存在≠所有）。
 
 衝突リスクなし（`addf-` プレフィックスで識別可能）:
 - `.claude/commands/addf-*.md` — スキル定義
 - `.claude/agents/addf-*.md` — エージェント定義
 - `.claude/addf/optional/` — オプトイン式スキル・エージェントの原本（GUI テスト等。有効化は `.claude/addf/addfTools/sync-optional-skills.py apply`）
 - `.claude/hooks/*.sh` — フック
-- `.claude/addf/templates/` — テンプレート
+- `.claude/addf/templates/` — テンプレート（ディレクトリ丸ごと。個別ファイル名は列挙しない — 列挙は本体側のテンプレート追加に追従できず腐るため。除外規則により `ProgressTemplate.addf.md` 等の `*.addf.md` はコピーしない）
 - `.claude/addf/addfTools/` — ツール群
 - `.claude/addf/tests/` — テストスイート
 - `.claude/addf/Behavior.toml`
-- `.claude/addf/CHANGELOG.md`, `.claude/addf/Release.addf.md`
+- `.claude/addf/CHANGELOG.md`（`Release.addf.md` は除外規則によりコピーしない）
 - `.claude/addf/Questions.example.md`, `.claude/addf/Dashboard.example.md` — CLAUDE.md が書式参照するため必須
 - `CLAUDE.repo.example.md`, `CLAUDE.local.example.md`
 - `AGENTS.md`
 - `.claudeignore`
-- `.claude/addf/knowhow/ADDF/`, `.claude/addf/knowhow/INDEX.addf.md`
+- `.claude/addf/knowhow/ADDF/`（`INDEX.addf.md` は除外規則によりコピーしない。ダウンストリームの knowhow インデックスは `.claude/addf/knowhow/INDEX.md` に一本化する）
 - `.claude/addf/guides/`
 
 #### カテゴリ2: インテリジェントマージ
@@ -178,6 +250,9 @@ ADDF ファイルの配置元を決定する:
 #### カテゴリ3: プロジェクト固有ファイル（ダウンストリーム体裁で生成）
 
 - **`CLAUDE.repo.md`** — `CLAUDE.repo.example.md` をベースに「ADDF 利用プロジェクト」として生成
+  - 種別宣言行は `CLAUDE.repo.example.md` の該当行を**一字一句そのままコピーする**
+    （`このリポジトリは **ADDF 利用プロジェクト** です。` — 太字マーカー含む。
+    パラフレーズしない — lint-template-sync の種別判定がこの書式（太字込みの厳密一致）に依存する）
   - プロジェクト名、ビルド・Lint・テストコマンド、コミットログ規約を反映
 - **`CLAUDE.local.md`** — テンプレートからコピー
 - **`.claude/addf/lock.json`** — ADDF クローン元の `ref` で生成
@@ -254,6 +329,15 @@ ADDF ファイルの配置元を決定する:
 5. **AGENTS.md の存在**（情報レベル）:
    - 存在すれば OK、なければ INFO（Codex 非対応として通知）
 
+6. **Hooks 配線**:
+   - `.claude/hooks/*.sh` が `settings.json` の hooks セクションに配線されているかを検査する
+     （ファイルが存在しても配線がなければ実行されない — 手縫い導入で漏れやすい）:
+     ```bash
+     uv run --python 3.11 .claude/addf/addfTools/lint-hooks-wiring.py
+     ```
+     tomllib 不要のため uv が無ければ `python3` 直接実行でよい。
+   - 未配線フックは WARNING（意図的に外している可能性があるため）。詳細は `/addf-lint` セクション11（Hooks 配線チェック）を参照
+
 ### レポート形式
 
 ```
@@ -264,8 +348,9 @@ ADDF ファイルの配置元を決定する:
 1. 必須ファイル        ✓ 7/7 存在
 2. @ メンション解決    ✓ 全て解決可能
 3. TODO ↔ plans 整合   ✓ 一致
-4. addf-lock.json      ✓ 有効
+4. addf/lock.json      ✓ 有効
 5. AGENTS.md           ✓ 存在（Codex 対応）
+6. Hooks 配線          ✓ 全配線済み
 
 結果: ✓ All checks passed
 ```

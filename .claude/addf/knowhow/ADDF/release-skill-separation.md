@@ -1,7 +1,7 @@
 ---
 title: リリーススキルの責務分割パターン
 created: 2026-03-21
-last_verified: 2026-03-21
+last_verified: 2026-07-06
 depends_on: []
 status: active
 ---
@@ -19,7 +19,7 @@ status: active
 | レイヤー | 責務 | 例 |
 |---|---|---|
 | スキル（`addf-release.md`） | 種別判定 → 設定/exp 読み込み → 実行 → 経験更新 | ルーターのみ |
-| upstream 設定（`ADDF-Release.addf.md`） | ADDF 固有のリリース手順 | プレチェック、lock 更新、gh release |
+| upstream 設定（`Release.addf.md`） | ADDF 固有のリリース手順 | プレチェック、lock 更新、gh release |
 | downstream 経験（`addf-release.exp.md`） | プロジェクト固有のリリース戦略 | npm publish、App Store 提出 |
 | テンプレート（`templates/Release.md`） | exp 初回作成の参考例 | npm / iOS / Web の3パターン |
 
@@ -34,14 +34,14 @@ status: active
 ダウンストリームのリリース戦略は完全にプロジェクト依存。テンプレートを押し付けるのではなく:
 - 初回実行時に対話的にヒアリング → `addf-release.exp.md` を生成
 - 2回目以降は exp に蓄積された戦略に従う
-- 構造は `ADDF-Release.addf.md` を参考にしてよいが、作り直してもよい
+- 構造は `Release.addf.md` を参考にしてよいが、作り直してもよい
 
 ## プロジェクトへの適用
 
 ### upstream/downstream 自動判定
 
 `CLAUDE.repo.md` の「プロジェクト種別」セクションを読んで判定:
-- 「ADDF 開発プロジェクト」→ `ADDF-Release.addf.md` を読む
+- 「ADDF 開発プロジェクト」→ `Release.addf.md` を読む
 - それ以外 → `addf-release.exp.md` を読む
 
 ### 新スキル設計時の指針

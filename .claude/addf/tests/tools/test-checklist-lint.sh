@@ -223,6 +223,22 @@ output=$(run_lint "$box")
 assert_exit "WHITELIST 行は OK" 0 $?
 rm -rf "$box"
 
+# テスト 10: addf-plan-audit.md のドリフト注入（human-judgment マーカー剥がし → 検出）
+# 実物のスキルファイルからマーカーを剥がした状態を再現し、lint が実際に検出することを確認する
+# （lint が生まれるきっかけになったケースの再現テスト — ドリフト注入 TDD）
+echo "Test 10: addf-plan-audit.md のマーカー剥がし検出"
+box="$(make_sandbox)"
+mkdir -p "$box/.claude/commands"
+cp "$PROJECT_DIR/.claude/commands/addf-plan-audit.md" "$box/.claude/commands/"
+output=$(run_lint "$box")
+assert_exit "実物コピーは OK（マーカーあり）" 0 $?
+sed -i.bak 's/<!-- human-judgment -->//' "$box/.claude/commands/addf-plan-audit.md" \
+  && rm -f "$box/.claude/commands/addf-plan-audit.md.bak"
+output=$(run_lint "$box")
+assert_exit "マーカー剥がしで WARNING" 2 $?
+assert_contains "剥がされた項目の特定" "処置の最終判断はオーナーが行う" "$output"
+rm -rf "$box"
+
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1

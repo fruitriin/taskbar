@@ -42,3 +42,6 @@ ProgressTemplate 系にマーカーを足すと同期ペア1/2（Progress.md / P
 - [sync-lint-design.md](sync-lint-design.md) — 検出はツール・解釈はエージェント、SKIP 設計、ドリフト注入テスト。本 lint はこの設計の直系
 - [plan-status-drift-check.md](plan-status-drift-check.md) — 信用ベース運用と「責めない」WARNING の先例
 - [rule-placement-execution-guarantee.md](rule-placement-execution-guarantee.md) — 参照では実行されない。実行チェックのインライン展開は実行保証の手段
+- [optional-skill-optin.md](optional-skill-optin.md) — 手順書の裏付け要求を引用する側。migrate 追加ステップのコードブロック添付例
+- [skill-design-patterns.md](skill-design-patterns.md) — 検出＝スクリプト・解釈＝エージェントの応用例として本 lint を引用する側。責めないトーン設計
+- [plan-refinement-pattern.md](plan-refinement-pattern.md) — 完了条件の A型/B型分離の根拠として本 lint を引用する側

@@ -2,6 +2,16 @@
 # run-all.sh
 # フック・ツールの自動テストを一括実行する。
 # スキルテストは自然言語シナリオのため手動実行（.claude/addf/tests/skills/ を参照）。
+#
+# 設計ガイドライン（ダウンストリームでテストを追加する場合も同様）:
+# - テストが依存する必須ランタイム（bun / uv / python3 等）の不在を SKIP=成功として
+#   扱わない。環境起因で実行できないことと、テストが通ったことは別物として区別する。
+#   ランタイム不在で 0 件実行のまま ✓ を返す構造にしないこと（ダウンストリーム実例:
+#   cron の PATH 落ちで bun 不在 → 74 テストが 0 件実行のまま「All passed」を返した）
+#   良い例: command -v bun >/dev/null || { echo "FAIL: bun が必要（インストールしてから再実行）"; exit 1; }
+# - 環境的に実行不能なテスト（例: macOS 専用バイナリの非 macOS 実行）を飛ばす場合は、
+#   SKIP を明示出力し、件数を Results 行に含める（例: test-tools.sh の
+#   「Results: N passed, N failed, N skipped」）。silent に読み飛ばさない
 
 set -uo pipefail
 

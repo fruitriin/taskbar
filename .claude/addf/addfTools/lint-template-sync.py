@@ -2,9 +2,13 @@
 """テンプレート同期チェック — 同期が必要なファイルペアのドリフトを検出する
 
 ペア1: ProgressTemplate.addf.md ⇔ 運用中 Progress.md（運用ルールのテキスト包含・ERROR）
-       ダウンストリーム（.addf.md 版がない場合）は ProgressTemplate.md を正として比較する
+       ダウンストリームでは ProgressTemplate.md を正として比較する（`.addf.md` 版が
+       配布・持ち込みで物理存在しても比較対象にしない — 存在≠所有）
 ペア2: ProgressTemplate.addf.md ⇔ ProgressTemplate.md（正規化した運用ルールの相互比較・WARNING）
+       ダウンストリームでは SKIP（同上の理由で `.addf.md` は所有物ではない）
 ペア3: CLAUDE.md ⇔ AGENTS.md（ブートシーケンス手順番号の対応・WARNING）
+       ダウンストリームでは SKIP（独自の AGENTS.md を持つプロジェクトで
+       「ブートシーケンス見出しなし」を誤報するため）
 ペア4: CLAUDE.md ⇔ .claude/addf/guides/development-process.md（ブートシーケンス概要手順番号の対応・WARNING）
 
 ペア5: CLAUDE.md ⇔ addf-init.md コピーリスト（参照ファイルのカバレッジ・WARNING）
@@ -12,6 +16,15 @@
        コピーリスト（グロブ・ディレクトリ含む）または .gitignore の ADDF マーカー
        ブロック（実行時生成ファイル）でカバーされているかを検査する。
        カバー漏れは外部起動導入したダウンストリームでの参照切れになる。
+
+ペア7: verify-checksums.sh detect_repo_kind() ⇔ lint-template-sync.py detect_repo_kind()
+       （Python⇔Bash 実装の同期契約・WARNING）
+       両ファイルの docstring/コメントに「同期契約」を示す固定文言（`lint-template-sync.py`
+       側は「verify-checksums.sh の detect_repo_kind()」への参照、bash 側は
+       「lint-template-sync.py の detect_repo_kind() と挙動を同期する契約」）があるかを
+       存在チェックする。挙動そのものの比較は困難なため、契約が明示されていることを
+       機械保証することでドリフト時のリファクタ意識を促す（Plan 0031 レビュー H3(a)(b)）。
+       verify-checksums.sh が不在なダウンストリームでは SKIP。
 
 ペア6: TODO ⇔ Plan 実装状況ヘッダ（状態の矛盾・参照切れ・登録漏れ・WARNING）
        TODO テーブルの状態列と各 Plan ファイルの `## 実装状況:` ヘッダを突合する。
@@ -23,8 +36,32 @@
        エージェントが TODO の状態表記を「信用ベース」で扱えるようにする機械検査
        （.claude/addf/knowhow/ADDF/plan-status-drift-check.md 参照）。
 
-ペア2〜6 は対象ファイルが存在しない場合 SKIP する（ADDF 本体固有ファイルは
+ペア8: README.md / README.en.md のスキルテーブル ⇔ .claude/commands/addf-*.md（WARNING）
+       ユーザー起動可能なスキル（`*.exp.md` を除く）が README の掲載から漏れていないかを
+       検査する。新設スキルが README のドキュメント公開から漏れる（Plan 0036 の
+       addf-plan-audit が未掲載のまま埋没した実例）を防ぐ。エージェント（.claude/agents/）は
+       命名規則が不均一なため対象外（Plan 0053）。ダウンストリームは独自 README のため SKIP。
+
+ペア2〜6・8 は対象ファイルが存在しない場合 SKIP する（ADDF 本体固有ファイルは
 ダウンストリームプロジェクトに存在しないため、欠如はドリフトではない）。
+
+upstream/downstream の判定はファイルの存在ではなく明示シグナルで行う（存在≠所有 —
+配布によって `.addf.md` はダウンストリームにも物理存在しうる）:
+1. 一次根拠: CLAUDE.repo.md の種別宣言。テンプレート書式（太字マーカー込みの
+   `**ADDF 開発プロジェクト**` / `**ADDF 利用プロジェクト**`）に厳密一致させる。
+   @メンション1段を解決し、コードフェンス（``` / ~~~）内の記述は除外する。
+   両方の宣言がヒットした場合は判定不能として安全側に倒し、フォールバックへ委ねる
+   （無条件の upstream 優先はしない）
+2. フォールバック: .claude/addf/lock.json が存在すればダウンストリーム
+3. どちらも判定不能（None）な場合のみ、従来のファイル存在フォールバックに委ねる
+   （テストサンドボックス等、シグナルの無い環境の互換動作）。ただし判定不能を
+   upstream と同一視しない — 旧配布のダウンストリーム（宣言なし・lock なし）で
+   誤検知しうるペア1/ペア3 の ERROR は WARNING に格下げし、種別宣言または
+   lock の整備を促すメッセージを併記する
+
+downstream / 判定不能によりペアの検査対象を切り替え・SKIP するときは、silent にせず
+`[N] SKIP: <理由（repo_kind）>` を stdout に出す（本体が誤って downstream 判定に
+なった場合に SKIP 表示で気づけるフェイルセーフ）。
 
 不一致の WARNING には git log による最終更新日ヒントを併記する
 （どちらが新しいか＝どちらを正として同期すべきかの判断材料）。
@@ -80,11 +117,145 @@ def git_hint(path_a, path_b):
             f'{path_b} = {last_commit_date(path_b)}')
 
 
-def check_pair1():
-    """テンプレートの運用ルールが Progress.md に全て含まれているか（ERROR）"""
-    tmpl_path = '.claude/addf/templates/ProgressTemplate.addf.md'
-    if not os.path.exists(tmpl_path):  # ダウンストリームでは無印版が正
+def _repo_declaration_lines(path, depth=0):
+    """CLAUDE.repo.md のコードフェンス外の本文行を、@メンション1段まで解決して返す
+
+    CLAUDE.repo.example.md は「ADDF 利用プロジェクト」への書き換え例をコードブロック内に
+    持つため、コードフェンス（``` / ~~~ の両方）内は宣言として扱わない。
+    ADDF 本体の CLAUDE.repo.md は `@CLAUDE.repo.example.md` 経由で種別宣言するため、
+    @メンションを1段だけ解決する。
+
+    解決仕様の注意:
+    - @メンションは行全体が `@xxx.md` の形の場合のみ解決する（行中の @ 言及は対象外）
+    - インラインコードスパン（単一バッククオート）内の言及は**除外されない**。
+      宣言文言をドキュメント内で引用説明するときはコードフェンスで囲う運用とする
+    - パストラバーサル耐性（Plan 0043 項目4）: `..` を含むパス・絶対パスは silent に無視する。
+      同ディレクトリまたは配下のみ許可し、realpath で解決先がベースディレクトリ配下に
+      収まることも検査する（シンボリックリンク経由の脱出防止）。bash 版の verify-checksums.sh
+      detect_repo_kind() と同じガードを持つ契約（ペア7）
+    """
+    if depth > 1 or not os.path.exists(path):
+        return []
+    base_dir = os.path.dirname(os.path.realpath(path)) or os.getcwd()
+    with open(path) as f:
+        lines = f.read().splitlines()
+    out, fence = [], None
+    for line in lines:
+        s = line.strip()
+        if fence is None and (s.startswith('```') or s.startswith('~~~')):
+            fence = s[:3]
+            continue
+        if fence is not None:
+            if s.startswith(fence):
+                fence = None
+            continue
+        m = re.match(r'@(\S+\.md)$', s)
+        if m:
+            inc = m.group(1)
+            resolved = _safe_resolve_mention(inc, base_dir)
+            if resolved is not None:
+                out.extend(_repo_declaration_lines(resolved, depth + 1))
+            continue
+        out.append(line)
+    return out
+
+
+def _safe_resolve_mention(inc, base_dir):
+    """@メンションのパストラバーサル耐性ガード（Plan 0043 項目4）
+
+    受け入れ条件（全て満たすこと）:
+      1. 絶対パスでない（`/` 始まり不可）
+      2. パスコンポーネントに `..` を含まない
+      3. realpath 解決後が base_dir 配下に収まる（シンボリックリンク経由の脱出防止）
+      4. ファイルが実在する
+
+    受け入れ拒否時は None を返す（silent — 宣言なしと同じ扱い）。
+    """
+    if not inc or inc.startswith('/'):
+        return None
+    parts = inc.split('/')
+    if '..' in parts:
+        return None
+    candidate = os.path.join(base_dir, inc)
+    if not os.path.isfile(candidate):
+        return None
+    resolved = os.path.realpath(candidate)
+    base_real = os.path.realpath(base_dir)
+    # base_dir/ 配下（末尾セパレータを付与して境界一致を防ぐ）
+    if not (resolved == base_real or resolved.startswith(base_real + os.sep)):
+        return None
+    return resolved
+
+
+# 判定不能（repo_kind=None）時に ERROR を格下げした WARNING に添える促しメッセージ
+KIND_UNKNOWN_HINT = (
+    'upstream/downstream を判定できないため WARNING に格下げ。'
+    'ダウンストリームなら CLAUDE.repo.md に種別宣言'
+    '（このリポジトリは **ADDF 利用プロジェクト** です。）を書くか、'
+    '.claude/addf/lock.json を配置する'
+)
+
+
+def detect_repo_kind():
+    """'upstream' / 'downstream' / None（判定不能）を返す
+
+    同期契約: verify-checksums.sh の detect_repo_kind()（bash 実装）と挙動を同期する契約。
+    判定仕様（一次: CLAUDE.repo.md の種別宣言＋@メンション1段解決／フォールバック:
+    addf-lock.json）を変えるときは bash 側も同時に更新する。契約文言の存在は
+    check_pair7 で機械保証している（Plan 0031 レビュー H3）。
+
+    ファイルの存在（ProgressTemplate.addf.md 等）で判定しない — 存在≠所有。
+    一次根拠: CLAUDE.repo.md の種別宣言。テンプレートが実際に生成する書式
+    （太字マーカー込みの `**ADDF 開発プロジェクト**` / `**ADDF 利用プロジェクト**`）に
+    正規表現で厳密一致させ、地の文の言及（「ADDF 開発プロジェクトではありません」
+    「かつて ADDF 開発プロジェクトとして始まり…」等）では判定しない。
+    upstream/downstream の**両方**がヒットした場合は判定不能（安全側）として
+    フォールバックに委ねる — 無条件の upstream 優先はしない。
+    フォールバック: addf-lock.json が存在すればダウンストリーム。
+
+    この優先順位・書式マッチは以下に依存する:
+    1. addf-init（カテゴリ3）が CLAUDE.repo.md に種別宣言を**太字マーカー込みで直書き**
+       すること（@メンションで CLAUDE.repo.example.md に継承させない）
+    2. @メンションは行全体が `@xxx.md` の形のみ解決される（_repo_declaration_lines 参照）
+    3. インラインコードスパン（単一バッククオート）内の言及は除外されない —
+       宣言文言を引用説明する際はコードフェンス（``` / ~~~）を使う運用
+    """
+    text = '\n'.join(_repo_declaration_lines('CLAUDE.repo.md'))
+    kinds = set(re.findall(r'\*\*ADDF (開発|利用)プロジェクト\*\*', text))
+    if len(kinds) == 1:
+        return 'upstream' if '開発' in kinds else 'downstream'
+    # len(kinds) == 2 は宣言の混在（判定不能・安全側）。0 は宣言なし。いずれも lock に委ねる
+    if os.path.exists('.claude/addf/lock.json'):
+        return 'downstream'
+    return None
+
+
+def check_pair1(repo_kind):
+    """テンプレートの運用ルールが Progress.md に全て含まれているか（ERROR）
+
+    **検査範囲の境界**（Plan 0046 明文化）: 検査対象は `## 運用ルール` セクション
+    （`## タスク` の直前まで）に限定する。`## タスク` 以降（現在のタスク・チェックリスト・
+    日記）は親エージェントが管理する進行中領域であり、テンプレートとの同期対象外。
+    委譲エージェントは運用ルール節をテンプレートに合わせて同一差分で更新してよい
+    （委譲プロンプトの禁止事項テンプレートは `.claude/addf/templates/DelegationRules.md`）。
+
+    repo_kind=None（宣言なし・lock なし = 旧配布ダウンストリームの可能性）で
+    `.addf.md` を比較対象にした場合の乖離は、誤検知の可能性があるため
+    WARNING に格下げして種別宣言/lock の整備を促す（判定不能を upstream と同一視しない）。
+    """
+    addf_tmpl = '.claude/addf/templates/ProgressTemplate.addf.md'
+    tmpl_path = addf_tmpl
+    kind_unknown = False
+    if repo_kind == 'downstream' or not os.path.exists(addf_tmpl):
+        if repo_kind == 'downstream' and os.path.exists(addf_tmpl):
+            skips.append(
+                f'[1] SKIP: repo_kind=downstream のため {addf_tmpl} を比較対象にしない'
+                f'（物理存在しても配布物 — ProgressTemplate.md を正として検査する）'
+            )
+        # ダウンストリームでは無印版が正（.addf.md が物理存在しても配布物のため比較しない）
         tmpl_path = '.claude/addf/templates/ProgressTemplate.md'
+    elif repo_kind is None:
+        kind_unknown = True
     prog_path = '.claude/addf/Progress.md'
     if not os.path.exists(tmpl_path) or not os.path.exists(prog_path):
         skips.append(f'[1] SKIP: {tmpl_path} または {prog_path} が存在しない')
@@ -97,15 +268,24 @@ def check_pair1():
     prog_text = '\n'.join(prog)
     missing = [s for s in (line.strip() for line in tmpl) if s and s not in prog_text]
     if missing:
+        if kind_unknown:
+            msg = [f'[1] WARNING: {prog_path} の運用ルールがテンプレート（{tmpl_path}）と乖離'
+                   f'（{KIND_UNKNOWN_HINT}）:']
+            msg += [f'    MISSING: {m}' for m in missing]
+            warnings.append('\n'.join(msg))
+            return
         msg = [f'[1] ERROR: {prog_path} の運用ルールがテンプレート（{tmpl_path}）と乖離（テンプレートを正として同期する）:']
         msg += [f'    MISSING: {m}' for m in missing]
         errors.append('\n'.join(msg))
 
 
-def check_pair2():
+def check_pair2(repo_kind):
     """ProgressTemplate.addf.md ⇔ ProgressTemplate.md の運用ルールを正規化して相互比較（WARNING）"""
     addf_path = '.claude/addf/templates/ProgressTemplate.addf.md'
     down_path = '.claude/addf/templates/ProgressTemplate.md'
+    if repo_kind == 'downstream':
+        skips.append(f'[2] SKIP: repo_kind=downstream のため対象外（{addf_path} が物理存在しても配布物のため比較しない）')
+        return
     if not os.path.exists(addf_path) or not os.path.exists(down_path):
         skips.append(f'[2] SKIP: {addf_path} がない（ダウンストリームでは対象外）')
         return
@@ -161,7 +341,12 @@ def boot_steps(path, header_prefix):
     return steps
 
 
-def check_boot_pair(pair_no, base, base_header, other, other_header, label):
+def check_boot_pair(pair_no, base, base_header, other, other_header, label,
+                    downgrade_missing_header=False):
+    """downgrade_missing_header: repo_kind=None（判定不能）のとき True。
+    見出し不在の ERROR を WARNING に格下げする（旧配布ダウンストリームの
+    独自 AGENTS.md で誤検知しうるため — 判定不能を upstream と同一視しない）。
+    """
     if not os.path.exists(base) or not os.path.exists(other):
         missing = base if not os.path.exists(base) else other
         skips.append(f'[{pair_no}] SKIP: {missing} が存在しない')
@@ -170,7 +355,13 @@ def check_boot_pair(pair_no, base, base_header, other, other_header, label):
     other_steps = boot_steps(other, other_header)
     if base_steps is None or other_steps is None:
         missing = base if base_steps is None else other
-        errors.append(f'[{pair_no}] ERROR: {missing} にブートシーケンス見出しが見つからない')
+        if downgrade_missing_header:
+            warnings.append(
+                f'[{pair_no}] WARNING: {missing} にブートシーケンス見出しが見つからない'
+                f'（{KIND_UNKNOWN_HINT}）'
+            )
+        else:
+            errors.append(f'[{pair_no}] ERROR: {missing} にブートシーケンス見出しが見つからない')
         return
     if base_steps != other_steps:
         warnings.append(
@@ -327,6 +518,48 @@ def todo_table_rows(path):
     return rows
 
 
+def check_pair7():
+    """verify-checksums.sh の detect_repo_kind() と本ファイルの detect_repo_kind() の
+    同期契約が両ファイルの docstring/コメントに明示されているかを検査する（WARNING）
+
+    挙動そのものの比較は困難（言語が異なる）なため、契約文言の存在を機械保証することで
+    実装差分を発見しやすくする。ダウンストリームで verify-checksums.sh が無ければ SKIP。
+    """
+    verify_path = '.claude/addf/addfTools/verify-checksums.sh'
+    self_path = '.claude/addf/addfTools/lint-template-sync.py'
+    if not os.path.exists(verify_path):
+        skips.append(f'[7] SKIP: {verify_path} が存在しない（ダウンストリームでは対象外）')
+        return
+    if not os.path.exists(self_path):
+        skips.append(f'[7] SKIP: {self_path} が存在しない')
+        return
+    with open(verify_path) as f:
+        vtext = f.read()
+    with open(self_path) as f:
+        stext = f.read()
+    # bash 側の契約文言（verify-checksums.sh 内に必ず1回以上出現すること）
+    bash_contract = 'lint-template-sync.py の detect_repo_kind() と挙動を同期する契約'
+    # Python 側の契約文言（lint-template-sync.py 内に必ず1回以上出現すること）
+    py_contract = 'verify-checksums.sh の detect_repo_kind()'
+    issues = []
+    if bash_contract not in vtext:
+        issues.append(
+            f'    {verify_path} に同期契約の明示が無い（追加すべき文言: '
+            f'「{bash_contract}」）'
+        )
+    if py_contract not in stext:
+        issues.append(
+            f'    {self_path} に同期契約の明示が無い（追加すべき文言: '
+            f'「{py_contract}」）'
+        )
+    if issues:
+        msg = [f'[7] WARNING: verify-checksums.sh / lint-template-sync.py の '
+               f'detect_repo_kind() 同期契約が明示されていない '
+               f'（片方の実装を変更したときにもう片方の更新が漏れる）:']
+        msg += issues
+        warnings.append('\n'.join(msg))
+
+
 def check_pair6():
     """TODO の状態列 ⇔ Plan の実装状況ヘッダの突合（WARNING）
 
@@ -377,16 +610,64 @@ def check_pair6():
             )
 
 
-check_pair1()
-check_pair2()
-check_boot_pair(3, 'CLAUDE.md', '## ブートシーケンス',
-                'AGENTS.md', '## Boot Sequence',
-                'CLAUDE.md ⇔ AGENTS.md ブートシーケンス')
+def check_pair8(repo_kind):
+    """.claude/commands/addf-*.md（*.exp.md 除く）が README.md / README.en.md の
+    スキルテーブルに掲載されているかを検査する（WARNING）
+
+    新設スキルが README のドキュメント公開から漏れる（Plan 0036 の addf-plan-audit が
+    未掲載のまま埋没した実例）を防ぐ。対象はユーザー起動可能なスキルのみ:
+    - `.claude/agents/` のエージェント定義は対象外（`addf-implementer` が `-agent` 接尾辞を
+      持たない・`addf-ui-test-agent` は README にのみ存在するプレースホルダ等、命名規則が
+      不均一で自動判定の誤検知リスクが高いため。`checklist-backing-lint.md` の
+      「裏付けの弱いチェックは追加しない」方針に沿う判断）
+    - ダウンストリームは独自 README を持つため対象外（SKIP）
+    """
+    if repo_kind != 'upstream':
+        skips.append('[8] SKIP: repo_kind != upstream のため対象外（ダウンストリームは独自 README）')
+        return
+    commands_dir = '.claude/commands'
+    if not os.path.isdir(commands_dir):
+        skips.append(f'[8] SKIP: {commands_dir} が存在しない')
+        return
+    skill_names = sorted(
+        os.path.splitext(os.path.basename(p))[0]
+        for p in glob.glob(f'{commands_dir}/addf-*.md')
+        if not p.endswith('.exp.md')
+    )
+    for readme_path in ('README.md', 'README.en.md'):
+        if not os.path.exists(readme_path):
+            skips.append(f'[8] SKIP: {readme_path} が存在しない')
+            continue
+        with open(readme_path) as f:
+            text = f.read()
+        listed = set(re.findall(r'\*\*(addf-[a-z0-9-]+)\*\*', text))
+        missing = [s for s in skill_names if s not in listed]
+        if missing:
+            msg = [f'[8] WARNING: {readme_path} のスキルテーブルに未掲載のスキルがある'
+                   f'（{commands_dir} には存在するが README のドキュメント公開から漏れている）:']
+            msg += [f'    MISSING: {m}' for m in missing]
+            warnings.append('\n'.join(msg))
+
+
+repo_kind = detect_repo_kind()
+check_pair1(repo_kind)
+check_pair2(repo_kind)
+if repo_kind == 'downstream':
+    # 独自 AGENTS.md（ADDF ブートシーケンス見出しなし）を持つプロジェクトでの誤報を防ぐ
+    skips.append('[3] SKIP: repo_kind=downstream のため対象外（AGENTS.md は独自ファイルの可能性がある）')
+else:
+    # repo_kind=None（判定不能）は upstream と同一視せず、見出し不在の ERROR を WARNING に格下げ
+    check_boot_pair(3, 'CLAUDE.md', '## ブートシーケンス',
+                    'AGENTS.md', '## Boot Sequence',
+                    'CLAUDE.md ⇔ AGENTS.md ブートシーケンス',
+                    downgrade_missing_header=(repo_kind is None))
 check_boot_pair(4, 'CLAUDE.md', '## ブートシーケンス',
                 '.claude/addf/guides/development-process.md', '## ブートシーケンス',
                 'CLAUDE.md ⇔ development-process.md ブートシーケンス概要')
 check_pair5()
 check_pair6()
+check_pair7()
+check_pair8(repo_kind)
 
 for msg in errors + warnings + skips:
     print(msg)
@@ -395,4 +676,4 @@ if errors:
     sys.exit(1)
 if warnings:
     sys.exit(2)
-print('OK: 同期チェック通過 (1: Progress.md / 2: ProgressTemplate / 3: AGENTS.md / 4: development-process.md / 5: addf-init コピーリスト / 6: TODO⇔Plan 状態)')
+print('OK: 同期チェック通過 (1: Progress.md / 2: ProgressTemplate / 3: AGENTS.md / 4: development-process.md / 5: addf-init コピーリスト / 6: TODO⇔Plan 状態 / 7: verify-checksums.sh detect_repo_kind 同期契約 / 8: README スキルテーブル網羅性)')

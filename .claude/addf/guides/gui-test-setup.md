@@ -54,6 +54,17 @@ bash build.sh
 - `annotate-grid` — PNG 画像にグリッド線と座標ラベルを描画
 - `clip-image` — PNG 画像の指定領域を切り出し
 
+`build.sh` は完了時に `checksums.sha256` も再生成します。toolchain（Xcode / swiftc バージョン）が
+配布時と異なると生成されるハッシュも異なりますが、これは正常です（Plan 0031 実測: 同一環境内でのみ
+決定的。環境間の再現は保証しません）。差分をコミットに含めるかは各プロジェクトの運用判断です。
+
+バイナリと `checksums.sha256` の照合は手動でも実行できます（GUI テストの動作前確認やトラブル
+シューティング用）:
+
+```bash
+bash .claude/addf/addfTools/verify-checksums.sh
+```
+
 ### 3. Screen Recording 権限の確認
 
 ```bash

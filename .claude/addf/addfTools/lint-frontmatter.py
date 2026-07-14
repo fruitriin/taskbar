@@ -20,8 +20,12 @@ for f in sorted(glob.glob('.claude/commands/addf-*.md')
                 + glob.glob('.claude/addf/optional/*/addf-*.md')):
     if f.endswith('.exp.md'):
         continue  # 経験ファイルはスキル定義ではないためスキップ
-    with open(f) as fh:
-        content = fh.read()
+    try:
+        with open(f, encoding='utf-8') as fh:
+            content = fh.read()
+    except UnicodeDecodeError as e:
+        errors.append(f'{f}: UTF-8 として読めません（バイナリ混入または不正エンコーディング）: {e}')
+        continue
     if not content.startswith('---'):
         errors.append(f'{f}: frontmatter なし')
         continue

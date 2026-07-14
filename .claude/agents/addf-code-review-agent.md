@@ -76,6 +76,7 @@ model: sonnet
 | マイルストーン・リリース直前 | `skeptic` + `attacker` + `newcomer` の3体並列 |
 | Plan が `mode: critical` を宣言 | 5体並列 |
 | unattended（不在）モードでの自走 | 3体並列（ユーザー監督が弱まるほどレビューを厚くする） |
+| 投機サイクルの Stage 2（integration 一括レビュー） | `skeptic` + `attacker` + `newcomer` の3体並列（`/addf-speculate` 手順7） |
 
 ## 知見の蓄積
 レビューで発見した繰り返しパターン・プロジェクト固有の規約・注意すべきポイントがあれば、`/addf-knowhow` で .claude/addf/knowhow/ に記録する。
