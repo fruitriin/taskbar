@@ -189,6 +189,9 @@ fn create_taskbar_window(
         .decorations(false)
         .transparent(true)
         .always_on_top(true)
+        // タスクバーが非アクティブでも最初のクリックをボタンに届ける
+        // （macOS は既定で first click をアクティブ化に消費し、2クリック必要になる）
+        .accept_first_mouse(true)
         .skip_taskbar(true)
         .resizable(false)
         .maximizable(false)
