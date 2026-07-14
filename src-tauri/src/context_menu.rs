@@ -1,5 +1,8 @@
 //! タスク右クリックのネイティブコンテキストメニュー
 //!
+//! 命名メモ: IPC チャンネル名は `contextTask` / コマンド名は `context_task`、
+//! ファイル名は表示物（ネイティブメニュー）に合わせて `context_menu.rs`。
+//!
 //! Electron 原本: src/main/funcs/events.ts:211-266（contextTask）＋
 //! moveAreaMenu / deleteFromAreaMenu / updateOptions（events.ts:270-308）。
 //! メニュー項目は原本と同じ4つ:
@@ -22,6 +25,7 @@
 //!   ハンドラが増殖する。lib.rs の setup で1回だけ登録し、対象ウィンドウは
 //!   managed state（`ContextTaskTarget`）経由で受け渡す。
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -38,10 +42,20 @@ pub const MENU_ID_FOOTERS: &str = "context-task-footers";
 pub const MENU_ID_CLOSE: &str = "context-task-close";
 pub const MENU_ID_KILL: &str = "context-task-kill";
 
-/// 直近に右クリックされたウィンドウ（メニュー表示 → 項目選択の間だけ有効）。
-/// lib.rs の setup で `app.manage()` する
+/// コンテキストメニューの状態。lib.rs の setup で `app.manage()` する。
+///
+/// 並行性メモ: `run_on_main_thread` のクロージャは kCFRunLoopCommonModes で
+/// 登録されるため、popup の NSMenu トラッキングループ**中**にも後続クロージャが
+/// 実行されうる。ガードなしだとメニュー表示中の再右クリックで `target` が
+/// すり替わり「A のメニューで選んだ強制終了が B に飛ぶ」事故になるため、
+/// `menu_open` の single-flight で表示中の再表示要求を無視する
 #[derive(Default)]
-pub struct ContextTaskTarget(pub Mutex<Option<MacWindow>>);
+pub struct ContextTaskState {
+    /// popup 表示中フラグ（表示中は新規 popup を拒否する）
+    menu_open: AtomicBool,
+    /// メニューの操作対象（popup 直前にセットし、項目選択時に take で消費する）
+    target: Mutex<Option<MacWindow>>,
+}
 
 /// headers / footers のトグル対象エリア
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,15 +144,27 @@ fn show_on_main_thread(
         .build()
         .map_err(|e| e.to_string())?;
 
+    let state = app.state::<ContextTaskState>();
+    // single-flight: 既にメニュー表示中なら何もしない（上記の並行性メモ参照）
+    if state.menu_open.swap(true, Ordering::SeqCst) {
+        log::info!("context_task: menu already open, ignoring");
+        return Ok(());
+    }
     // 項目選択時に on_menu_event ハンドラが参照する対象を popup 前に保存する
-    *app.state::<ContextTaskTarget>()
-        .0
-        .lock()
-        .map_err(|_| "ContextTaskTarget mutex poisoned".to_string())? = Some(win);
+    match state.target.lock() {
+        Ok(mut guard) => *guard = Some(win),
+        Err(_) => {
+            state.menu_open.store(false, Ordering::SeqCst);
+            return Err("ContextTaskState mutex poisoned".to_string());
+        }
+    }
 
     // 位置指定なしの popup はカーソル位置に表示される
-    // （原本 events.ts:236-265 の Screen.getCursorScreenPoint ベース popup に対応）
-    window.popup_menu(&menu).map_err(|e| e.to_string())
+    // （原本 events.ts:236-265 の Screen.getCursorScreenPoint ベース popup に対応）。
+    // popup はメニューが閉じるまでブロックし、項目選択イベントはこの後に配送される
+    let result = window.popup_menu(&menu).map_err(|e| e.to_string());
+    state.menu_open.store(false, Ordering::SeqCst);
+    result
 }
 
 /// メニューイベントハンドラ（lib.rs の setup で1回だけ登録する）。
@@ -152,10 +178,12 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
         return;
     }
 
-    let target = match app.state::<ContextTaskTarget>().0.lock() {
-        Ok(guard) => guard.clone(),
+    // take で消費する: 1回の popup につき項目選択は高々1回。取り残しの対象が
+    // 次のメニューへ持ち越されない
+    let target = match app.state::<ContextTaskState>().target.lock() {
+        Ok(mut guard) => guard.take(),
         Err(_) => {
-            log::warn!("ContextTaskTarget mutex poisoned");
+            log::warn!("ContextTaskState mutex poisoned");
             return;
         }
     };
@@ -204,12 +232,20 @@ fn toggle_and_notify(app: &AppHandle, owner: &str, area: Area) {
 }
 
 /// 対象ウィンドウの所有プロセスへ SIGTERM を送る（原本の process.kill(pid)）。
-/// pid <= 0 は kill(2) がプロセスグループ宛てになるため拒否する
+/// pid <= 0 は kill(2) がプロセスグループ宛てになるため拒否する。
+/// 自プロセスも拒否する（自ウィンドウはデフォルトフィルタで一覧から除外されるが、
+/// フィルタはユーザーが変更できるため設定に依存しない最終防御として）
 fn force_terminate(win: &MacWindow) -> Result<(), String> {
     let pid = libc::pid_t::try_from(win.owner_pid)
         .ok()
         .filter(|pid| *pid > 0)
         .ok_or_else(|| format!("invalid pid: {} ({})", win.owner_pid, win.owner_name))?;
+    if pid as u32 == std::process::id() {
+        return Err(format!(
+            "refusing to terminate own process (pid={pid}, owner={})",
+            win.owner_name
+        ));
+    }
     // SAFETY: pid > 0 を保証済み。存在しない pid でも ESRCH が返るだけで安全
     let ret = unsafe { libc::kill(pid, libc::SIGTERM) };
     if ret == 0 {
@@ -326,6 +362,12 @@ mod tests {
         assert!(force_terminate(&make_window(0)).is_err());
         assert!(force_terminate(&make_window(-1)).is_err());
         assert!(force_terminate(&make_window(i64::MAX)).is_err());
+    }
+
+    #[test]
+    fn 強制終了は自プロセスを拒否する() {
+        let result = force_terminate(&make_window(i64::from(std::process::id())));
+        assert!(result.unwrap_err().contains("own process"));
     }
 
     #[test]

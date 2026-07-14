@@ -12,8 +12,9 @@ type MockIpcRenderer = {
 
 declare global {
   interface Window {
-    // Tauri 実行時はどちらも存在しない（ipc.ts がランタイム判定する）
-    electron: { ipcRenderer: MockIpcRenderer }
+    // Tauri 実行時はどちらも存在しない（ipc.ts がランタイム判定する）ため optional。
+    // 使う側にランタイムチェックを強制する
+    electron?: { ipcRenderer: MockIpcRenderer }
     store?: Store
   }
 }
@@ -156,12 +157,8 @@ export function moveApp(apps: string[], dragged: string, target: string): string
 }
 
 export const Electron = {
-  // listen はリスナーが (event, ...args) を受ける旧シグネチャのため委譲しない
-  // （ipcListen はペイロードのみを渡す新シグネチャ。移行はコンポーネント側で段階的に行う）
-  listen(channel: string, listener: (event: unknown, ...args: any[]) => void): void {
-    window.electron.ipcRenderer.on(channel, listener)
-  },
-  // ipc.ts へ委譲（JSON クローンによるプロキシ剥がしの単一ソース化。Phase 3 の差し替え箇所を集約）
+  // ipc.ts へ委譲（JSON クローンによるプロキシ剥がしの単一ソース化）。
+  // listen は呼び出し元ゼロになったため削除済み — 新規コードは ipcListen を使うこと
   send(channel: string, ...args: any[]): void {
     ipcSend(channel, ...args)
   }

@@ -85,7 +85,7 @@
 - [x] 3.2 Rust 基盤 **完了（2026-07-10）**: window_manager・filter・observer・commands 22本・store.rs。Rust テスト23件。AX/権限/アイコンは 3.3 スタブ
 - [x] 3.3 Rust 機能 **完了（2026-07-10）**: window_actions・permission_manager・icon_manager・display_manager。Rust テスト35件（実機 ignored 4）
 - [x] 3.4 フロント接続 **完了（2026-07-10）**: ipc.ts ランタイム切替・ARG_KEYS 変換・データ移行（Rust 冪等）・get_options 新設・option.vue の window.store 非依存化。**実機初起動待ち**
-- [ ] 3.5 統合: 動作確認（実機3ポイント）・署名/notarize・テスト移植・Electron/Swift 削除・ドキュメント更新
+- [ ] 3.5 統合 **実装完了・レビュー/実機確認中（2026-07-14）**: 署名/notarize 検証済み・Electron/Swift/15依存 削除済み（tag v2-electron-final）・CI を tauri-action 化・ドキュメント刷新・context_task 移植・restart_helper 撤去。残: ペルソナレビュー集約→実機最終確認→v3.0.0 リリース判断
 - [ ] 完了条件: rearch-phase3.md 末尾のリスト
 
 #### 日記
@@ -153,6 +153,28 @@
 **次の自分へ**: オーナーの実機確認（非アクティブ状態から1クリックでウィンドウ切り替わるか）待ち。OK なら 3.5 へ。
 
 **気になっていること**: accept_first_mouse でもクリック時にタスクバーアプリ自体はアクティブになる。切り替え先ウィンドウを AX で raise するので実用上は問題ない想定だが、フォーカスの往復が体感で気になるかは実機次第。
+
+##### 2026-07-14 — 3.5 実装一式完了（オーナー「快適！」→ 3.5 突入）
+
+**やったこと**: (1) アーカイブ tag v2-electron-final 作成（push 未）。(2) Electron/Swift 全削除: src/main・preload・nativeSrc・build/・resources/・electron-builder.yml・electron.vite.config.ts・reference/・Versions.vue・依存15個（riinlogger 含む — 参照ゼロ化により Feedback の保留判断を解消）。型は global.d.ts 移設＋MockIpcRenderer ローカル型＋tsconfig インライン化で自立。(3) 実バグ1件発見・修正: MainPermissionStatus.vue に window.electron 直呼び残存（Tauri で TypeError）。(4) 署名: tauri.conf.json に signingIdentity、scripts/build-release.sh（.env→Tauri 環境変数マッピング）。実ビルドで notarize Accepted・staple・DMG まで検証済み。(5) CI release.yml を tauri-action 化（既存 Secrets 名を流用。次のタグ push まで未検証）。(6) アプリアイコンを build/icon.png 1024px から tauri icon で再生成（scaffold のデフォルトアイコンだった）。(7) ドキュメント刷新: CLAUDE.repo.md・src/renderer/CLAUDE.md・README-developer.md。(8) context_task を native メニューで移植（委譲第6弾、context_menu.rs。main thread 設計・on_menu_event 増殖回避・SIGTERM pid ガード。テスト+9=46件）。restart_helper 導線ごと撤去。コミット: d3ac35f・50594e2。
+
+**今の見立て**: 3.5 の実装項目は全消化。ペルソナ並列レビュー（skeptic/attacker/newcomer）＋contribution agent を起動済み・集約待ち。
+
+**次の自分へ**: (1) レビュー集約（2ペルソナ以上の重複指摘は1段格上げ、Critical/High は即修正）。(2) オーナーに実機最終確認を依頼: 右クリックメニュー（カーソル位置・先頭/末尾トグル・閉じる・強制終了）＋既存機能の回帰＋ cargo test -- --ignored 4件。(3) OK なら完了処理（knowhow 記録・Feedback 更新・Progress アーカイブ）と v3.0.0 リリース判断（/addf-release、CI は次タグで検証）。
+
+**気になっていること**: CI の tauri-action は未検証（Secrets CERT の p12 が Developer ID Application か要確認）。install-app のパスは dmg でなく bundle/macos 直下を参照しており、release:mac 後のみ有効。
+
+##### 2026-07-14 — ペルソナレビュー集約と Critical/High 修正完了
+
+**やったこと**: レビュー4体完了・集約（2ペルソナ重複は1段格上げ）。修正済み: (1) Critical: context_task がクライアント供給 MacWindow を無検証で信頼 → CGWindowList と (owner_pid, window_number) 照合し権威データに差し替え（コマンドを async 化）。強制終了に自プロセス pid 拒否も追加。(2) Critical（格上げ）: メニュー表示中の再右クリックで対象すり替わりレース → ContextTaskState（menu_open single-flight ＋ target の take 消費）。(3) High（格上げ）: menu_position_from_taskbar にモニタ内クランプ追加。(4) High（格上げ）: test 3スクリプト統合（test:all = renderer + cargo test）。(5) Warning: vite:dev/vite:build の暗黙配線を README に明記・死んだ testing-with-taskbar-helper.md 削除・window.electron を optional 化（ipc.ts に mockIpc() ガード、未使用 Electron.listen 削除）・build-release.sh を source から狭いパーサへ・context_logo 陳腐化 TODO 削除。knowhow 記録: tauri-trust-boundary-and-native-menu.md（INDEX 登録済み）。Feedback 更新（riinlogger 項目解消・ADDF コントリビューション候補4件・CI 未検証の注意）。全ゲート緑（Rust 47 / renderer 63 / lint・typecheck 0 / vite build）。
+
+**今の見立て**: 3.5 の実装・レビューは完結。残るはオーナーの実機最終確認と v3.0.0 リリース判断のみ。
+
+**次の自分へ**: オーナー実機確認の観点: (1) 右クリックメニュー（カーソル位置・先頭/末尾トグル・閉じる・強制終了・メニュー表示中の再右クリック無視）(2) 各 layout でのスタートメニュー位置（クランプ込み）(3) 既存機能の回帰（一覧・クリック・D&D・設定・アイコン）(4) cargo test -- --ignored 4件。OK が出たら Progress アーカイブ→ v3.0.0（/addf-release。CI は初回タグで未検証な点をオーナーに念押し）。
+
+**気になっていること**: レビュー指摘のうち「メニューイベントが popup 復帰後に配送される」前提は tauri ソース裏取り済みだが、イベント配送順（前のメニューのイベント vs 次の show）の理論上の追い越しは残る（single-flight で実害はほぼ封じた）。実機で「強制終了」の対象が正しいことだけ確認したい。
+
+
 
 > 新しいタスク開始時は以下の構造で記録する:
 > `### 現在のタスク: <Plan 名>` → `#### サブタスクチェックリスト` → `#### 日記`（運用ルール 3.5 の4項目書式）

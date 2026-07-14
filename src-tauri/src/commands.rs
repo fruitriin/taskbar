@@ -341,8 +341,8 @@ pub fn open_full_window_list(app: AppHandle) -> Result<(), String> {
 /// Electron 原本: events.ts:187-200（contextLogo。送信元タスクバーの bounds と
 /// layout からメニュー位置を計算）→ optionWindows.ts:111-171（createMenuWindow）
 ///
-/// TODO(3.4 マルチウィンドウ結合): タスクバー位置・layout に応じた配置
-/// （optionWindows.ts:123-160）と blur 時の自動クローズ。暫定で固定位置に生成する
+/// 配置はタスクバー基準（menu_position_from_taskbar）、blur 時の自動クローズは
+/// lib.rs の Focused(false) ハンドラで実装済み
 #[tauri::command]
 pub fn context_logo(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
     // 呼び出し元タスクバーの bounds と layout からメニュー位置を決める
@@ -400,12 +400,22 @@ fn menu_position_from_taskbar(
     let layout = store::get_options(app)
         .map(|o| o.layout)
         .unwrap_or(store::Layout::Bottom);
-    let (x, y) = match layout {
+    let (mut x, mut y) = match layout {
         store::Layout::Left => (pos.x + size.width, pos.y),
         store::Layout::Right => (pos.x - MENU_WIDTH, pos.y),
         // Bottom: メニューの左下がタスクバーの左上に接する
         store::Layout::Bottom => (pos.x, pos.y - MENU_HEIGHT),
     };
+    // タスクバーはモニタ端に張り付くため、狭いモニタや負座標のマルチディスプレイ
+    // 構成では計算結果がモニタ外に出うる。menu_position と同様にクランプする
+    // （レビュー指摘 attacker+skeptic: フォールバックは I/O エラーでしか発動しない）
+    if let Ok(Some(monitor)) = taskbar.current_monitor() {
+        let mscale = monitor.scale_factor();
+        let mpos = monitor.position().to_logical::<f64>(mscale);
+        let msize = monitor.size().to_logical::<f64>(mscale);
+        x = x.min(mpos.x + msize.width - MENU_WIDTH).max(mpos.x);
+        y = y.min(mpos.y + msize.height - MENU_HEIGHT).max(mpos.y);
+    }
     Ok((x, y))
 }
 
@@ -435,13 +445,27 @@ fn menu_position(app: &AppHandle) -> Result<(f64, f64), String> {
 /// 先頭へ追加/末尾へ追加/閉じる/強制終了を表示）。
 /// Tauri 版は tauri::menu で構築し、呼び出し元タスクバーウィンドウに
 /// カーソル位置で popup する（設計メモは context_menu.rs 冒頭参照）
+/// セキュリティ: `win` は webview の JS が自由に組み立てられる値のため、
+/// そのまま信用せず現在の CGWindowList と (owner_pid, window_number) で突き合わせ、
+/// 一致した**サーバー側のエントリ**をメニューの対象にする（強制終了が
+/// 「任意 pid へ SIGTERM を送る汎用プリミティブ」になるのを防ぐ。レビュー指摘 attacker/Critical）
 #[tauri::command]
-pub fn context_task(
+pub async fn context_task(
     app: AppHandle,
     window: tauri::WebviewWindow,
     win: MacWindow,
 ) -> Result<(), String> {
-    context_menu::show(&app, window, win)
+    let windows = window_manager::get_window_list().await?;
+    let authoritative = windows
+        .into_iter()
+        .find(|w| w.owner_pid == win.owner_pid && w.window_number == win.window_number)
+        .ok_or_else(|| {
+            format!(
+                "context_task rejected: no such window (pid={}, number={})",
+                win.owner_pid, win.window_number
+            )
+        })?;
+    context_menu::show(&app, window, authoritative)
 }
 
 /// メニューウィンドウを閉じる。

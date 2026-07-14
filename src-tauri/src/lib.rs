@@ -62,7 +62,7 @@ pub fn run() {
             // タスク右クリックメニュー: 対象ウィンドウの受け渡し用 state と
             // メニューイベントハンドラ（on_menu_event は追記型のため登録はここで1回だけ。
             // 設計メモは context_menu.rs 冒頭参照）
-            app.manage(context_menu::ContextTaskTarget::default());
+            app.manage(context_menu::ContextTaskState::default());
             app.on_menu_event(|app, event| context_menu::handle_menu_event(app, &event));
             Ok(())
         })

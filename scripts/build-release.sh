@@ -15,13 +15,21 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# .env を読み込む（KEY=VALUE 形式のみ想定）
-set -a
-. ./.env
-set +a
+# .env はシェルとして source しない（値に $() 等が混入した場合の実行を防ぐ）。
+# 必要な3キーだけを素朴な KEY=VALUE として抽出する
+env_value() {
+  sed -n "s/^$1=//p" .env | tail -1
+}
 
-export APPLE_ID
-export APPLE_PASSWORD="${APPLE_ID_PASS:?}"
-export APPLE_TEAM_ID="${TEAM_ID:?}"
+APPLE_ID="$(env_value APPLE_ID)"
+APPLE_PASSWORD="$(env_value APPLE_ID_PASS)"
+APPLE_TEAM_ID="$(env_value TEAM_ID)"
+
+if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+  echo "error: .env に APPLE_ID / APPLE_ID_PASS / TEAM_ID が揃っていません" >&2
+  exit 1
+fi
+
+export APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
 
 exec bunx tauri build "$@"

@@ -34,12 +34,16 @@ bun run install-app  # /Applications ディレクトリに放り込む
 - `format`: oxfmt
 - `lint`: oxlint
 - `typecheck`: vue-tsc
-- `test` / `test:renderer` / `test:all`: レンダラーテスト（bun test）
+- `test`: レンダラーテスト（bun test）
+- `test:all`: レンダラーテスト＋Rust テスト（cargo test）
 - `build`: vite build（フロントのみ）
 - `dev` / `tauri:dev`: tauri dev
 - `build:mac` / `tauri:build`: tauri build
 - `release:mac`: scripts/build-release.sh（署名＋notarize）
 - `install-app`: ビルド済み .app を /Applications へコピー
+- `vite:dev` / `vite:build`: **tauri.conf.json の beforeDevCommand / beforeBuildCommand
+  から呼ばれる内部フック**。直接叩く必要はないが削除しないこと（消すと `dev` /
+  `build:mac` が壊れる）
 
 Rust 側のチェックは `src-tauri/` で `cargo check` / `cargo clippy --all-targets -- -D warnings` /
 `cargo test` / `cargo fmt --check`。
