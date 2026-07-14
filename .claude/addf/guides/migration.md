@@ -10,7 +10,7 @@
 
 ### 動作の流れ
 
-1. `.claude/addf-lock.json` から現在のバージョンを読む
+1. `.claude/addf/lock.json` から現在のバージョンを読む
 2. ADDF 本体リポジトリの最新版を取得
 3. 差分を算出し、変更のプレビューを表示
 4. ADDF-CHANGELOG.md から該当バージョン間の変更履歴を表示
@@ -29,10 +29,10 @@
 
 ### マイグレーション対象外
 
-- `.claude/Progress.md`, `.claude/Feedback.md` — プロジェクト固有
+- `.claude/addf/Progress.md`, `.claude/addf/Feedback.md` — プロジェクト固有
 - `*.exp.md` — ローカル経験ファイル
 - `CLAUDE.repo.md`, `CLAUDE.local.md` — プロジェクト固有設定
-- `TODO.md`, `docs/plans/` — プロジェクトのタスク管理
+- `TODO.md`, `.claude/addf/plans/` — プロジェクトのタスク管理
 
 ### ターゲット指定
 
@@ -48,6 +48,6 @@
 
 1. ADDF リポジトリの最新版をクローン
 2. `.claude/commands/addf-*.md` と `.claude/agents/addf-*.md` を上書きコピー
-3. `.claude/hooks/` と `.claude/templates/` を上書きコピー
+3. `.claude/hooks/` と `.claude/addf/templates/` を上書きコピー
 4. `.claude/settings.json` の diff を確認し、手動でマージ
-5. `.claude/addf-lock.json` を新しいコミットハッシュで更新
+5. `.claude/addf/lock.json` を新しいコミットハッシュで更新

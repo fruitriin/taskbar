@@ -87,5 +87,5 @@ ADDF エントリを `# --- ADDF Framework ---` で囲むことで:
 ## 参照
 
 - `.claude/commands/addf-init.md` — 外部起動セクション、Phase 2.5 干渉チェック、Phase 2.7 導入前レビュー
-- `docs/plans-add/0015-existing-project-install.md` — 設計計画
-- `docs/knowhow/ADDF/upstream-downstream-separation.md` — 分離パターンの全体像
+- `.claude/addf/plans-add/0015-existing-project-install.md` — 設計計画
+- `.claude/addf/knowhow/ADDF/upstream-downstream-separation.md` — 分離パターンの全体像

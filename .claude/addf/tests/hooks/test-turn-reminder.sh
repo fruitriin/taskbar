@@ -10,9 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 HOOK="$PROJECT_DIR/.claude/hooks/turn-reminder.sh"
 SANDBOX="$(mktemp -d)"
-mkdir -p "$SANDBOX/.claude/addfTools"
+mkdir -p "$SANDBOX/.claude/addf/addfTools"
 # 関心事B の中継先も sandbox に置く（本番の状態ファイルに触れさせない）
-cp "$PROJECT_DIR/.claude/addfTools/context-reminder.py" "$SANDBOX/.claude/addfTools/"
+cp "$PROJECT_DIR/.claude/addf/addfTools/context-reminder.py" "$SANDBOX/.claude/addf/addfTools/"
 COUNTER_FILE="$SANDBOX/.claude/.turn-count"
 PASS=0
 FAIL=0

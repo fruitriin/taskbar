@@ -2,7 +2,7 @@
 
 > `/addf-release` を初めて実行すると、プロジェクトのリリース戦略をヒアリングして
 > `addf-release.exp.md` を作成します。このファイルはその際の参考例です。
-> `.claude/ADDF-Release.addf.md`（upstream 用）も構造の参考になります。
+> `.claude/addf/Release.addf.md`（upstream 用）も構造の参考になります。
 
 ---
 

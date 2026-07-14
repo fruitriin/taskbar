@@ -38,15 +38,15 @@ import sys
 
 # 検査対象の手順書（「確認した」という主張を含むチェックリストを持つファイル）
 TARGETS = [
-    '.claude/ADDF-Release.addf.md',
+    '.claude/addf/Release.addf.md',
     '.claude/commands/addf-init.md',
     '.claude/commands/addf-migrate.md',
-    '.claude/templates/ProgressTemplate.addf.md',
-    '.claude/templates/ProgressTemplate.md',
+    '.claude/addf/templates/ProgressTemplate.addf.md',
+    '.claude/addf/templates/ProgressTemplate.md',
 ]
 
 # チェックリスト体（「〜こと」で項目が終わる書式）の手順書。「〜こと」行も候補にする
-CHECKLIST_STYLE = {'.claude/ADDF-Release.addf.md'}
+CHECKLIST_STYLE = {'.claude/addf/Release.addf.md'}
 
 HUMAN_JUDGMENT = '<!-- human-judgment -->'
 SKIP_SECTION = '<!-- checklist-lint: skip-section'

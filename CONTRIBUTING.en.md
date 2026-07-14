@@ -33,7 +33,7 @@ This is not about code attribution — it's for **tracking the lineage of ideas*
 PRs that involve implementation should include a plan file:
 
 ```
-docs/plans/NNNN-title.md
+.claude/addf/plans/NNNN-title.md
 ```
 
 Plan files should contain:

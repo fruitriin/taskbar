@@ -40,23 +40,23 @@ trap 'rm -rf "$box"' EXIT
 mkdir -p "$box/.claude"
 
 echo "Test 1: 正常な TOML → OK・exit 0"
-printf '[gui-test]\nenable = false\n' > "$box/.claude/addf-Behavior.toml"
+printf '[gui-test]\nenable = false\n' > "$box/.claude/addf/Behavior.toml"
 out="$(run_lint "$box")"; code=$?
 check "正常 TOML で OK" 0 "$code" "$out" "OK"
 
 echo "Test 2: 構文エラー → ERROR・exit 1"
-printf '[gui-test\nenable = false\n' > "$box/.claude/addf-Behavior.toml"
+printf '[gui-test\nenable = false\n' > "$box/.claude/addf/Behavior.toml"
 out="$(run_lint "$box")"; code=$?
 check "構文エラーを ERROR" 1 "$code" "$out" "ERROR"
 
 echo "Test 3: ファイル不在 → SKIP・exit 0"
-rm -f "$box/.claude/addf-Behavior.toml"
+rm -f "$box/.claude/addf/Behavior.toml"
 out="$(run_lint "$box")"; code=$?
 check "ファイル不在で SKIP" 0 "$code" "$out" "SKIP"
 
 echo "Test 4: tomllib が無い環境 → SKIP・exit 0（配布先で誤 ERROR を出さない）"
 # PYTHONPATH シムで ModuleNotFoundError を注入し、旧 Python（3.9 等）を再現する
-printf '[gui-test]\nenable = false\n' > "$box/.claude/addf-Behavior.toml"
+printf '[gui-test]\nenable = false\n' > "$box/.claude/addf/Behavior.toml"
 shim="$(mktemp -d)"
 printf 'raise ModuleNotFoundError("No module named '"'"'tomllib'"'"'")\n' > "$shim/tomllib.py"
 out="$( (cd "$box" && PYTHONPATH="$shim" python3 "$LINT" 2>&1) )"; code=$?

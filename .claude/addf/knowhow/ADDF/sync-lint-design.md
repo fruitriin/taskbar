@@ -3,12 +3,12 @@ title: 同期 lint の設計 — 検出はツール、解釈と修復はエー�
 created: 2026-06-10
 last_verified: 2026-07-03
 depends_on:
-  - .claude/addfTools/lint-template-sync.py
-  - .claude/tests/tools/test-template-sync.sh
+  - .claude/addf/addfTools/lint-template-sync.py
+  - .claude/addf/tests/tools/test-template-sync.sh
   - .claude/commands/addf-init.md
-  - .claude/addfTools/sync-optional-skills.py
-  - .claude/addfTools/speculate-guard.py
-  - .claude/addfTools/lint-toml.py
+  - .claude/addf/addfTools/sync-optional-skills.py
+  - .claude/addf/addfTools/speculate-guard.py
+  - .claude/addf/addfTools/lint-toml.py
 status: active
 ---
 
@@ -39,7 +39,7 @@ status: active
 
 ### addfTools はダウンストリーム配布を前提に「欠如 = SKIP」で設計する
 
-`.claude/addfTools/` はダウンストリームに配布される。ADDF 本体固有ファイル（`ProgressTemplate.addf.md`・`AGENTS.md` 等）をハードコード参照すると、ダウンストリームで必ず ERROR になる。設計ルール:
+`.claude/addf/addfTools/` はダウンストリームに配布される。ADDF 本体固有ファイル（`ProgressTemplate.addf.md`・`AGENTS.md` 等）をハードコード参照すると、ダウンストリームで必ず ERROR になる。設計ルール:
 
 - ADDF 本体固有ファイルの欠如は **SKIP（exit 0 相当）** として扱う。欠如はドリフトではない
 - 両環境に存在するファイルはフォールバックで対応する（例: テンプレートは `.addf.md` 版がなければ無印版を正とする）
@@ -73,7 +73,7 @@ Plan 0022 で追加したペア5は、テキスト一致ではなく**参照の�
 
 ### 列挙の陳腐化は「列挙を持たない」設計で構造的に排除できる
 
-addf-init の .gitignore マージ手順は、当初ブロック内容をハードコード列挙しており、本体 .gitignore の変更（`.claude/Dashboard.md` 追加等）に追従できず腐っていた。リストの鮮度を lint で守る前に、**そもそも列挙を持たず「クローン元（`<tmp>/addf-source/.gitignore`）の同ブロックをそのままコピーする」と指示する**ことでドリフトの発生源自体を消せた。同期ペアを増やす（機械化）より、単一ソース化（構造的排除）が上策。lint は単一ソース化できない箇所にだけ張る。
+addf-init の .gitignore マージ手順は、当初ブロック内容をハードコード列挙しており、本体 .gitignore の変更（`.claude/addf/Dashboard.md` 追加等）に追従できず腐っていた。リストの鮮度を lint で守る前に、**そもそも列挙を持たず「クローン元（`<tmp>/addf-source/.gitignore`）の同ブロックをそのままコピーする」と指示する**ことでドリフトの発生源自体を消せた。同期ペアを増やす（機械化）より、単一ソース化（構造的排除）が上策。lint は単一ソース化できない箇所にだけ張る。
 
 ### lint のテストは mktemp サンドボックスにドリフトを注入する
 
@@ -82,7 +82,7 @@ addf-init の .gitignore マージ手順は、当初ブロック内容をハー�
 ```bash
 box="$(mktemp -d)"
 # 対象ファイルを相対レイアウトを保ってコピー
-mkdir -p "$box/.claude/templates" "$box/docs/guides"
+mkdir -p "$box/.claude/addf/templates" "$box/.claude/addf/guides"
 cp ... # 必要ファイル
 # ドリフトを注入（行削除・番号書き換え・ファイル削除）
 grep -v '^15\. コミットする' ... / sed 's/^4\. /44. /' ... / rm -f "$box/AGENTS.md"
@@ -94,7 +94,7 @@ grep -v '^15\. コミットする' ... / sed 's/^4\. /44. /' ... / rm -f "$box/A
 ## 関連ノウハウ
 
 - [アップストリーム / ダウンストリーム分離パターン](upstream-downstream-separation.md) — `.addf.md` サフィックス等、本知見の SKIP 設計が前提とする分離規約
-- [スキル設計パターン（Anthropic 社内知見ベース）](skill-design-patterns.md) — スクリプトを `.claude/addfTools/` に同梱する Progressive Disclosure 構成
+- [スキル設計パターン（Anthropic 社内知見ベース）](skill-design-patterns.md) — スクリプトを `.claude/addf/addfTools/` に同梱する Progressive Disclosure 構成
 - [Plan 着手前の実態突合](plan-status-drift-check.md) — ペア5（Plan 0022）の発端となった残差分切り出しの経緯
 - [チェックリスト裏付け lint](checklist-backing-lint.md) — 本設計の直系。手順書の「確認」項目に実行チェック/human-judgment マーカーの裏付けを要求する
 - [オプトイン式スキルの退避＋有効化コピー設計](optional-skill-optin.md) — SKIP 設計・列挙の陳腐化検査の応用先。gitignore 列挙との突き合わせで孤児コピーを検出する

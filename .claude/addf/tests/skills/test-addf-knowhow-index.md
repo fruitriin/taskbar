@@ -8,7 +8,7 @@
 ```
 
 ### 期待結果
-- `docs/knowhow/INDEX.md` の内容が返される
+- `.claude/addf/knowhow/INDEX.md` の内容が返される
 - テーブル形式で knowhow ファイル一覧が表示される
 
 ---
@@ -21,6 +21,6 @@
 ```
 
 ### 期待結果
-- `docs/knowhow/INDEX.md` が再生成される
-- `docs/knowhow/` 内の全 `.md` ファイル（INDEX 系を除く）がインデックスに含まれる
+- `.claude/addf/knowhow/INDEX.md` が再生成される
+- `.claude/addf/knowhow/` 内の全 `.md` ファイル（INDEX 系を除く）がインデックスに含まれる
 - 各エントリにファイルパス・一行要約・キーワードが含まれる

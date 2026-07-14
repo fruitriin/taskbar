@@ -6,7 +6,7 @@ ADDF が提供するスキル（`/コマンド名` で呼び出し）:
 
 | スキル | 呼び出し | 説明 |
 |---|---|---|
-| **addf-knowhow** | `/addf-knowhow <トピック>` | 実装知見を `docs/knowhow/` に記録。既存ノウハウとの重複チェック・統合を自動で行う |
+| **addf-knowhow** | `/addf-knowhow <トピック>` | 実装知見を `.claude/addf/knowhow/` に記録。既存ノウハウとの重複チェック・統合を自動で行う |
 | **addf-knowhow-index** | `/addf-knowhow-index [reindex]` | knowhow インデックスを参照、または `reindex` で再構築 |
 | **addf-knowhow-filter** | `/addf-knowhow-filter <plan-path>` | Plan に関連するノウハウだけをフィルタリングして返す |
 | **addf-knowhow-revise** | `/addf-knowhow-revise` | 鮮度低下（🔴 stale / needs-review）したノウハウを再検証し、訂正・superseded 遷移を記録 |
@@ -28,7 +28,7 @@ ADDF が提供するスキル（`/コマンド名` で呼び出し）:
 | **addf-lint** | `/addf-lint` | フレームワーク整合性チェック（JSON構文・権限・frontmatter・INDEX等） |
 | **addf-release** | `/addf-release [minor]` | リリース（チェンジログ・バージョン採番・publish） |
 | **addf-permission-audit** | `/addf-permission-audit` | 権限要求の分析・分類・settings ファイルへの追加提案 |
-| **addf-overview** | `/addf-overview` | CLAUDE.md・スキル・フック・エージェントのエコシステム概要を `docs/project-overview/` に生成 |
+| **addf-overview** | `/addf-overview` | CLAUDE.md・スキル・フック・エージェントのエコシステム概要を `.claude/addf/project-overview/` に生成 |
 
 ## 経験管理
 
@@ -38,10 +38,10 @@ ADDF が提供するスキル（`/コマンド名` で呼び出し）:
 
 ## GUI テスト（オプション）
 
-GUI 関連スキルはオプトイン式です（原本は `.claude/optional/`、有効化するまで発見パスに存在しません）。
-`.claude/addf-Behavior.toml` で `enable = true` に設定し、
-`uv run --python 3.11 .claude/addfTools/sync-optional-skills.py apply` で有効化コピーを配置してください
-（uv が無い場合は `python3` で直接実行。Python 3.11+ が必要。手順の詳細は `docs/guides/gui-test-setup.md`）。macOS のみ対応。
+GUI 関連スキルはオプトイン式です（原本は `.claude/addf/optional/`、有効化するまで発見パスに存在しません）。
+`.claude/addf/Behavior.toml` で `enable = true` に設定し、
+`uv run --python 3.11 .claude/addf/addfTools/sync-optional-skills.py apply` で有効化コピーを配置してください
+（uv が無い場合は `python3` で直接実行。Python 3.11+ が必要。手順の詳細は `.claude/addf/guides/gui-test-setup.md`）。macOS のみ対応。
 
 | スキル | 呼び出し | 説明 |
 |---|---|---|

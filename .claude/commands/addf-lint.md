@@ -24,7 +24,7 @@ user_invocable: true
 ## 1. JSON 構文チェック
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-json.py
+uv run --python 3.11 .claude/addf/addfTools/lint-json.py
 ```
 
 ## 2. Hooks 実行権限チェック
@@ -32,7 +32,7 @@ uv run --python 3.11 .claude/addfTools/lint-json.py
 `.claude/hooks/` 内の `*.sh` ファイルが実行権限を持っているか確認する:
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-hooks-exec.py
+uv run --python 3.11 .claude/addf/addfTools/lint-hooks-exec.py
 ```
 
 exit code: 0 = 全て実行可能 / 2 = WARNING（実行権限なし。`chmod +x` で付与する）。
@@ -43,20 +43,20 @@ exit code: 0 = 全て実行可能 / 2 = WARNING（実行権限なし。`chmod +x
 `.claude/commands/addf-*.md` の全ファイルについて frontmatter の存在と必須フィールド（name, description）を検証する。
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-frontmatter.py
+uv run --python 3.11 .claude/addf/addfTools/lint-frontmatter.py
 ```
 
 ## 4. addf-Behavior.toml 構文チェック
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-toml.py
+uv run --python 3.11 .claude/addf/addfTools/lint-toml.py
 ```
 
 ## 5. Knowhow INDEX 整合性チェック
 
-`docs/knowhow/INDEX.addf.md`（ADDF 本体の場合）または `docs/knowhow/INDEX.md`（ダウンストリームの場合）を対象に:
+`.claude/addf/knowhow/INDEX.addf.md`（ADDF 本体の場合）または `.claude/addf/knowhow/INDEX.md`（ダウンストリームの場合）を対象に:
 - INDEX に記載されているがファイルが存在しないエントリを検出
-- `docs/knowhow/` 配下に存在するが INDEX に記載されていない `.md` ファイルを検出
+- `.claude/addf/knowhow/` 配下に存在するが INDEX に記載されていない `.md` ファイルを検出
 - INDEX ファイル自身（INDEX.md, INDEX.addf.md）と `CLAUDE.md`（読み方の作法）は除外する
 
 INDEX ファイルからリンクを抽出するには、テーブル行の `[パス](パス)` パターンをパースする。
@@ -67,17 +67,17 @@ INDEX ファイルからリンクを抽出するには、テーブル行の `[�
 
 | ペア | 検証内容 | 重要度 |
 |---|---|---|
-| 1. `.claude/templates/ProgressTemplate.addf.md` ⇔ `.claude/Progress.md` | 運用ルールのテキスト包含 | ERROR |
-| 2. `.claude/templates/ProgressTemplate.addf.md` ⇔ `.claude/templates/ProgressTemplate.md` | 運用ルールの正規化比較（意図的差分はホワイトリスト済み） | WARNING |
+| 1. `.claude/addf/templates/ProgressTemplate.addf.md` ⇔ `.claude/addf/Progress.md` | 運用ルールのテキスト包含 | ERROR |
+| 2. `.claude/addf/templates/ProgressTemplate.addf.md` ⇔ `.claude/addf/templates/ProgressTemplate.md` | 運用ルールの正規化比較（意図的差分はホワイトリスト済み） | WARNING |
 | 3. `CLAUDE.md` ⇔ `AGENTS.md` | ブートシーケンス手順番号の対応 | WARNING |
-| 4. `CLAUDE.md` ⇔ `docs/guides/development-process.md` | ブートシーケンス概要の手順番号の対応 | WARNING |
+| 4. `CLAUDE.md` ⇔ `.claude/addf/guides/development-process.md` | ブートシーケンス概要の手順番号の対応 | WARNING |
 | 5. `CLAUDE.md` ⇔ `.claude/commands/addf-init.md` コピーリスト | 参照ファイルのカバレッジ（.gitignore ADDF ブロック含む） | WARNING |
-| 6. TODO（`TODO.md` / `docs/plans-add/TODO.addf.md`）⇔ Plan の `## 実装状況:` ヘッダ | 状態の矛盾・参照切れ・登録漏れ・表記ゆれヘッダ（`## 状態:` 等）。ヘッダ無し Plan は対象外 | WARNING |
+| 6. TODO（`TODO.md` / `.claude/addf/plans-add/TODO.addf.md`）⇔ Plan の `## 実装状況:` ヘッダ | 状態の矛盾・参照切れ・登録漏れ・表記ゆれヘッダ（`## 状態:` 等）。ヘッダ無し Plan は対象外 | WARNING |
 
 ※ lint にペアを追加・変更したら、この表とスクリプト docstring も同時に更新する。
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-template-sync.py
+uv run --python 3.11 .claude/addf/addfTools/lint-template-sync.py
 ```
 
 exit code: 0 = 全一致 / 1 = ERROR / 2 = WARNING のみ。
@@ -86,7 +86,7 @@ WARNING には git log による最終更新日ヒントが併記される。**�
 
 ## 7. Knowhow 鮮度チェック
 
-`docs/knowhow/` 配下の各 `.md` ファイル（INDEX と CLAUDE.md を除く）について:
+`.claude/addf/knowhow/` 配下の各 `.md` ファイル（INDEX と CLAUDE.md を除く）について:
 - フロントマター（`last_verified`・`status`）の有無を確認。なければ WARNING
 - 🔴 stale のファイル（しきい値・判定基準は `addf-knowhow-index.md` の定義に従う）を列挙し、`/addf-knowhow-revise` を案内する
 - `depends_on` に存在しないファイル・スキルが含まれていれば WARNING
@@ -95,7 +95,7 @@ WARNING には git log による最終更新日ヒントが併記される。**�
 
 ## 8. Knowhow 双方向リンクチェック
 
-`docs/knowhow/` 配下の各 knowhow の「## 関連ノウハウ」セクションのリンクについて:
+`.claude/addf/knowhow/` 配下の各 knowhow の「## 関連ノウハウ」セクションのリンクについて:
 - リンク先ファイルが存在するか確認。なければ WARNING
 - A→B のリンクに対し B→A が存在するか確認。欠落していれば INFO として列挙し、`/addf-knowhow-network` を案内する
 - 「## 関連ノウハウ」セクション自体がないファイルはチェック対象外（ネットワーク化は任意）
@@ -107,7 +107,7 @@ WARNING には git log による最終更新日ヒントが併記される。**�
 あるかを点検する:
 
 ```bash
-uv run --python 3.11 .claude/addfTools/lint-checklist.py
+uv run --python 3.11 .claude/addf/addfTools/lint-checklist.py
 ```
 
 exit code: 0 = 裏付けあり / 2 = WARNING（ERROR 級はこの lint には無い）。
@@ -119,17 +119,17 @@ WARNING はエージェントの確認漏れではなく**手順書側の点検*
 
 ## 10. オプショナルスキル同期チェック
 
-`.claude/optional/`（オプトイン式スキル・エージェントの原本）と発見パスの有効化コピーが
+`.claude/addf/optional/`（オプトイン式スキル・エージェントの原本）と発見パスの有効化コピーが
 `addf-Behavior.toml` の `[gui-test] enable` と整合しているかを検査する:
 
 ```bash
-uv run --python 3.11 .claude/addfTools/sync-optional-skills.py
+uv run --python 3.11 .claude/addf/addfTools/sync-optional-skills.py
 ```
 
 exit code: 0 = 整合 / 1 = ERROR（`enable` が真偽値でない等の設定不正） /
 2 = WARNING（未配置・撤去漏れ・原本との差分・gitignore 列挙漏れ・原本を失った孤児コピー）。
 解消は `sync-optional-skills.py apply`（原本と異なる有効化コピーは apply でも削除・上書きされない —
-直接編集は原本に対して行う）。`.claude/optional/` または Behavior.toml が無い場合、
+直接編集は原本に対して行う）。`.claude/addf/optional/` または Behavior.toml が無い場合、
 Behavior.toml が構文エラーの場合（セクション4の責務）は SKIP される。
 
 ## 結果報告

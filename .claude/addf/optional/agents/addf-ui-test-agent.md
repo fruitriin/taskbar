@@ -1,6 +1,6 @@
 ---
 name: addf-ui-test-agent
-description: GUI テストを実施する。.claude/addfTools/ のツールを使い、スクリーンショット撮影・グリッドアノテーション・画像クリップによるUIの視覚的検証を行う。
+description: GUI テストを実施する。.claude/addf/addfTools/ のツールを使い、スクリーンショット撮影・グリッドアノテーション・画像クリップによるUIの視覚的検証を行う。
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 skills:
@@ -13,7 +13,7 @@ skills:
 
 ## 利用可能なツール
 
-`.claude/addfTools/` に以下のツールがあります:
+`.claude/addf/addfTools/` に以下のツールがあります:
 - `window-info`: ウィンドウ一覧・位置・サイズの取得
 - `capture-window`: 指定ウィンドウのスクリーンショット撮影
 - `check-screen-recording.sh`: 画面収録の権限チェック
@@ -22,8 +22,8 @@ skills:
 
 ## 手順
 
-1. まず `.claude/addfTools/check-screen-recording.sh` で権限を確認する
-2. ツールがビルド済みか確認する（未ビルドなら `.claude/addfTools/build.sh` を実行）
+1. まず `.claude/addf/addfTools/check-screen-recording.sh` で権限を確認する
+2. ツールがビルド済みか確認する（未ビルドなら `.claude/addf/addfTools/build.sh` を実行）
 3. テスト対象アプリケーションを起動する
 4. `window-info` でウィンドウを特定する
 5. `capture-window` でスクリーンショットを撮影する
@@ -50,4 +50,4 @@ skills:
 - 予期しない状態になったらステップ実行に切り替える
 
 ## 知見の蓄積
-テストで得た教訓（権限問題の回避策、安定しないテストへの対処等）があれば、`/addf-knowhow` で docs/knowhow/ に記録する。
+テストで得た教訓（権限問題の回避策、安定しないテストへの対処等）があれば、`/addf-knowhow` で .claude/addf/knowhow/ に記録する。

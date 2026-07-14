@@ -461,4 +461,4 @@ export function useReactiveStore<T>(key: string, defaultValue: T): Ref<T> {
   基準化、context_task のクライアント供給値検証（レビュー Critical 対応）、single-flight ガード
 - 残課題（リリース関連）: CI（tauri-action）は初回タグ push まで未検証。v3.0.0 リリースは
   /addf-release で実施予定
-- 知見: docs/knowhow/rust-port-delegation.md・docs/knowhow/tauri-trust-boundary-and-native-menu.md
+- 知見: .claude/addf/knowhow/rust-port-delegation.md・.claude/addf/knowhow/tauri-trust-boundary-and-native-menu.md

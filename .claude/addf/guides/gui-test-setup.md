@@ -17,11 +17,11 @@ ADD フレームワークの GUI テスト機能は、スクリーンショッ�
 ### 1. プラットフォーム設定とスキルの有効化
 
 GUI 関連スキル（`addf-gui-test` / `addf-annotate-grid` / `addf-clip-image` /
-`addf-ui-test-agent`）は**オプトイン式**です。原本は `.claude/optional/` に退避されており、
+`addf-ui-test-agent`）は**オプトイン式**です。原本は `.claude/addf/optional/` に退避されており、
 有効化するまで発見パスに存在しません（GUI の無い環境でコンテキストを消費せず、
 エージェントが GUI テストを試みることもありません）。
 
-`.claude/addf-Behavior.toml` を編集:
+`.claude/addf/Behavior.toml` を編集:
 
 ```toml
 [gui-test]
@@ -32,19 +32,19 @@ machine = "mac"
 続けて同期スクリプトでスキルの有効化コピーを配置:
 
 ```bash
-uv run --python 3.11 .claude/addfTools/sync-optional-skills.py apply
+uv run --python 3.11 .claude/addf/addfTools/sync-optional-skills.py apply
 ```
 
 uv が無い環境では `python3` で直接実行できます（Python 3.11+ が必要。旧い Python では実行できない旨の案内が出ます）。
 
 無効に戻すときは `enable = false` にして同コマンドを再実行します（配置と撤去の両方を担います。
 有効化コピーを直接編集していた場合は削除されず WARNING になります — 変更は
-`.claude/optional/` の原本に対して行ってください）。整合チェックは `/addf-lint` セクション10。
+`.claude/addf/optional/` の原本に対して行ってください）。整合チェックは `/addf-lint` セクション10。
 
 ### 2. ツールのビルド
 
 ```bash
-cd .claude/addfTools
+cd .claude/addf/addfTools
 bash build.sh
 ```
 
@@ -57,7 +57,7 @@ bash build.sh
 ### 3. Screen Recording 権限の確認
 
 ```bash
-bash .claude/addfTools/check-screen-recording.sh
+bash .claude/addf/addfTools/check-screen-recording.sh
 ```
 
 権限がない場合は、macOS のシステム設定から付与してください:
@@ -77,16 +77,16 @@ bash .claude/addfTools/check-screen-recording.sh
 
 ```bash
 # ウィンドウ情報を取得
-.claude/addfTools/window-info <プロセス名>
+.claude/addf/addfTools/window-info <プロセス名>
 
 # スクリーンショットを撮影
-.claude/addfTools/capture-window <プロセス名> tmp/capture.png
+.claude/addf/addfTools/capture-window <プロセス名> tmp/capture.png
 
 # グリッドアノテーション
-.claude/addfTools/annotate-grid tmp/capture.png tmp/annotated.png
+.claude/addf/addfTools/annotate-grid tmp/capture.png tmp/annotated.png
 
 # 画像クリップ
-.claude/addfTools/clip-image tmp/annotated.png tmp/clip.png --rect 100,200,300,400
+.claude/addf/addfTools/clip-image tmp/annotated.png tmp/clip.png --rect 100,200,300,400
 ```
 
 ## プラットフォーム対応状況
@@ -98,7 +98,7 @@ bash .claude/addfTools/check-screen-recording.sh
 | Windows | `"windows"` | 未実装 |
 
 Linux/Windows の GUI テストツール実装はコントリビューションを歓迎します。
-`addf-gui-test.md` スキルのプラットフォーム判定ロジックは実装済みのため、プラットフォーム固有ツールを `.claude/addfTools/` に追加するだけで対応できます。
+`addf-gui-test.md` スキルのプラットフォーム判定ロジックは実装済みのため、プラットフォーム固有ツールを `.claude/addf/addfTools/` に追加するだけで対応できます。
 
 ## トラブルシューティング
 
@@ -111,4 +111,4 @@ Linux/Windows の GUI テストツール実装はコントリビューション�
 - ターミナルアプリに Screen Recording 権限が付与されているか確認
 
 ### `gui-test.enable = false` と表示される
-- `.claude/addf-Behavior.toml` の `enable` を `true` に変更してください
+- `.claude/addf/Behavior.toml` の `enable` を `true` に変更してください

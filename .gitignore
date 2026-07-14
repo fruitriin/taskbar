@@ -18,9 +18,9 @@ taskbar_mac_cert.p12
 .claude/.context-reminder-state
 .claude/logs/
 CLAUDE.local.md
-.claude/Dashboard.md
-.claude/Worktrees.md
-# オプショナルスキルの有効化コピー（原本は .claude/optional/。sync-optional-skills.py が配置）
+.claude/addf/Dashboard.md
+.claude/addf/Worktrees.md
+# オプショナルスキルの有効化コピー（原本は .claude/addf/optional/。sync-optional-skills.py が配置）
 .claude/commands/addf-gui-test.md
 .claude/commands/addf-annotate-grid.md
 .claude/commands/addf-clip-image.md

@@ -1,7 +1,7 @@
 ---
 name: addf-knowhow-index
 description: |
-  docs/knowhow/ のインデックスを参照して「何を知っているか」を把握する。reindex 引数でインデックスを再構築する。
+  .claude/addf/knowhow/ のインデックスを参照して「何を知っているか」を把握する。reindex 引数でインデックスを再構築する。
   ADD フレームワーク本体では INDEX.addf.md、ダウンストリームプロジェクトでは INDEX.md を使用する。
   プロジェクトの知見ベースを確認したいとき、ノウハウの追加・削除後にインデックスを更新したいときに使う。
 context: fork
@@ -12,13 +12,13 @@ user_invocable: true
 
 ## インデックスファイルの選択
 
-- ADD フレームワーク本体（このリポジトリ）では `docs/knowhow/INDEX.addf.md` を使用する
-- ダウンストリームプロジェクトでは `docs/knowhow/INDEX.md` を使用する
+- ADD フレームワーク本体（このリポジトリ）では `.claude/addf/knowhow/INDEX.addf.md` を使用する
+- ダウンストリームプロジェクトでは `.claude/addf/knowhow/INDEX.md` を使用する
 - 判定方法: `INDEX.addf.md` が存在すればそちらを優先する
 
 ## 引数
 - **引数なし**: インデックスファイルを読み、内容をそのまま返す
-- **`reindex`**: `docs/knowhow/` の全ファイルを読み込み、インデックスファイルを再構築する
+- **`reindex`**: `.claude/addf/knowhow/` の全ファイルを読み込み、インデックスファイルを再構築する
 
 ## 目的
 
@@ -36,7 +36,7 @@ user_invocable: true
 
 ## `reindex` の場合
 
-1. `docs/knowhow/` 内の全 `.md` ファイルを読む（`INDEX.md` 自体と `CLAUDE.md`（読み方の作法）は除く）
+1. `.claude/addf/knowhow/` 内の全 `.md` ファイルを読む（`INDEX.md` 自体と `CLAUDE.md`（読み方の作法）は除く）
 2. 各ファイルについて以下を抽出する:
    - **ファイルパス**
    - **一行要約**: そのファイルが扱う中心トピック（1文）

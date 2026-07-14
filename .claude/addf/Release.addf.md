@@ -6,11 +6,11 @@
 
 ## プレリリースチェック
 
-1. `bash .claude/tests/run-all.sh` が全て通過すること
+1. `bash .claude/addf/tests/run-all.sh` が全て通過すること
 2. `/addf-lint` が全チェック通過すること
 3. リリースをブロックする未完了タスクがないこと — 未着手タスクを機械抽出して判断する:
    ```bash
-   grep -n '未着手' docs/plans-add/TODO.addf.md || echo '(未着手タスクなし)'
+   grep -n '未着手' .claude/addf/plans-add/TODO.addf.md || echo '(未着手タスクなし)'
    ```
    抽出された未着手タスクがリリースをブロックするかはオーナー・エージェントの判断 <!-- human-judgment -->
 
@@ -22,8 +22,8 @@
 
 | ファイル | 更新内容 |
 |---|---|
-| `.claude/addf-lock.json` | `version`, `ref`（`vX.Y.Z` タグ名）, `updated_at` を更新 |
-| `.claude/ADDF-CHANGELOG.md` | 新バージョンのエントリを先頭に追加 |
+| `.claude/addf/lock.json` | `version`, `ref`（`vX.Y.Z` タグ名）, `updated_at` を更新 |
+| `.claude/addf/CHANGELOG.md` | 新バージョンのエントリを先頭に追加 |
 
 > **`ref` はタグ名であってコミットハッシュではない**: lock ファイルはリリースコミット自身に
 > 含まれるため、そのコミットのハッシュを lock に書くことは自己参照で原理的に不可能
@@ -62,7 +62,7 @@ Keep a Changelog 形式（https://keepachangelog.com/）に準拠。日本語で
 
 - タグが存在し `addf-lock.json` の `ref` と一致し、push 済みであることを確認する:
   ```bash
-  ref=$(python3 -c "import json; print(json.load(open('.claude/addf-lock.json'))['ref'])")
+  ref=$(python3 -c "import json; print(json.load(open('.claude/addf/lock.json'))['ref'])")
   git tag -l "$ref" | grep -q . && echo "OK: タグ $ref が存在する" || echo "NG: タグ $ref が無い"
   git ls-remote --tags origin "refs/tags/$ref" | grep -q . && echo "OK: push 済み" || echo "NG: 未 push"
   ```

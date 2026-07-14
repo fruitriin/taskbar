@@ -48,4 +48,4 @@ model: sonnet
 **重要**: 実装は行わない。修正案の提示のみ。
 
 ## 知見の蓄積
-プロジェクト固有のセキュリティパターンや注意点を発見したら、`/addf-knowhow` で docs/knowhow/ に記録する。
+プロジェクト固有のセキュリティパターンや注意点を発見したら、`/addf-knowhow` で .claude/addf/knowhow/ に記録する。

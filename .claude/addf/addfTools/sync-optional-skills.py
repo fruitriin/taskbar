@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """オプショナルスキル同期 — GUI スキルの有効化コピーを Behavior.toml と整合させる
 
-GUI を扱うスキル・エージェント定義は `.claude/optional/` に原本として退避されており、
+GUI を扱うスキル・エージェント定義は `.claude/addf/optional/` に原本として退避されており、
 `addf-Behavior.toml` の `[gui-test] enable` でオプトインしたときだけ発見パス
 （`.claude/commands/` / `.claude/agents/`）へコピーで実体化される。
 無効時はスキルがコンテキストに載らず、GUI の無い環境でエージェントが
 GUI テストを試みる余地もなくなる。
 
 3原則:
-- 原本（.claude/optional/）が真実源。コミット対象は原本のみ
+- 原本（.claude/addf/optional/）が真実源。コミット対象は原本のみ
 - 有効化コピーは使い捨て（gitignore 済み・いつでも再生成可能）
 - 有効化コピーが原本と異なる場合は削除・上書きしない（WARNING で報告し人間に委ねる。
   直接編集は原本に対して行い、apply で再配置するのが正しい手順）
@@ -26,7 +26,7 @@ check モードは配置状態に加えて以下も検査する（列挙の陳�
   uv run --python 3.11 sync-optional-skills.py apply    # 配置・撤去を実行する
 
 /addf-gui-test 自体が退避対象のため、同期の入口はスキルではなくこのスクリプトに置く。
-`.claude/optional/` が存在しない場合は SKIP する（未配布構成は問題ではない）。
+`.claude/addf/optional/` が存在しない場合は SKIP する（未配布構成は問題ではない）。
 Behavior.toml の構文エラーは SKIP（構文検査は lint-toml.py の責務）。
 
 exit code: 0 = 整合 / 1 = ERROR（enable が真偽値でない等の設定不正） / 2 = WARNING あり
@@ -49,8 +49,8 @@ except ModuleNotFoundError:
     print(f'SKIP: {_hint}')
     sys.exit(0)
 
-BEHAVIOR = '.claude/addf-Behavior.toml'
-OPTIONAL_ROOT = '.claude/optional'
+BEHAVIOR = '.claude/addf/Behavior.toml'
+OPTIONAL_ROOT = '.claude/addf/optional'
 GITIGNORE = '.gitignore'
 # 原本ディレクトリ → 有効化先ディレクトリ
 DIR_MAP = {
@@ -161,7 +161,7 @@ for src, dst in pair_list:
             else:
                 warnings.append(
                     f'未配置: {dst} が無い（gui-test.enable=true）。'
-                    f' `uv run --python 3.11 .claude/addfTools/sync-optional-skills.py apply` で配置する')
+                    f' `uv run --python 3.11 .claude/addf/addfTools/sync-optional-skills.py apply` で配置する')
         elif not same_content(src, dst):
             # 有効化コピー側の直接編集か原本の更新か区別できないため自動では触らない
             warnings.append(

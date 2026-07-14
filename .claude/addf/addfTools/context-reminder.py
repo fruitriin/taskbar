@@ -6,7 +6,7 @@ transcript JSONL の直近 assistant メッセージの usage からコンテキ
 実測する。設定閾値を超えていたら「観測事実＋モデル別の実効コンテキスト目安」を
 注入し、能動コンパクション（知見記録→整理）の判断はモデル自身に委ねる。
 
-設計（docs/plans-add/0023-turn-reminder-context-split.md）:
+設計（.claude/addf/plans-add/0023-turn-reminder-context-split.md）:
 - フックの仕事は事実の注入のみ。固定文言で状態を断言しない
 - ウィンドウ variant（200k/1M）は transcript から判別できないため、
   モデル名に対する「実効コンテキストの目安」を設定表から添えるだけにする

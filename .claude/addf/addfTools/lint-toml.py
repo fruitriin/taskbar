@@ -11,7 +11,7 @@ except ModuleNotFoundError:
     sys.exit(0)
 
 try:
-    with open('.claude/addf-Behavior.toml', 'rb') as f:
+    with open('.claude/addf/Behavior.toml', 'rb') as f:
         tomllib.load(f)
     print('OK')
 except FileNotFoundError:

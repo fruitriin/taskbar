@@ -47,5 +47,5 @@ status: active
 ## 参照
 
 - `.claude/agents/addf-code-review-agent.md` — ペルソナ定義と集約ルール（サブエージェント側）
-- `.claude/templates/ProgressTemplate.addf.md` — 品質ゲート手順5（メインエージェント側にインライン展開した例）
-- `docs/plans-add/0020-adversarial-review.md` — この知見の発生源
+- `.claude/addf/templates/ProgressTemplate.addf.md` — 品質ゲート手順5（メインエージェント側にインライン展開した例）
+- `.claude/addf/plans-add/0020-adversarial-review.md` — この知見の発生源

@@ -130,7 +130,7 @@ hooks:
   注入は観測事実のみ＋「切り上げ指示ではない」の安心文を添える
 - 大きい transcript は末尾チャンク（2MB 程度）だけ読み、先頭の不完全な行を捨てる。
   取得不能（transcript 不在・圧縮直後・パース失敗）は静かに exit 0（誤発火より無発火）
-- 実装: `.claude/addfTools/context-reminder.py`（`turn-reminder.sh` から stdin 中継。
+- 実装: `.claude/addf/addfTools/context-reminder.py`（`turn-reminder.sh` から stdin 中継。
   stdin の TTY 判定で手動実行・旧テストとの互換を保つ）
 
 ## プロジェクトへの適用

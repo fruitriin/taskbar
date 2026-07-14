@@ -1,7 +1,7 @@
 //! 設定ストア（tauri-plugin-store）ヘルパー
 //!
 //! Electron 原本: src/main/funcs/store.ts（electron-store の defaults / キー構成）
-//! 計画書: docs/plans/rearch-phase3.md 3.3 store.rs 節
+//! 計画書: .claude/addf/plans/rearch-phase3.md 3.3 store.rs 節
 //!
 //! ストアファイルは `config.json`（electron-store と同名）。キーは
 //! - `options` … layout / windowSortByPositionInApp / appOrder / headers / footers

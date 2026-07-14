@@ -2,7 +2,7 @@
 name: addf-overview
 description: |
   CLAUDE.md・スキル・フック・エージェントのエコシステムを網羅的に記録し、
-  docs/project-overview/ に静的ドキュメントとして出力する。
+  .claude/addf/project-overview/ に静的ドキュメントとして出力する。
   ドキュメントは「実装方法別」ではなく「概念システム別」に分類する。
   最後に実施したコミットハッシュを .lock として保持。
   コードの変更後や大規模スキル追加時に実行してドキュメントを最新化する。
@@ -28,16 +28,16 @@ user_invocable: true
 - 三本柱: **計画駆動** (Plan-driven)・**ノウハウ蓄積** (Knowhow)・**品質ゲート** (Quality Gate)
 - Claude Code ファーストパーティ + Codex 部分対応 + その他エージェント基本対応
 - スキル・エージェント・フックはすべて `addf-` 接頭辞を持つ
-- `docs/plans-add/` は ADDF 自身の開発計画、`docs/plans/` は下流プロジェクトの計画置き場
+- `.claude/addf/plans-add/` は ADDF 自身の開発計画、`.claude/addf/plans/` は下流プロジェクトの計画置き場
 - addf-lock.json + addf-migrate によるバージョン管理・マイグレーション機構を持つ
 
 ## 出力先
 
-すべて `docs/project-overview/` に作成する（`~/.claude` 配下には書かない）。
+すべて `.claude/addf/project-overview/` に作成する（`~/.claude` 配下には書かない）。
 既存ファイルは上書き。
 
 ```
-docs/project-overview/
+.claude/addf/project-overview/
 ├── INDEX.md               エントリポイント・ファイル一覧・最終更新日
 ├── claude-md-deps.md      CLAUDE.md とその依存・Boot Sequence
 ├── phase-flows.md         フェーズ/ステップ進行のあるスキルを自動検出して全掲載
@@ -65,7 +65,7 @@ docs/project-overview/
 ### P1: .lock を読み、差分を取得
 
 ```bash
-LOCK_HASH=$(cut -d'|' -f1 docs/project-overview/.lock)
+LOCK_HASH=$(cut -d'|' -f1 .claude/addf/project-overview/.lock)
 git diff --name-only "$LOCK_HASH"..HEAD
 ```
 
@@ -114,14 +114,14 @@ git diff --name-only "$LOCK_HASH"..HEAD
 **E. 主要ファイル・ディレクトリの確認**
 - `CONTRIBUTING.md` — 存在確認と内容確認
 - `TODO.md` — 存在確認と内容確認
-- `.claude/Progress.md`, `.claude/Feedback.md` — 存在確認
-- `.claude/addf-lock.json` — バージョン情報
-- `.claude/addf-Behavior.toml` — 行動設定
-- `docs/plans/`, `docs/plans-add/` — ls（件数と命名パターン）
-- `docs/knowhow/` — ls（INDEX.md の有無、knowhow ファイル数）
-- `docs/guides/` — ls（ガイド一覧）
-- `.claude/templates/` — ls（テンプレート一覧）
-- `.claude/addfTools/` — 存在確認
+- `.claude/addf/Progress.md`, `.claude/addf/Feedback.md` — 存在確認
+- `.claude/addf/lock.json` — バージョン情報
+- `.claude/addf/Behavior.toml` — 行動設定
+- `.claude/addf/plans/`, `.claude/addf/plans-add/` — ls（件数と命名パターン）
+- `.claude/addf/knowhow/` — ls（INDEX.md の有無、knowhow ファイル数）
+- `.claude/addf/guides/` — ls（ガイド一覧）
+- `.claude/addf/templates/` — ls（テンプレート一覧）
+- `.claude/addf/addfTools/` — 存在確認
 
 **F. コミット情報**
 - `git log -1 --pretty=format:"%H|%s|%ad" --date=short`
@@ -172,8 +172,8 @@ git diff --name-only "$LOCK_HASH"..HEAD
 **前回の分類（参考として読むが、拘束力はない）:**
 
 前回（.exp.md に記録がある場合はそちらを優先）の分類がなければ、以下を初期仮説として使え:
-- **計画駆動** (planning) — TODO.md・docs/plans/・addf-dev の計画フェーズ
-- **ノウハウ** (knowhow) — docs/knowhow/・addf-knowhow・addf-knowhow-index・addf-knowhow-filter・addf-knowhow-agent
+- **計画駆動** (planning) — TODO.md・.claude/addf/plans/・addf-dev の計画フェーズ
+- **ノウハウ** (knowhow) — .claude/addf/knowhow/・addf-knowhow・addf-knowhow-index・addf-knowhow-filter・addf-knowhow-agent
 - **品質ゲート** (quality) — addf-code-review-agent・addf-security-review-agent・addf-lint・addf-permission-audit
 - **ライフサイクル** (lifecycle) — Boot Sequence・Progress・Feedback・フック群・addf-dev の全体フロー
 - **配布・導入** (distribution) — addf-init・addf-migrate・addf-release・addf-lock.json・CLAUDE.repo
@@ -230,7 +230,7 @@ AutomatonDevDrive Framework — AI コーディングエージェントのため
 - スキル: N本（うち .exp.md あり: N本）
 - エージェント定義: N体
 - フックスクリプト: N本
-- ガイドドキュメント: N本（docs/guides/）
+- ガイドドキュメント: N本（.claude/addf/guides/）
 - 概念システム: N（Step 3 で探索的に決定）
 ```
 
@@ -328,7 +328,7 @@ Step 3 で決定したシステム群に基づいてその都度描く（決め�
 - **次回への申し送り** — 次回実行時に注意すべきこと、検証したい仮説
 
 **ファイル構造:**
-ファイル先頭に `.claude/templates/ExperienceTemplate.md` 準拠の固定セクション（うまくいったパターン / 注意すべき落とし穴 / 次回への改善点）を置き、その後に実行記録を時系列で追記する。
+ファイル先頭に `.claude/addf/templates/ExperienceTemplate.md` 準拠の固定セクション（うまくいったパターン / 注意すべき落とし穴 / 次回への改善点）を置き、その後に実行記録を時系列で追記する。
 
 **実行記録のフォーマット:**
 ```markdown
@@ -352,7 +352,7 @@ Step 3 で決定したシステム群に基づいてその都度描く（決め�
 
 ### Step 6: .lock 更新
 
-`docs/project-overview/.lock` に以下を書く：
+`.claude/addf/project-overview/.lock` に以下を書く：
 ```
 HASH|COMMIT_MSG|DATE
 ```

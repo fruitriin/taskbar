@@ -72,6 +72,6 @@ status: active
 
 ## 参照
 
-- `docs/plans-add/0024-todo-plan-status-lint.md` — 機械化の実装計画
-- `docs/plans-add/0015-existing-project-install.md` — ドリフト事件の現場
+- `.claude/addf/plans-add/0024-todo-plan-status-lint.md` — 機械化の実装計画
+- `.claude/addf/plans-add/0015-existing-project-install.md` — ドリフト事件の現場
 - [同期 lint の設計](sync-lint-design.md) — 「意思で覚えず機械化する」の本家

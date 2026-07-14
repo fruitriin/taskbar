@@ -1,6 +1,6 @@
 //! Tauri Commands（IPC ハンドラー）
 //!
-//! 計画書: docs/plans/rearch-phase3.md 3.2 節（＋鮮度更新節の20チャンネル一覧）
+//! 計画書: .claude/addf/plans/rearch-phase3.md 3.2 節（＋鮮度更新節の20チャンネル一覧）
 //! 意味論の原本: src/main/funcs/events.ts（各コマンドに該当行を注記）
 //!
 //! Electron チャンネル名 → Tauri command 名の対応（snake_case 化）:

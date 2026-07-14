@@ -16,7 +16,7 @@ status: active
 ## 運用判断基準
 
 ### @展開すべき場合（クオートなし）
-- **ブートシーケンスで毎回読むべきファイル**: @TODO.md, @.claude/Progress.md, @.claude/Feedback.md — エージェントが手動で Read する手間を省き、セッション開始時に自動でコンテキストに載る
+- **ブートシーケンスで毎回読むべきファイル**: @TODO.md, @.claude/addf/Progress.md, @.claude/addf/Feedback.md — エージェントが手動で Read する手間を省き、セッション開始時に自動でコンテキストに載る
 - **分割した設定ファイルの結合**: @CLAUDE.repo.md, @CLAUDE.local.example.md — CLAUDE.md を分割管理しつつ、実行時には1つのコンテキストとして統合する
 - **経験的・蓄積的なファイル**: 内容が変化し、常に最新を参照すべきもの
 
@@ -35,6 +35,6 @@ status: active
 - ネスト展開が機能するため、`CLAUDE.local.md` → `@テンプレート` のような間接参照パターンが使える
 
 ## 参照
-- CLAUDE.md のブートシーケンスで @TODO.md, @.claude/Progress.md, @.claude/Feedback.md を展開利用中
+- CLAUDE.md のブートシーケンスで @TODO.md, @.claude/addf/Progress.md, @.claude/addf/Feedback.md を展開利用中
 - CLAUDE.md から @CLAUDE.repo.md で分割設定を結合
 - `CLAUDE.local.md` から @CLAUDE.local.example.md でテンプレートを展開

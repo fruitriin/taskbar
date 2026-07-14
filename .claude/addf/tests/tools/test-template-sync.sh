@@ -7,7 +7,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-LINT="$PROJECT_DIR/.claude/addfTools/lint-template-sync.py"
+LINT="$PROJECT_DIR/.claude/addf/addfTools/lint-template-sync.py"
 PASS=0
 FAIL=0
 
@@ -42,13 +42,13 @@ assert_contains() {
 make_sandbox() {
   local box
   box="$(mktemp -d)"
-  mkdir -p "$box/.claude/templates" "$box/.claude/commands" "$box/docs/guides"
+  mkdir -p "$box/.claude/addf/templates" "$box/.claude/commands" "$box/.claude/addf/guides"
   cp "$PROJECT_DIR/CLAUDE.md" "$PROJECT_DIR/AGENTS.md" "$PROJECT_DIR/.gitignore" "$box/"
-  cp "$PROJECT_DIR/.claude/Progress.md" "$box/.claude/"
-  cp "$PROJECT_DIR/.claude/templates/ProgressTemplate.addf.md" \
-     "$PROJECT_DIR/.claude/templates/ProgressTemplate.md" "$box/.claude/templates/"
+  cp "$PROJECT_DIR/.claude/addf/Progress.md" "$box/.claude/"
+  cp "$PROJECT_DIR/.claude/addf/templates/ProgressTemplate.addf.md" \
+     "$PROJECT_DIR/.claude/addf/templates/ProgressTemplate.md" "$box/.claude/addf/templates/"
   cp "$PROJECT_DIR/.claude/commands/addf-init.md" "$box/.claude/commands/"
-  cp "$PROJECT_DIR/docs/guides/development-process.md" "$box/docs/guides/"
+  cp "$PROJECT_DIR/.claude/addf/guides/development-process.md" "$box/.claude/addf/guides/"
   echo "$box"
 }
 
@@ -66,8 +66,8 @@ assert_contains "OK メッセージ" "OK: 同期チェック通過" "$output"
 # テスト 2: ProgressTemplate.md のステップ欠落 → WARNING (exit=2)
 echo "Test 2: ダウンストリーム版テンプレートのステップ欠落"
 box="$(make_sandbox)"
-grep -v '^15\. コミットする' "$box/.claude/templates/ProgressTemplate.md" > "$box/tmp" \
-  && mv "$box/tmp" "$box/.claude/templates/ProgressTemplate.md"
+grep -v '^15\. コミットする' "$box/.claude/addf/templates/ProgressTemplate.md" > "$box/tmp" \
+  && mv "$box/tmp" "$box/.claude/addf/templates/ProgressTemplate.md"
 output=$(run_lint "$box")
 assert_exit "ステップ欠落で WARNING" 2 $?
 assert_contains "ペア2の WARNING" "[2] WARNING" "$output"
@@ -87,8 +87,8 @@ rm -rf "$box"
 # テスト 4: Progress.md の運用ルール乖離 → ERROR (exit=1)
 echo "Test 4: Progress.md の運用ルール乖離"
 box="$(make_sandbox)"
-grep -v '^15\. コミットする' "$box/.claude/Progress.md" > "$box/tmp" \
-  && mv "$box/tmp" "$box/.claude/Progress.md"
+grep -v '^15\. コミットする' "$box/.claude/addf/Progress.md" > "$box/tmp" \
+  && mv "$box/tmp" "$box/.claude/addf/Progress.md"
 output=$(run_lint "$box")
 assert_exit "運用ルール乖離で ERROR" 1 $?
 assert_contains "ペア1の ERROR" "[1] ERROR" "$output"
@@ -98,7 +98,7 @@ rm -rf "$box"
 echo "Test 5: development-process.md の手順ドリフト"
 box="$(make_sandbox)"
 sed -i.bak 's/^4\. TODO に未完了タスクがない場合/44. TODO に未完了タスクがない場合/' \
-  "$box/docs/guides/development-process.md" && rm -f "$box/docs/guides/development-process.md.bak"
+  "$box/.claude/addf/guides/development-process.md" && rm -f "$box/.claude/addf/guides/development-process.md.bak"
 output=$(run_lint "$box")
 assert_exit "手順ドリフトで WARNING" 2 $?
 assert_contains "ペア4の WARNING" "[4] WARNING" "$output"
@@ -108,11 +108,11 @@ rm -rf "$box"
 # addf-init.md と .gitignore は配布対象のため存在する想定（ペア5は SKIP せず実行され OK になる）
 echo "Test 6: ダウンストリーム環境シミュレーション"
 box="$(make_sandbox)"
-rm -f "$box/.claude/templates/ProgressTemplate.addf.md" "$box/AGENTS.md"
-rm -rf "$box/docs/guides"
+rm -f "$box/.claude/addf/templates/ProgressTemplate.addf.md" "$box/AGENTS.md"
+rm -rf "$box/.claude/addf/guides"
 # Progress.md をダウンストリーム版テンプレート由来の内容に変換する
 sed -i.bak -e 's/ProgressTemplate\.addf\.md/ProgressTemplate.md/g' \
-  -e '/ADD フレームワークテスト/d' "$box/.claude/Progress.md" && rm -f "$box/.claude/Progress.md.bak"
+  -e '/ADD フレームワークテスト/d' "$box/.claude/addf/Progress.md" && rm -f "$box/.claude/addf/Progress.md.bak"
 output=$(run_lint "$box")
 assert_exit "ダウンストリームで OK" 0 $?
 assert_contains "ペア2の SKIP" "[2] SKIP" "$output"
@@ -140,7 +140,7 @@ assert_exit "addf-init 欠如で OK" 0 $?
 assert_contains "ペア5の SKIP" "[5] SKIP" "$output"
 rm -rf "$box"
 
-# テスト 9: .gitignore 欠如 → 実行時生成ファイル（.claude/Dashboard.md）がカバー不能で WARNING
+# テスト 9: .gitignore 欠如 → 実行時生成ファイル（.claude/addf/Dashboard.md）がカバー不能で WARNING
 # addf-init 実行後の環境では .gitignore ADDF ブロックが必ず存在するため定常運用では発生しない。
 # 発生時は「未整備」を伝える早期警告として妥当 — その仕様をここで固定化する
 echo "Test 9: .gitignore 欠如時のカバー漏れ検出"
@@ -148,27 +148,27 @@ box="$(make_sandbox)"
 rm -f "$box/.gitignore"
 output=$(run_lint "$box")
 assert_exit ".gitignore 欠如で WARNING" 2 $?
-assert_contains "Dashboard.md の UNCOVERED" "UNCOVERED: .claude/Dashboard.md" "$output"
+assert_contains "Dashboard.md の UNCOVERED" "UNCOVERED: .claude/addf/Dashboard.md" "$output"
 rm -rf "$box"
 
 # ペア6用サンドボックス: TODO.addf.md と Plan ファイルの最小セットを作る
 make_plans_sandbox() {
   local box
   box="$(make_sandbox)"
-  mkdir -p "$box/docs/plans-add"
-  cat > "$box/docs/plans-add/0001-sample.md" <<'EOF'
+  mkdir -p "$box/.claude/addf/plans-add"
+  cat > "$box/.claude/addf/plans-add/0001-sample.md" <<'EOF'
 # Plan: サンプル
 
 ## 実装状況: 完了（2026-06-11）
 
 本文
 EOF
-  cat > "$box/docs/plans-add/TODO.addf.md" <<'EOF'
+  cat > "$box/.claude/addf/plans-add/TODO.addf.md" <<'EOF'
 # TODO (ADDF)
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | 1 | `docs/plans-add/0001-sample.md` | 完了 |
+| 1 | 1 | `.claude/addf/plans-add/0001-sample.md` | 完了 |
 EOF
   echo "$box"
 }
@@ -176,27 +176,27 @@ EOF
 # テスト 10: TODO「未着手」⇔ Plan ヘッダ「完了」の矛盾 → ペア6 WARNING (exit=2)
 echo "Test 10: TODO⇔Plan 状態の矛盾検出"
 box="$(make_plans_sandbox)"
-sed -i.bak 's/| 完了 |/| 未着手 |/' "$box/docs/plans-add/TODO.addf.md" \
-  && rm -f "$box/docs/plans-add/TODO.addf.md.bak"
+sed -i.bak 's/| 完了 |/| 未着手 |/' "$box/.claude/addf/plans-add/TODO.addf.md" \
+  && rm -f "$box/.claude/addf/plans-add/TODO.addf.md.bak"
 output=$(run_lint "$box")
 assert_exit "状態矛盾で WARNING" 2 $?
 assert_contains "ペア6の WARNING" "[6] WARNING" "$output"
-assert_contains "矛盾の特定" "矛盾: docs/plans-add/0001-sample.md" "$output"
+assert_contains "矛盾の特定" "矛盾: .claude/addf/plans-add/0001-sample.md" "$output"
 rm -rf "$box"
 
 # テスト 11: TODO 登録漏れと参照切れ → ペア6 WARNING (exit=2)
 echo "Test 11: TODO 登録漏れ・参照切れの検出"
 box="$(make_plans_sandbox)"
-cat > "$box/docs/plans-add/0002-unlisted.md" <<'EOF'
+cat > "$box/.claude/addf/plans-add/0002-unlisted.md" <<'EOF'
 # Plan: 登録漏れサンプル
 
 ## 実装状況: 未着手
 EOF
-printf '| 2 | 2 | `docs/plans-add/0003-ghost.md` | 未着手 |\n' >> "$box/docs/plans-add/TODO.addf.md"
+printf '| 2 | 2 | `.claude/addf/plans-add/0003-ghost.md` | 未着手 |\n' >> "$box/.claude/addf/plans-add/TODO.addf.md"
 output=$(run_lint "$box")
 assert_exit "登録漏れで WARNING" 2 $?
-assert_contains "登録漏れの特定" "登録漏れ: docs/plans-add/0002-unlisted.md" "$output"
-assert_contains "参照切れの特定" "不在: docs/plans-add/TODO.addf.md が参照する docs/plans-add/0003-ghost.md" "$output"
+assert_contains "登録漏れの特定" "登録漏れ: .claude/addf/plans-add/0002-unlisted.md" "$output"
+assert_contains "参照切れの特定" "不在: .claude/addf/plans-add/TODO.addf.md が参照する .claude/addf/plans-add/0003-ghost.md" "$output"
 rm -rf "$box"
 
 # テスト 12: 実装状況ヘッダの無い Plan は検査対象外（信用ベース・旧 Plan 互換）→ exit=0
@@ -204,7 +204,7 @@ rm -rf "$box"
 # 注: テスト1と同じく実リポジトリのコピーが前提。exit≠0 ならペア6ではなく実ファイルのドリフトを疑う
 echo "Test 12: ヘッダ無し Plan のスキップと TODO 不在の SKIP"
 box="$(make_plans_sandbox)"
-printf '# Plan: ヘッダ無し旧式\n\n本文のみ\n' > "$box/docs/plans-add/0001-sample.md"
+printf '# Plan: ヘッダ無し旧式\n\n本文のみ\n' > "$box/.claude/addf/plans-add/0001-sample.md"
 output=$(run_lint "$box")
 assert_exit "ヘッダ無しで OK" 0 $?
 rm -rf "$box"
@@ -217,10 +217,10 @@ rm -rf "$box"
 # 実装状況ヘッダの表記ゆれは「状態を書いているのに検査から漏れる」穴になる（Plan 0025 で顕在化）
 echo "Test 13: 表記ゆれヘッダの検出"
 box="$(make_plans_sandbox)"
-printf '# Plan: 表記ゆれ\n\n## 状態: 未着手\n\n本文\n' > "$box/docs/plans-add/0001-sample.md"
+printf '# Plan: 表記ゆれ\n\n## 状態: 未着手\n\n本文\n' > "$box/.claude/addf/plans-add/0001-sample.md"
 output=$(run_lint "$box")
 assert_exit "表記ゆれで WARNING" 2 $?
-assert_contains "表記ゆれの特定" "表記ゆれ: docs/plans-add/0001-sample.md" "$output"
+assert_contains "表記ゆれの特定" "表記ゆれ: .claude/addf/plans-add/0001-sample.md" "$output"
 rm -rf "$box"
 
 echo ""

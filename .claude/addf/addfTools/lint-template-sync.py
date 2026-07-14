@@ -5,7 +5,7 @@
        ダウンストリーム（.addf.md 版がない場合）は ProgressTemplate.md を正として比較する
 ペア2: ProgressTemplate.addf.md ⇔ ProgressTemplate.md（正規化した運用ルールの相互比較・WARNING）
 ペア3: CLAUDE.md ⇔ AGENTS.md（ブートシーケンス手順番号の対応・WARNING）
-ペア4: CLAUDE.md ⇔ docs/guides/development-process.md（ブートシーケンス概要手順番号の対応・WARNING）
+ペア4: CLAUDE.md ⇔ .claude/addf/guides/development-process.md（ブートシーケンス概要手順番号の対応・WARNING）
 
 ペア5: CLAUDE.md ⇔ addf-init.md コピーリスト（参照ファイルのカバレッジ・WARNING）
        CLAUDE.md が参照する .claude/ 配下のファイルが、addf-init の Phase 3
@@ -15,13 +15,13 @@
 
 ペア6: TODO ⇔ Plan 実装状況ヘッダ（状態の矛盾・参照切れ・登録漏れ・WARNING）
        TODO テーブルの状態列と各 Plan ファイルの `## 実装状況:` ヘッダを突合する。
-       対象は ADDF 本体（docs/plans-add/TODO.addf.md ⇔ docs/plans-add/）と
-       ダウンストリーム（TODO.md ⇔ docs/plans/）の2系統。
+       対象は ADDF 本体（.claude/addf/plans-add/TODO.addf.md ⇔ .claude/addf/plans-add/）と
+       ダウンストリーム（TODO.md ⇔ .claude/addf/plans/）の2系統。
        ヘッダの無い Plan は検査しない（旧 Plan の欠如はドリフトではない）。
        ただし `## 状態:` 等の表記ゆれヘッダは「状態を書いているのに検査から漏れる」
        信頼モデルの穴になるため WARNING で形式統一を促す（Plan 0025 で顕在化）。
        エージェントが TODO の状態表記を「信用ベース」で扱えるようにする機械検査
-       （docs/knowhow/ADDF/plan-status-drift-check.md 参照）。
+       （.claude/addf/knowhow/ADDF/plan-status-drift-check.md 参照）。
 
 ペア2〜6 は対象ファイルが存在しない場合 SKIP する（ADDF 本体固有ファイルは
 ダウンストリームプロジェクトに存在しないため、欠如はドリフトではない）。
@@ -82,10 +82,10 @@ def git_hint(path_a, path_b):
 
 def check_pair1():
     """テンプレートの運用ルールが Progress.md に全て含まれているか（ERROR）"""
-    tmpl_path = '.claude/templates/ProgressTemplate.addf.md'
+    tmpl_path = '.claude/addf/templates/ProgressTemplate.addf.md'
     if not os.path.exists(tmpl_path):  # ダウンストリームでは無印版が正
-        tmpl_path = '.claude/templates/ProgressTemplate.md'
-    prog_path = '.claude/Progress.md'
+        tmpl_path = '.claude/addf/templates/ProgressTemplate.md'
+    prog_path = '.claude/addf/Progress.md'
     if not os.path.exists(tmpl_path) or not os.path.exists(prog_path):
         skips.append(f'[1] SKIP: {tmpl_path} または {prog_path} が存在しない')
         return
@@ -104,8 +104,8 @@ def check_pair1():
 
 def check_pair2():
     """ProgressTemplate.addf.md ⇔ ProgressTemplate.md の運用ルールを正規化して相互比較（WARNING）"""
-    addf_path = '.claude/templates/ProgressTemplate.addf.md'
-    down_path = '.claude/templates/ProgressTemplate.md'
+    addf_path = '.claude/addf/templates/ProgressTemplate.addf.md'
+    down_path = '.claude/addf/templates/ProgressTemplate.md'
     if not os.path.exists(addf_path) or not os.path.exists(down_path):
         skips.append(f'[2] SKIP: {addf_path} がない（ダウンストリームでは対象外）')
         return
@@ -117,7 +117,7 @@ def check_pair2():
 
     # ペア2専用ホワイトリスト: ADDF 版にのみ存在してよい意図的差分（strip 済みで比較）
     whitelist_addf_only = {
-        '- ADD フレームワークテスト: `bash .claude/tests/run-all.sh`',
+        '- ADD フレームワークテスト: `bash .claude/addf/tests/run-all.sh`',
     }
 
     def normalize(lines, is_addf):
@@ -186,7 +186,7 @@ def claude_md_references(path):
 
     コードブロック内は例示パスの可能性があるため除外する。
     検査対象を CLAUDE.md に限定するのは意図的: CLAUDE.repo.example.md や
-    テンプレート群が参照するファイルは `.claude/templates/` 等のディレクトリ丸ごと
+    テンプレート群が参照するファイルは `.claude/addf/templates/` 等のディレクトリ丸ごと
     コピーでカバーされるため、参照切れの主リスクは CLAUDE.md 直下参照に集中する。
     """
     with open(path) as f:
@@ -199,9 +199,9 @@ def claude_md_references(path):
             continue
         if in_code:
             continue
-        # @.claude/Feedback.md 形式（@メンション）
+        # @.claude/addf/Feedback.md 形式（@メンション）
         refs.update(re.findall(r'@(\.claude/[^\s`]+\.\w+)', line))
-        # `.claude/Questions.md` 形式（バッククオート内・拡張子付きファイルのみ）
+        # `.claude/addf/Questions.md` 形式（バッククオート内・拡張子付きファイルのみ）
         refs.update(re.findall(r'`(\.claude/[^\s`]+\.\w+)`', line))
     return sorted(refs)
 
@@ -319,7 +319,7 @@ def todo_table_rows(path):
         if '状態' in cells:  # ヘッダ行。以降のデータ行にこの列位置を適用する
             status_idx = cells.index('状態')
             continue
-        m = re.search(r'`(docs/plans[^`]*?\.md)`', line)
+        m = re.search(r'`(.claude/addf/plans[^`]*?\.md)`', line)
         if not m:
             continue
         status = cells[status_idx] if -1 < status_idx < len(cells) else cells[-1]
@@ -334,8 +334,8 @@ def check_pair6():
     加えて TODO が指す Plan の不在と、Plan の TODO 登録漏れを検出する。
     """
     targets = [
-        ('docs/plans-add/TODO.addf.md', 'docs/plans-add'),
-        ('TODO.md', 'docs/plans'),
+        ('.claude/addf/plans-add/TODO.addf.md', '.claude/addf/plans-add'),
+        ('TODO.md', '.claude/addf/plans'),
     ]
     for todo_path, plans_dir in targets:
         if not os.path.exists(todo_path):
@@ -383,7 +383,7 @@ check_boot_pair(3, 'CLAUDE.md', '## ブートシーケンス',
                 'AGENTS.md', '## Boot Sequence',
                 'CLAUDE.md ⇔ AGENTS.md ブートシーケンス')
 check_boot_pair(4, 'CLAUDE.md', '## ブートシーケンス',
-                'docs/guides/development-process.md', '## ブートシーケンス',
+                '.claude/addf/guides/development-process.md', '## ブートシーケンス',
                 'CLAUDE.md ⇔ development-process.md ブートシーケンス概要')
 check_pair5()
 check_pair6()

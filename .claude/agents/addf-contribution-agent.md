@@ -10,7 +10,7 @@ model: sonnet
 
 ## 最重要: アップストリーム/ダウンストリーム分離ルール
 
-分析の前に `docs/knowhow/ADDF/upstream-downstream-separation.md` を読み、以下の3つの分離パターンを理解すること。
+分析の前に `.claude/addf/knowhow/ADDF/upstream-downstream-separation.md` を読み、以下の3つの分離パターンを理解すること。
 
 1. **`.addf.` サフィックス** — 同じ目的の汎用版（ダウンストリーム）と ADDF 版を並置する
 2. **`ADDF/` サブディレクトリ** — ADDF 由来コンテンツをサブディレクトリに隔離する
@@ -19,8 +19,8 @@ model: sonnet
 **これらのパターンに違反する変更を検出した場合、コントリビューション提案より優先して報告すること。**
 
 違反の例:
-- ADDF 由来の knowhow が `docs/knowhow/` 直下に置かれている（`ADDF/` に置くべき）
-- ADDF 開発用の計画が `docs/plans/` にある（`docs/plans-add/` に置くべき）
+- ADDF 由来の knowhow が `.claude/addf/knowhow/` 直下に置かれている（`ADDF/` に置くべき）
+- ADDF 開発用の計画が `.claude/addf/plans/` にある（`.claude/addf/plans-add/` に置くべき）
 - ADDF 固有のテストランナー参照がダウンストリーム向けテンプレート（`ProgressTemplate.md`）に含まれている（`.addf.md` 版に入れるべき）
 - `addf-` プレフィックスのないフレームワークスキル・エージェント
 
@@ -31,20 +31,20 @@ model: sonnet
 - `CLAUDE.md` のブートシーケンス・並列実装方針・コントリビューションモデル
 - `TODO.md` の構造・運用ルール
 - `CONTRIBUTING.md` の計画駆動モデル
-- `docs/knowhow/ADDF/` の ADDF 由来ノウハウ
-- `docs/plans-add/` の ADDF 開発計画
+- `.claude/addf/knowhow/ADDF/` の ADDF 由来ノウハウ
+- `.claude/addf/plans-add/` の ADDF 開発計画
 - `addf-` プレフィックスを持つスキル・エージェント
 
 以下はプロジェクト固有のコードです:
 - `CLAUDE.repo.md` / `CLAUDE.local.md` の内容
 - `addf-` プレフィックスを持たないスキル・エージェント
-- `docs/knowhow/` 直下のプロジェクト固有ノウハウ
-- `docs/plans/` のプロジェクト固有計画
+- `.claude/addf/knowhow/` 直下のプロジェクト固有ノウハウ
+- `.claude/addf/plans/` のプロジェクト固有計画
 - プロジェクトのソースコード・テスト・設定
 
 ## 手順
 
-1. `docs/knowhow/ADDF/upstream-downstream-separation.md` を読む
+1. `.claude/addf/knowhow/ADDF/upstream-downstream-separation.md` を読む
 2. `git diff` または指定された変更を分析する
 3. 各変更を「ADD フレームワーク由来」か「プロジェクト固有」に分類する
 4. **分離パターン違反がないか検査する**（最重要セクション参照）
@@ -56,15 +56,15 @@ model: sonnet
 - **スキル・エージェントの改善**: `addf-` プレフィックスのスキル/エージェントへのバグ修正・機能改善
 - **テンプレートの改善**: ダウンストリーム版（`ProgressTemplate.md`）のワークフロー改善
 - **新しい汎用スキル**: プロジェクト非依存の再利用可能なスキル（`addf-` プレフィックス付き）
-- **ツールの改善**: `.claude/addfTools/` のツールへの修正・機能追加
-- **ノウハウの汎用化**: プロジェクト固有でない開発ノウハウ（`docs/knowhow/ADDF/` に配置）
+- **ツールの改善**: `.claude/addf/addfTools/` のツールへの修正・機能追加
+- **ノウハウの汎用化**: プロジェクト固有でない開発ノウハウ（`.claude/addf/knowhow/ADDF/` に配置）
 - **フックの改善**: `.claude/hooks/` のフックスクリプトの改善
-- **テストの改善**: `.claude/tests/` のテスト追加・修正
+- **テストの改善**: `.claude/addf/tests/` のテスト追加・修正
 
 以下はコントリビューション対象外:
 - プロジェクト固有の設定・コード
 - `CLAUDE.repo.md` / `CLAUDE.local.md` の内容
-- プロジェクト固有のノウハウ（`docs/knowhow/` 直下）
+- プロジェクト固有のノウハウ（`.claude/addf/knowhow/` 直下）
 
 ## 出力形式
 
@@ -93,4 +93,4 @@ model: sonnet
 ```
 
 ## 知見の蓄積
-ADD フレームワークの識別パターンや判断基準の改善点を発見したら、`/addf-knowhow` で `docs/knowhow/ADDF/` に記録する。
+ADD フレームワークの識別パターンや判断基準の改善点を発見したら、`/addf-knowhow` で `.claude/addf/knowhow/ADDF/` に記録する。

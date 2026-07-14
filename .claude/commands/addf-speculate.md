@@ -18,7 +18,7 @@ TODO に着手可能なタスクがないとき、黙って止まる代わりに
 ### 1. 発動ガード
 
 ```bash
-uv run --python 3.11 .claude/addfTools/speculate-guard.py
+uv run --python 3.11 .claude/addf/addfTools/speculate-guard.py
 ```
 
 uv が無い環境では `python3` で直接実行する（Python 3.11+ が必要。旧い Python では tomllib 欠如の ERROR となり投機は開始できない — フェイルセーフ）。
@@ -26,7 +26,7 @@ uv が無い環境では `python3` で直接実行する（Python 3.11+ が必�
 - `enable=false`（exit 0）→ **何もせず終了**し、「投機は無効（オプトインは addf-Behavior.toml の
   `[speculation].enable`）」と報告する
 - exit 1（型不正等の ERROR）→ 投機せず、エラー内容をオーナーに報告する
-- exit 2（上限到達 WARNING）→ 新規投機はせず、`.claude/Worktrees.md` に「上限で待機」を記録して終了する
+- exit 2（上限到達 WARNING）→ 新規投機はせず、`.claude/addf/Worktrees.md` に「上限で待機」を記録して終了する
 - exit 0 かつ `enable=true` → 次へ（`slots` が今回起こせる worktree の残り枠）
 
 ### 1.5. モード確認（interactive のみ）
@@ -40,7 +40,7 @@ uv が無い環境では `python3` で直接実行する（Python 3.11+ が必�
 選定元の優先順位:
 
 1. 既存の計画ファイルに記録済みの軽微な残課題（Low/Info 等。分解済み・独立性が高く・低リスク）
-2. `.claude/Questions.md` の未回答質問の最有力解釈による投機
+2. `.claude/addf/Questions.md` の未回答質問の最有力解釈による投機
 3. オーナー常設リクエスト（TODO 末尾等）から導出できる独立作業
 
 ルール:
@@ -76,7 +76,7 @@ cp -r .claude/. ../<repo名>-spec-<concept>/.claude/
 
 ### 5. Worktrees.md への記録
 
-`.claude/Worktrees.md`（.gitignore 対象の実行時状態ファイル）に全投機を記録する。
+`.claude/addf/Worktrees.md`（.gitignore 対象の実行時状態ファイル）に全投機を記録する。
 **打ち切った投機も silent に消さず記録する**。
 
 書式:
@@ -97,7 +97,7 @@ cp -r .claude/. ../<repo名>-spec-<concept>/.claude/
 1本の integration ブランチに squash 統合し、動作確認を一括する:
 
 ```bash
-python3 .claude/addfTools/speculate-integrate.py speculative/<concept1> speculative/<concept2> ...
+python3 .claude/addf/addfTools/speculate-integrate.py speculative/<concept1> speculative/<concept2> ...
 ```
 
 スクリプトは `integration/loop-<日付>` ブランチを base（main）から**作り直し**（使い捨て・再生成可能）、
@@ -139,7 +139,7 @@ integration **ブランチ**は使い捨てのため origin へ push しない�
 
 ### 8. Dashboard への書き分け
 
-unattended 自走（`dashboard_report: true`）では `.claude/Dashboard.md`（書式: `.claude/Dashboard.example.md`）に
+unattended 自走（`dashboard_report: true`）では `.claude/addf/Dashboard.md`（書式: `.claude/addf/Dashboard.example.md`）に
 結果を書き分ける。基準は「オーナーの採否判断の対象かどうか」:
 
 - **「投機ブランチ（採否判断待ち）」**: integration の動作確認（手順7「Stage 2」）まで通過した feature のみ。

@@ -33,7 +33,7 @@
 実装を伴うPRには、計画ファイルを含めてください:
 
 ```
-docs/plans/NNNN-タイトル.md
+.claude/addf/plans/NNNN-タイトル.md
 ```
 
 計画ファイルには以下を記述:

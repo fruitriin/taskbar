@@ -3,8 +3,8 @@ title: 投機 feature の squash 統合設計 — 副作用を worktree に閉�
 created: 2026-07-03
 last_verified: 2026-07-03
 depends_on:
-  - .claude/addfTools/speculate-integrate.py
-  - .claude/tests/tools/test-speculate-integrate.sh
+  - .claude/addf/addfTools/speculate-integrate.py
+  - .claude/addf/tests/tools/test-speculate-integrate.sh
   - .claude/commands/addf-speculate.md
 status: active
 ---

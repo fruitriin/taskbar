@@ -59,5 +59,5 @@ status: active
 ## 参照
 
 - `.claude/commands/addf-release.md` — スキル定義（ルーター）
-- `.claude/ADDF-Release.addf.md` — upstream リリース手順
-- `.claude/templates/Release.md` — exp 作成の参考例（npm / iOS / Web）
+- `.claude/addf/Release.addf.md` — upstream リリース手順
+- `.claude/addf/templates/Release.md` — exp 作成の参考例（npm / iOS / Web）

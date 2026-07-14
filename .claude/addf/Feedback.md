@@ -22,7 +22,7 @@
 
 ## 改善アクション
 
-- 2026-07-14（Phase 3.5 レビュー知見）: 委譲実装＋全ゲート緑でも Critical は残りうる（信頼境界・並行性はゲートで検出できない）。**危険な副作用を持つ Tauri コマンドを新設・委譲するときは、依頼文に「クライアント供給値をサーバー側データと照合すること」を要件として明記する**（詳細は docs/knowhow/tauri-trust-boundary-and-native-menu.md）
+- 2026-07-14（Phase 3.5 レビュー知見）: 委譲実装＋全ゲート緑でも Critical は残りうる（信頼境界・並行性はゲートで検出できない）。**危険な副作用を持つ Tauri コマンドを新設・委譲するときは、依頼文に「クライアント供給値をサーバー側データと照合すること」を要件として明記する**（詳細は .claude/addf/knowhow/tauri-trust-boundary-and-native-menu.md）
 
 - 2026-07-14（ADDF 本体へのコントリビューション候補、contribution agent 検出・オーナー判断待ち）:
   1. アーカイブタグ運用（大規模削除前の `<stack>-final` タグ）を CLAUDE.md/ProgressTemplate に明文化
@@ -35,6 +35,6 @@
 
 - 2026-07-07: 2-B（フォーマッタ交換）で Stage 2 レビューエージェントを意図的にスキップした（機械的変更で失敗モードが4ゲートに直接現れるため）。プロセスの例外適用。基準に異論があればオーナーが差し戻してよい
 
-- 2026-07-05: 新しい electron-store マイグレーションを追加したら、リリース時に package.json の version がマイグレーションキーを満たすことを確認する（今回 `>=2.1.1` を追加、現行 2.1.0。詳細は `docs/knowhow/electron-store-migration.md`）
+- 2026-07-05: 新しい electron-store マイグレーションを追加したら、リリース時に package.json の version がマイグレーションキーを満たすことを確認する（今回 `>=2.1.1` を追加、現行 2.1.0。詳細は `.claude/addf/knowhow/electron-store-migration.md`）
 
 ## 完了済み

@@ -3,7 +3,7 @@ title: 粗々プランの詰め方 — 未決事項を「決定＋根拠」に1:
 created: 2026-07-03
 last_verified: 2026-07-03
 depends_on:
-  - docs/plans-add/0028-worktree-speculative-dev.md
+  - .claude/addf/plans-add/0028-worktree-speculative-dev.md
 status: active
 ---
 

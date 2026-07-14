@@ -1,7 +1,7 @@
 #!/bin/bash
 # run-all.sh
 # フック・ツールの自動テストを一括実行する。
-# スキルテストは自然言語シナリオのため手動実行（.claude/tests/skills/ を参照）。
+# スキルテストは自然言語シナリオのため手動実行（.claude/addf/tests/skills/ を参照）。
 
 set -uo pipefail
 

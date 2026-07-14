@@ -28,7 +28,7 @@ fi
 # 関心事B: stdin（hook JSON）を context-reminder.py に中継する。
 # stdin が TTY の場合（手動実行・旧テスト）は中継しない。python3 不在なら静かにスキップ
 if [ ! -t 0 ] && command -v python3 >/dev/null 2>&1; then
-  python3 "$PROJECT_DIR/.claude/addfTools/context-reminder.py" 2>/dev/null
+  python3 "$PROJECT_DIR/.claude/addf/addfTools/context-reminder.py" 2>/dev/null
 fi
 
 exit 0

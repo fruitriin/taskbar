@@ -41,7 +41,7 @@ ADDF リポジトリ: https://github.com/fruitriin/ADDF
 - 既存 CLAUDE.md の内容（日本語返答・vitest）が `CLAUDE.repo.md` に退避されている
 - `.gitignore` に ADDF マーカーブロックが追加され、既存エントリ（node_modules, dist）が保持されている。ブロック内容がクローン元 `.gitignore` のマーカーブロックと一致する
 - `.claude/settings.json` の既存 allow（Read）が保持されたまま ADDF の hooks/permissions が追加されている
-- `.claude/Progress.md` が `ProgressTemplate.md`（無印版）由来である（`.addf.md` 版の「ADD フレームワークテスト」行を含まない）
+- `.claude/addf/Progress.md` が `ProgressTemplate.md`（無印版）由来である（`.addf.md` 版の「ADD フレームワークテスト」行を含まない）
 
 ## テスト 3: 参照切れがないこと
 
@@ -53,12 +53,12 @@ ADDF リポジトリ: https://github.com/fruitriin/ADDF
 および:
 
 ```bash
-python3 .claude/addfTools/lint-template-sync.py
+python3 .claude/addf/addfTools/lint-template-sync.py
 ```
 
 ### 期待結果
 - check: 必須ファイルが全て存在し、`@` メンションが全て解決可能
-- lint: exit 0（ペア5により、CLAUDE.md が参照する `.claude/Questions.example.md`・`.claude/Dashboard.example.md` の存在＝コピー漏れがないことが裏付けられる）
+- lint: exit 0（ペア5により、CLAUDE.md が参照する `.claude/addf/Questions.example.md`・`.claude/addf/Dashboard.example.md` の存在＝コピー漏れがないことが裏付けられる）
 - 一時ディレクトリ（tmp クローン）が削除されている
 
 ## 後片付け

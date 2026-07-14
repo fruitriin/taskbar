@@ -24,7 +24,7 @@ Claude Code の @メンション展開では、クオート（バッククォー
 
 ### Phase 1: スキャン
 
-1. `.claude/commands/` と `.claude/optional/` 配下の全 `.md` ファイルを一覧取得する（サブディレクトリ含む。optional はオプトイン式スキルの原本置き場）
+1. `.claude/commands/` と `.claude/addf/optional/` 配下の全 `.md` ファイルを一覧取得する（サブディレクトリ含む。optional はオプトイン式スキルの原本置き場）
 2. 各ファイルの内容から `.exp.md` を含む行を抽出する
 3. 以下のパターンを分類する:
    - **正常**: `addf-foo.exp.md`（クオートなし、@展開される）
@@ -67,4 +67,4 @@ Claude Code の @メンション展開では、クオート（バッククォー
 - 実行後、新たな教訓があれば `addf-experience.exp.md` に追記する
 
 ## 参照
-- `docs/knowhow/ADDF/claude-md-at-mention.md` — @メンション展開の仕組みと判断基準
+- `.claude/addf/knowhow/ADDF/claude-md-at-mention.md` — @メンション展開の仕組みと判断基準

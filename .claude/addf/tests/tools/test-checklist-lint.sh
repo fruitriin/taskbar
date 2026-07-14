@@ -7,7 +7,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-LINT="$PROJECT_DIR/.claude/addfTools/lint-checklist.py"
+LINT="$PROJECT_DIR/.claude/addf/addfTools/lint-checklist.py"
 PASS=0
 FAIL=0
 
@@ -71,7 +71,7 @@ assert_contains "OK メッセージ" "OK: チェックリスト裏付け検査�
 # テスト 2: 裏付けのない「確認」ステップ → WARNING (exit=2)
 echo "Test 2: 裏付けなし項目の検出"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック
@@ -87,14 +87,14 @@ rm -rf "$box"
 # テスト 3: 実行チェック・マーカーの各裏付け形式が認められる → exit=0
 echo "Test 3: 裏付け形式（コードブロック / インラインコマンド / マーカー）"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック
 
 1. テストが全て通過すること
    ```bash
-   bash .claude/tests/run-all.sh
+   bash .claude/addf/tests/run-all.sh
    ```
 2. タグが存在することを確認する: `git tag -l vX.Y.Z`
 3. `/addf-lint` が全チェック通過すること
@@ -107,7 +107,7 @@ rm -rf "$box"
 # テスト 4: skip-section マーカーはサブセクションにも及ぶ → exit=0
 echo "Test 4: skip-section の除外（サブセクション含む）"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## check モード
@@ -127,8 +127,8 @@ EOF
 output=$(run_lint "$box")
 assert_exit "除外セクションで OK" 0 $?
 # 除外が次の同レベル見出しで解除されることも確認: 別セクションの裏付けを消すと WARNING
-sed -i.bak 's/: `git tag -l vX.Y.Z`//' "$box/.claude/ADDF-Release.addf.md" \
-  && rm -f "$box/.claude/ADDF-Release.addf.md.bak"
+sed -i.bak 's/: `git tag -l vX.Y.Z`//' "$box/.claude/addf/Release.addf.md" \
+  && rm -f "$box/.claude/addf/Release.addf.md.bak"
 output=$(run_lint "$box")
 assert_exit "除外解除後のセクションは検査される" 2 $?
 assert_contains "解除後の対象行" "タグの存在を確認する" "$output"
@@ -140,13 +140,13 @@ echo "Test 5: 対象ファイル欠如時の SKIP"
 box="$(make_sandbox)"
 output=$(run_lint "$box")
 assert_exit "全対象欠如で OK" 0 $?
-assert_contains "SKIP 表示" "SKIP: .claude/ADDF-Release.addf.md が存在しない" "$output"
+assert_contains "SKIP 表示" "SKIP: .claude/addf/Release.addf.md が存在しない" "$output"
 rm -rf "$box"
 
 # テスト 6: リスト直後の引用・平文中のコマンドは裏付けに数えない（レビュー指摘の回帰テスト）
 echo "Test 6: リスト外の解説文への裏付け漏出防止"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック
@@ -166,7 +166,7 @@ rm -rf "$box"
 # テスト 7: 「〜こと」の後に説明が続く形も候補になる（レビュー指摘の回帰テスト）
 echo "Test 7: 「〜こと — 説明:」形式の候補判定"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック
@@ -177,7 +177,7 @@ output=$(run_lint "$box")
 assert_exit "説明が続く形でも WARNING" 2 $?
 assert_contains "対象行の特定" "ブロッカーがないこと" "$output"
 # 同じ項目に裏付け（コードブロック＋マーカー）を足すと OK になる
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック
@@ -195,7 +195,7 @@ rm -rf "$box"
 # テスト 8: コードフェンス内の疑似リスト項目は検査対象外
 echo "Test 8: コードフェンス内の除外"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## レポート例
@@ -212,7 +212,7 @@ rm -rf "$box"
 # テスト 9: WHITELIST 記載行は裏付けなしでも除外される
 echo "Test 9: WHITELIST の短絡"
 box="$(make_sandbox)"
-cat > "$box/.claude/ADDF-Release.addf.md" <<'EOF'
+cat > "$box/.claude/addf/Release.addf.md" <<'EOF'
 # リリース手順
 
 ## チェック

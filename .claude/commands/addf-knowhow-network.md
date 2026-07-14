@@ -16,7 +16,7 @@ user_invocable: true
 
 ### 1. 関連性の抽出
 
-1. `docs/knowhow/` の全 `.md` ファイル（INDEX と CLAUDE.md を除く）を読む
+1. `.claude/addf/knowhow/` の全 `.md` ファイル（INDEX と CLAUDE.md を除く）を読む
 2. 各記事の概念・キーワード・依存対象（`depends_on`）を抽出する
 3. 記事間の関連を推定する（同じスキルに言及 / 同じファイル群を扱う / 同じドメイン / 一方が他方の前提）
 

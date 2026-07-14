@@ -64,11 +64,11 @@ status: active
 
 | ADDF コンポーネント | カテゴリ | 備考 |
 |---|---|---|
-| `docs/knowhow/` + `addf-knowhow` | 1. Library & API Reference | **ライブラリ知識がそのままノウハウとして実装されている**。Anthropic の「Library & API Reference」スキルが SDK の使い方を教えるのと同じ役割を、ADDF はプロジェクト固有の知見ファイル群で果たす |
-| `addf-gui-test` + `addf-ui-test-agent` | 2. Product Verification | `.claude/addfTools/` にスクリプト群を同梱する構成は記事の推奨パターンそのもの |
+| `.claude/addf/knowhow/` + `addf-knowhow` | 1. Library & API Reference | **ライブラリ知識がそのままノウハウとして実装されている**。Anthropic の「Library & API Reference」スキルが SDK の使い方を教えるのと同じ役割を、ADDF はプロジェクト固有の知見ファイル群で果たす |
+| `addf-gui-test` + `addf-ui-test-agent` | 2. Product Verification | `.claude/addf/addfTools/` にスクリプト群を同梱する構成は記事の推奨パターンそのもの |
 | `addf-knowhow-filter` | 3. Data Fetching & Analysis | knowhow を Plan に応じてフィルタリングして返す — データフェッチの内部版 |
 | `addf-dev` | 4. Business Process | TODO.md → Plan 選択 → 実装の反復ワークフロー自動化 |
-| `.claude/templates/` + Progress.md | 5. Code Scaffolding & Templates | ProgressTemplate からタスク進捗ファイルを生成するパターン |
+| `.claude/addf/templates/` + Progress.md | 5. Code Scaffolding & Templates | ProgressTemplate からタスク進捗ファイルを生成するパターン |
 | `addf-code-review-agent` + `addf-security-review-agent` | 6. Code Quality & Review | 品質ゲートの Stage 2 で並列実行するレビューエージェント群 |
 | `addf-contribution-agent` | 7. CI/CD & Deployment | アップストリームへのコントリビューション検出 — デプロイではないが「コード配布」の自動化 |
 | `addf-permission-audit` | 9. Infrastructure Operations | 権限設定の監査・分類・提案 |
@@ -79,14 +79,14 @@ status: active
 |---|---|
 | **Gotchas セクションを育てる** | **経験ファイル (.exp.md)** が同じ役割。スキル実行ごとに失敗パターンを蓄積し次回に活かす |
 | **ファイルシステムで段階的開示** | `addf-knowhow-filter` がコンテキスト制御を担う。全 knowhow を読み込まず、Plan に関連するものだけをメインコンテキストに返す |
-| **スクリプトを同梱する** | `.claude/addfTools/` に Swift/Shell スクリプトを配置し、スキルから呼び出す（annotate-grid, clip-image, capture-window 等） |
+| **スクリプトを同梱する** | `.claude/addf/addfTools/` に Swift/Shell スクリプトを配置し、スキルから呼び出す（annotate-grid, clip-image, capture-window 等） |
 | **オンデマンドフック** | `.claude/hooks/` の turn-reminder.sh / reset-turn-count.sh。セッション中に常駐するフック |
-| **データを保存する** | `.claude/Progress.md` がセッション横断の作業状態を保持。`.claude/Feedback.md` がプロセス改善の蓄積 |
+| **データを保存する** | `.claude/addf/Progress.md` がセッション横断の作業状態を保持。`.claude/addf/Feedback.md` がプロセス改善の蓄積 |
 | **description はトリガー条件** | ADDF スキルの frontmatter で実装済み（例: `addf-knowhow-index` の「reindex 引数でインデックスを再構築」） |
 
 ### ADDF 固有の発展 — 記事にないパターン
 
-- **knowhow = Library Reference の汎用化**: Anthropic は個別ライブラリごとにスキルを作るが、ADDF は `docs/knowhow/` という統一的なナレッジベースと `addf-knowhow-index` によるインデックスで、任意のトピックを動的に参照する仕組みを持つ。スキル数の爆発を防ぐアプローチ
+- **knowhow = Library Reference の汎用化**: Anthropic は個別ライブラリごとにスキルを作るが、ADDF は `.claude/addf/knowhow/` という統一的なナレッジベースと `addf-knowhow-index` によるインデックスで、任意のトピックを動的に参照する仕組みを持つ。スキル数の爆発を防ぐアプローチ
 - **エージェント分離**: 記事はスキル（commands）中心だが、ADDF はエージェント（`.claude/agents/`）をスキルと分離して定義。レビュー・テスト等の自律的なタスクはエージェントに委ね、ユーザー対話型の手順はスキルに残す
 - **アップストリーム/ダウンストリーム分離**: `addf-` プレフィックスと `.addf.md` サフィックスで、フレームワーク由来とプロジェクト固有を区別。記事のマーケットプレイス配布とは異なるが、同じ「共有可能性」の課題を解決している
 - **自己推進ループ**: `/loop` + `/addf-dev` による TODO.md 駆動の自律開発は、記事の `babysit-pr` や `standup-post` の発展形。単一タスク自動化を超えて、タスクバックログ全体の自動推進を実現

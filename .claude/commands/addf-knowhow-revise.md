@@ -20,7 +20,7 @@ user_invocable: true
 
 ### 1. 対象の特定
 
-1. `docs/knowhow/INDEX.addf.md`（ダウンストリームでは `INDEX.md`）を読み、🔴 stale / `needs-review` のファイルを列挙する
+1. `.claude/addf/knowhow/INDEX.addf.md`（ダウンストリームでは `INDEX.md`）を読み、🔴 stale / `needs-review` のファイルを列挙する
 2. 引数でファイル指定があればそれを優先する
 
 ### 2. 再検証（1ファイルずつ）

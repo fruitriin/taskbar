@@ -7,14 +7,14 @@
 
 ## ブートシーケンス（セッション開始時に必ず実行）
 
-1. @.claude/Feedback.md を読む — 未対応の改善アクションを確認する。読み終えたら続けて以下を実行する（手順 1 のサブステップ。以降の手順番号は変わらない）:
-   - 1.5. @.claude/Questions.md を読む — オーナーの新しい回答があれば Plan に反映し、該当質問を「回答済み」へ移す
-   - 1.6. `.claude/Dashboard.md` が存在すれば冒頭で内容を提示する（unattended 自走の差分まとめ）。オーナーの応答を確認してから削除する。確認前にセッションが終わった場合は次回再提示する
+1. @.claude/addf/Feedback.md を読む — 未対応の改善アクションを確認する。読み終えたら続けて以下を実行する（手順 1 のサブステップ。以降の手順番号は変わらない）:
+   - 1.5. @.claude/addf/Questions.md を読む — オーナーの新しい回答があれば Plan に反映し、該当質問を「回答済み」へ移す
+   - 1.6. `.claude/addf/Dashboard.md` が存在すれば冒頭で内容を提示する（unattended 自走の差分まとめ）。オーナーの応答を確認してから削除する。確認前にセッションが終わった場合は次回再提示する
 2. @TODO.md を読む — タスクバックログと優先度を把握する
-3. @.claude/Progress.md を読む — 現在進行中のタスクがあれば継続する
+3. @.claude/addf/Progress.md を読む — 現在進行中のタスクがあれば継続する
    - 進行中タスクに「日記」セクションがあれば末尾3エントリーを読み、前任者の状況・判断・気にしていたことを把握してから着手する（日記の書き方は Progress.md の運用ルール参照）
 4. **TODO に未完了タスクがない場合**:
-   - **`docs/plans/` に計画ファイルが1つもない場合**（プロジェクト初回）— 以下の骨格プランニングを実施する:
+   - **`.claude/addf/plans/` に計画ファイルが1つもない場合**（プロジェクト初回）— 以下の骨格プランニングを実施する:
      1. プロジェクトの README・ソースコード・既存ドキュメントを走査し、現状を把握する
      2. オーナーに情報提供方法を選択してもらう（AskUserQuestion）:
         - **A. 質問に答える形式** — こちらから質問していく
@@ -24,22 +24,22 @@
         - 何に困っているか？（現在の課題・ペインポイント）
         - どのプラットフォームで動かしたいか？（Web / モバイル / デスクトップ / CLI 等）
         - 既存のツールやサービスで解決できないのはなぜか？（差別化ポイント・固有の制約）
-     4. 回答（A/B いずれも）をもとに初動の計画ファイル（2〜3本）を `docs/plans/` に作成し、`TODO.md` に登録する
+     4. 回答（A/B いずれも）をもとに初動の計画ファイル（2〜3本）を `.claude/addf/plans/` に作成し、`TODO.md` に登録する
      5. `CLAUDE.repo.md` が未作成または `CLAUDE.repo.example.md` のままなら、ヒアリング結果をもとにプロジェクト固有の `CLAUDE.repo.md` を作成する（プロジェクト種別は「ADDF 利用プロジェクト」、プロジェクト概要・ビルドコマンド・テストコマンド等を記述）
      6. 作成した計画をオーナーに提示し、優先度の確認を取る
    - **計画ファイルが存在する場合** — オーナーに次のタスクを確認する
 5. 次に着手する Plan を特定したら、knowhow サブエージェントを起動する:
    - Plan ファイルの内容をサブエージェントに渡す
-   - サブエージェントは `docs/knowhow/` を全読みし、Plan に必要・有用なノウハウのパスと要約をメインコンテキストに返す
+   - サブエージェントは `.claude/addf/knowhow/` を全読みし、Plan に必要・有用なノウハウのパスと要約をメインコンテキストに返す
    - メインコンテキストには Plan に関連する knowhow のみが載り、コンテキスト消費を抑制する
 
 ## 開発プロセスファイル一覧
 
-- **`TODO.md`**: タスクバックログ。`docs/plans/` の完了状態・優先度を追跡する
-- **`.claude/Progress.md`**: 現在のタスク進捗。運用ルールもここに記載
-- **`.claude/Feedback.md`**: 問題・改善アクションの記録
-- `docs/plans/`: 実装計画ファイル
-- `docs/knowhow/`: 実装で得たノウハウの蓄積
+- **`TODO.md`**: タスクバックログ。`.claude/addf/plans/` の完了状態・優先度を追跡する
+- **`.claude/addf/Progress.md`**: 現在のタスク進捗。運用ルールもここに記載
+- **`.claude/addf/Feedback.md`**: 問題・改善アクションの記録
+- `.claude/addf/plans/`: 実装計画ファイル
+- `.claude/addf/knowhow/`: 実装で得たノウハウの蓄積
 
 ---
 
@@ -82,7 +82,7 @@
 | responsiveness | 閾値を下回ったときの挙動 |
 |---|---|
 | `interactive` | 即時質問し、オーナーの応答を待つ |
-| `relaxed`（デフォルト） | `.claude/Questions.md` に質問を置き、別タスクへ移る |
+| `relaxed`（デフォルト） | `.claude/addf/Questions.md` に質問を置き、別タスクへ移る |
 | `unattended` | 質問を置き、最有力解釈で**投機続行**する。投機作業は `speculative/` ブランチに隔離し、本流にはマージしない |
 
 ### 軸C: 完成イメージ確度 — 閾値を補正する
@@ -94,10 +94,10 @@
 ### 運用ルール
 
 - モードは Plan のフロントマター（`trust:` / `responsiveness:` / `image_clarity:`）または `/addf-mode` で宣言する。値は表のとおり `nervous|normal|full` / `interactive|relaxed|unattended` / `specific|balanced|vague`。省略時は `normal` × `relaxed` × `balanced`
-- 閾値割れでタスクをスキップしたら、TODO の該当タスクを「要確認（質問投下済み）」にし、`.claude/Questions.md` に質問を置いて次のタスクへ移る
+- 閾値割れでタスクをスキップしたら、TODO の該当タスクを「要確認（質問投下済み）」にし、`.claude/addf/Questions.md` に質問を置いて次のタスクへ移る
 - worktree 隔離下は失敗を捨てられるため、閾値を1段下げてよい
 - サブタスク完了時点でブランチ `checkpoint/<phase>-<N>` を切ってよい。途中から別方針を試すときは checkpoint から `alt/` ブランチを分岐する
-- `unattended` の情報伝達は2フラグで制御する: `dashboard_report`（次セッション冒頭で `.claude/Dashboard.md` の差分まとめを表示）/ `uncertainty_notify`（閾値割れ・投機分岐・障害時に外部通知）。書式は `.claude/Dashboard.example.md` / `.claude/Questions.example.md` を参照
+- `unattended` の情報伝達は2フラグで制御する: `dashboard_report`（次セッション冒頭で `.claude/addf/Dashboard.md` の差分まとめを表示）/ `uncertainty_notify`（閾値割れ・投機分岐・障害時に外部通知）。書式は `.claude/addf/Dashboard.example.md` / `.claude/addf/Questions.example.md` を参照
 - 3軸の表は固定式ではなくガイドライン。最終判断は人間とタスクとシチュエーションに応じてケースバイケースで揺らいでよい。自分の見立ては Progress.md に書き残す
 
 

@@ -26,7 +26,7 @@ user_invocable: true
 種別に応じてリリース手順を決定する:
 
 **upstream の場合:**
-1. `.claude/ADDF-Release.addf.md` を読む（必須）
+1. `.claude/addf/Release.addf.md` を読む（必須）
 2. `addf-release.exp.md` が存在すれば読み、過去の経験を考慮する
 
 **downstream の場合:**
@@ -37,7 +37,7 @@ user_invocable: true
    - バージョン更新対象ファイル（package.json / Cargo.toml / pyproject.toml / 独自）
    - Publish 手順（npm publish / cargo publish / Docker / デプロイ / なし）
    - プレリリースチェック（ビルド / テスト / Lint）
-   - 構造は `.claude/ADDF-Release.addf.md` を参考にしてよいが、プロジェクトの要件に合わせて作り直す
+   - 構造は `.claude/addf/Release.addf.md` を参考にしてよいが、プロジェクトの要件に合わせて作り直す
 
 ### 3. リリース手順の実行
 

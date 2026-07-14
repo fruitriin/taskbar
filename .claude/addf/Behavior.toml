@@ -5,7 +5,7 @@
 # true にすると window-info, capture-window が使用可能になり、GUI スキル一式
 # （addf-gui-test / addf-annotate-grid / addf-clip-image / addf-ui-test-agent）の
 # 有効化コピーが配置対象になる。切り替え後に
-# `uv run --python 3.11 .claude/addfTools/sync-optional-skills.py apply` を実行すること
+# `uv run --python 3.11 .claude/addf/addfTools/sync-optional-skills.py apply` を実行すること
 # （uv が無ければ python3 で直接実行。Python 3.11+ が必要）
 enable = false
 machine = "mac" # "mac" | "linux" | "windows" — プラットフォーム固有ツールの選択に使用

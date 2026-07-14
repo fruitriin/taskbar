@@ -9,13 +9,13 @@ ADDF フレームワークの変更履歴。`/addf-migrate` 実行時に該当�
   - `speculate-guard.py` — `[speculation]` enable・上限の発動ガード（オプトイン式・デフォルト無効）
   - `speculate-integrate.py` — integration ブランチへの squash 統合。衝突 feature のスキップ報告・commit フック拒否の検出（`commit_failed`）・メイン作業ツリー不可侵
   - Stage 2 一括ゲート（integration 上の相互作用テスト＋ペルソナ並列レビュー）と Dashboard 書き分け
-- オプショナルスキルのオプトイン機構 — GUI スキル一式を `.claude/optional/` に退避し、`[gui-test] enable` + `sync-optional-skills.py apply` で有効化コピーを配置（Plan 0029 フェーズ1）
+- オプショナルスキルのオプトイン機構 — GUI スキル一式を `.claude/addf/optional/` に退避し、`[gui-test] enable` + `sync-optional-skills.py apply` で有効化コピーを配置（Plan 0029 フェーズ1）
 - チェックリスト裏付け lint（`lint-checklist.py`）— 手順書の「確認」項目に実行チェックか human-judgment マーカーの裏付けを要求（Plan 0027）
 - 旧 Python 環境ガード — tomllib（Python 3.11+）・PEP 723 依存（pyyaml）を使うスクリプトに責務別 import ガード（lint = SKIP / 実行前ゲート = フェイルセーフ ERROR / 変更系 = ERROR）
 - 再現テスト群 — `test-lint-toml` / `test-lint-frontmatter` / `test-speculate-guard` / `test-speculate-integrate` / `test-optional-skills`（PYTHONPATH シム・commit フック注入によるドリフト注入 TDD）
 
 ### 変更
-- Python スクリプトの呼び出しを `uv run --python 3.11` に統一し、uv 不在環境向けの `python3` 直接実行フォールバック注記を手順書（addf-lint / addf-migrate / addf-speculate / docs/guides）に併記
+- Python スクリプトの呼び出しを `uv run --python 3.11` に統一し、uv 不在環境向けの `python3` 直接実行フォールバック注記を手順書（addf-lint / addf-migrate / addf-speculate / .claude/addf/guides）に併記
 - GUI テストシナリオ（test-addf-clip-image / test-addf-annotate-grid）にオプトイン前提の注記を追加
 - 非 macOS 環境ではバイナリ実行テストを SKIP（Plan 0029）
 
@@ -39,8 +39,8 @@ ADDF フレームワークの変更履歴。`/addf-migrate` 実行時に該当�
 - プロジェクト初回の骨格プランニングフロー — ブートシーケンス Step 4 でヒアリング→計画生成を自動化
 - `CLAUDE.repo.md` 自動生成 — 骨格プランニング時にプロジェクト固有設定を生成
 - ノウハウ記録の3観点（コーディング・品質ゲート・タスク総括）を ProgressTemplate に明文化
-- `.claude/Questions.md` — 非同期質問箱（relaxed/unattended モード用）
-- `.claude/Dashboard.md` — unattended 自走時の差分まとめ
+- `.claude/addf/Questions.md` — 非同期質問箱（relaxed/unattended モード用）
+- `.claude/addf/Dashboard.md` — unattended 自走時の差分まとめ
 
 ### 変更
 - リポジトリ URL を `fruitriin/ADDF` に変更（Plan 0025）
@@ -59,10 +59,10 @@ ADDF フレームワークの変更履歴。`/addf-migrate` 実行時に該当�
 - `/addf-migrate` にスキルリネーム時の `.exp.md` 手動リネーム案内を追加
 - `ADDF-Release.addf.md` — ADDF 本体のリリース手順定義
 - `AGENTS.md` — Codex 向けブートシーケンス
-- `docs/guides/codex-setup.md` — Codex ユーザー向けセットアップガイド
+- `.claude/addf/guides/codex-setup.md` — Codex ユーザー向けセットアップガイド
 - 経験ファイルテンプレート（`ExperienceTemplate.md`）と主要3スキルの初期経験
 - スキル使用計測フック（`skill-usage-log.sh` / PreToolUse）
-- `docs/guides/` にドキュメント分離（setup, skills, agents, development-process, migration）
+- `.claude/addf/guides/` にドキュメント分離（setup, skills, agents, development-process, migration）
 - 既存プロジェクトへの ADDF 導入（WebFetch → tmp クローン → 干渉チェック → 導入前レビュー）
 - `.gitignore` マーカーブロック形式（`addf-migrate` での自動更新対応）
 
@@ -73,7 +73,7 @@ ADDF フレームワークの変更履歴。`/addf-migrate` 実行時に該当�
 - `addf-lint` の frontmatter チェックで `.exp.md` を除外
 
 ### 修正
-- `addf-migrate` の対象リストに `settings.json`, `AGENTS.md`, `ADDF-Release.addf.md`, `docs/guides/` を追加
+- `addf-migrate` の対象リストに `settings.json`, `AGENTS.md`, `ADDF-Release.addf.md`, `.claude/addf/guides/` を追加
 - `skill-usage-log.sh` の JSONL インジェクション対策（jq でエントリ全体を生成）
 - `addf-init` / `addf-migrate` に URL 検証ステップを追加（`https://` のみ許可）
 

@@ -7,7 +7,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-TOOL="$PROJECT_DIR/.claude/addfTools/context-reminder.py"
+TOOL="$PROJECT_DIR/.claude/addf/addfTools/context-reminder.py"
 PASS=0
 FAIL=0
 
@@ -49,7 +49,7 @@ make_sandbox() {
   local box
   box="$(mktemp -d)"
   mkdir -p "$box/.claude"
-  cat > "$box/.claude/addf-Behavior.toml" <<'EOF'
+  cat > "$box/.claude/addf/Behavior.toml" <<'EOF'
 [context-reminder]
 threshold_tokens = 100000
 renotify_step_tokens = 50000
@@ -154,8 +154,8 @@ rm -rf "$box"
 # テスト 7: threshold_tokens = 0 → 無効化
 echo "Test 7: 設定による無効化"
 box="$(make_sandbox)"
-sed -i.bak 's/threshold_tokens = 100000/threshold_tokens = 0/' "$box/.claude/addf-Behavior.toml" \
-  && rm -f "$box/.claude/addf-Behavior.toml.bak"
+sed -i.bak 's/threshold_tokens = 100000/threshold_tokens = 0/' "$box/.claude/addf/Behavior.toml" \
+  && rm -f "$box/.claude/addf/Behavior.toml.bak"
 write_transcript 999000 "$box/t.jsonl"
 out=$(run_tool "$box" "$box/t.jsonl")
 assert_empty "無効化時は沈黙" "$out"
@@ -164,9 +164,9 @@ rm -rf "$box"
 # テスト 8: フック経由の統合 — turn-reminder.sh が stdin を中継する
 echo "Test 8: turn-reminder.sh 経由の統合"
 box="$(make_sandbox)"
-mkdir -p "$box/.claude/hooks" "$box/.claude/addfTools"
+mkdir -p "$box/.claude/hooks" "$box/.claude/addf/addfTools"
 cp "$PROJECT_DIR/.claude/hooks/turn-reminder.sh" "$box/.claude/hooks/"
-cp "$TOOL" "$box/.claude/addfTools/"
+cp "$TOOL" "$box/.claude/addf/addfTools/"
 write_transcript 150000 "$box/t.jsonl"
 echo "0" > "$box/.claude/.turn-count"
 out=$(printf '{"transcript_path":"%s"}' "$box/t.jsonl" | CLAUDE_PROJECT_DIR="$box" bash "$box/.claude/hooks/turn-reminder.sh" 2>/dev/null)

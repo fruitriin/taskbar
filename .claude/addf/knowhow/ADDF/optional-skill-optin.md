@@ -3,9 +3,9 @@ title: オプトイン式スキルの退避＋有効化コピー設計
 created: 2026-07-02
 last_verified: 2026-07-02
 depends_on:
-  - .claude/addfTools/sync-optional-skills.py
-  - .claude/tests/tools/test-optional-skills.sh
-  - docs/guides/gui-test-setup.md
+  - .claude/addf/addfTools/sync-optional-skills.py
+  - .claude/addf/tests/tools/test-optional-skills.sh
+  - .claude/addf/guides/gui-test-setup.md
 status: active
 ---
 
@@ -18,7 +18,7 @@ status: active
 ### 設定オプトインだけでは足りない — スキル定義自体を発見パスから退避する
 
 `Behavior.toml` の enable フラグだけだと、無効でもスキル定義がコンテキストに載り続け、
-エージェントが「試みて失敗する」余地が残る。原本を `.claude/optional/` に置き、有効時のみ
+エージェントが「試みて失敗する」余地が残る。原本を `.claude/addf/optional/` に置き、有効時のみ
 発見パス（`.claude/commands/` / `.claude/agents/`）へコピーで実体化すると、無効時は
 **能力として存在しない**状態になる。
 

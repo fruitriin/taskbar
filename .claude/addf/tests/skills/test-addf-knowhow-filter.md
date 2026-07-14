@@ -4,7 +4,7 @@
 
 ### 入力
 ```
-/addf-knowhow-filter docs/plans-add/0004-gui-test-cross-platform.md
+/addf-knowhow-filter .claude/addf/plans-add/0004-gui-test-cross-platform.md
 ```
 
 ### 期待結果

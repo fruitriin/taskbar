@@ -15,9 +15,9 @@ except ModuleNotFoundError:
     sys.exit(0)
 
 errors = []
-# .claude/optional/ はオプトイン式スキルの原本置き場（有効化コピーの検査は commands 側で兼ねる）
+# .claude/addf/optional/ はオプトイン式スキルの原本置き場（有効化コピーの検査は commands 側で兼ねる）
 for f in sorted(glob.glob('.claude/commands/addf-*.md')
-                + glob.glob('.claude/optional/*/addf-*.md')):
+                + glob.glob('.claude/addf/optional/*/addf-*.md')):
     if f.endswith('.exp.md'):
         continue  # 経験ファイルはスキル定義ではないためスキップ
     with open(f) as fh:

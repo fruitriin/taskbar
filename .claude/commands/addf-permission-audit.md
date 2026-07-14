@@ -14,7 +14,7 @@ user_invocable: true
 ## 手順
 
 ### 1. ノウハウ読み込み
-`docs/knowhow/ADDF/permission-settings-pattern.md` を読み、以下を把握する:
+`.claude/addf/knowhow/ADDF/permission-settings-pattern.md` を読み、以下を把握する:
 - 3パターン × 2プロジェクト種別の分類ルール
 - 権限フォーマットの技術仕様（評価順序、ワイルドカード構文、`:*` 非推奨など）
 

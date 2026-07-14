@@ -7,7 +7,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-TOOLS_DIR="$PROJECT_DIR/.claude/addfTools"
+TOOLS_DIR="$PROJECT_DIR/.claude/addf/addfTools"
 PASS=0
 FAIL=0
 SKIP=0

@@ -1,7 +1,7 @@
 ---
 name: addf-knowhow-filter
 description: |
-  Plan ファイルの内容を受け取り、docs/knowhow/ から関連するノウハウのパスと要約だけを返す。ブートシーケンスだけでなく開発中いつでも利用してよい。
+  Plan ファイルの内容を受け取り、.claude/addf/knowhow/ から関連するノウハウのパスと要約だけを返す。ブートシーケンスだけでなく開発中いつでも利用してよい。
   タスク開始時に関連ノウハウを把握したいとき、実装中に参考になる知見を探したいときに使う。
 context: fork
 user_invocable: true
@@ -9,26 +9,26 @@ user_invocable: true
 
 # Knowhow フィルタリング
 
-Plan の内容に基づいて、`docs/knowhow/` 内のノウハウファイルから関連するものだけを選別して返す。
+Plan の内容に基づいて、`.claude/addf/knowhow/` 内のノウハウファイルから関連するものだけを選別して返す。
 
 ## 引数
-- `$ARGUMENTS`: Plan ファイルのパス（例: `docs/plans/phase6.1-mouse-scroll.md`）
+- `$ARGUMENTS`: Plan ファイルのパス（例: `.claude/addf/plans/phase6.1-mouse-scroll.md`）
 
 ## 手順
 
 1. `$ARGUMENTS` で指定された Plan ファイルを読む
-2. `docs/knowhow/` 内の全 `.md` ファイル（`INDEX.md` と `CLAUDE.md` を除く）を読む
+2. `.claude/addf/knowhow/` 内の全 `.md` ファイル（`INDEX.md` と `CLAUDE.md` を除く）を読む
 3. Plan の実装に **必要または有用** なノウハウを判定する
 4. 以下の形式で結果を返す:
 
 ```
 ## 関連ノウハウ
 
-### docs/knowhow/xxx.md
+### .claude/addf/knowhow/xxx.md
 要約: （1〜2文で内容を要約）
 関連理由: （Plan のどの部分に関係するか）
 
-### docs/knowhow/yyy.md
+### .claude/addf/knowhow/yyy.md
 要約: ...
 関連理由: ...
 ```
