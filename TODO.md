@@ -3,14 +3,13 @@
 `docs/plans/` の完了状態・優先度をトラックする。
 `docs/plans/` と TODO が一致しなければ TODO を編集する。
 
-## 現在のフェーズ: リアーキテクチャ完了 → v3.0.0 リリース
+## 現在のフェーズ: v3.0.0 リリース済み（2026-07-14）・次テーマ選定
 
 ## バックログ
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | v3.0.0 リリース | （/addf-release で実施） | **draft 作成済み・オーナーの公開待ち（2026-07-14）**: master マージ・タグ push・CI 成功（universal DMG・notarize・staple 検証済み）・ノート設定済み。残りは GitHub 上の Publish ボタンのみ |
-| 2 | autoUpdate 再起票 | （Q4 回答: Phase 3 完了につき起票可能に） | 未起票: tauri-plugin-updater 前提で設計する |
+| 1 | autoUpdate 再起票 | （Q4 回答: Phase 3 完了につき起票可能に） | 未起票: tauri-plugin-updater 前提で設計する |
 
 ※優先度は仮置き。オーナーが並べ替えてください。
 
@@ -20,6 +19,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| リリース | v3.0.0（GitHub Releases） | **公開済み（2026-07-14）** 🎉 Tauri 版初リリース。universal DMG・notarize/staple・アイコン検証済み。CI（tauri-action）も実走検証完了 |
 | リアーキ全体 | [rearchitecture-plan.md](docs/plans/rearchitecture-plan.md) | **完了（2026-07-14）** 🎉 Phase 1〜3 全消化 |
 | リアーキ Phase 1 | [rearch-phase1.md](docs/plans/rearch-phase1.md) | 完了（2026-07-07）。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照） |
 | リアーキ Phase 2 | [rearch-phase2.md](docs/plans/rearch-phase2.md) | 完了（2026-07-07。lint=oxlint / fmt=oxfmt / test=bun test / mise 廃止 → bun run） |
