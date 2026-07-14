@@ -71,4 +71,4 @@
 AI エージェントが自動でタスクを選択し、上記のライフサイクルを繰り返します。
 タスク選択の優先順位: ブロッカー解消 > インフラ整備 > 若番。
 
-詳細は [CONTRIBUTING.md](../../CONTRIBUTING.md) を参照してください。
+詳細は [CONTRIBUTING.md](../../../CONTRIBUTING.md) を参照してください。

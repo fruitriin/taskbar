@@ -63,7 +63,7 @@
 
 これを Claude に渡す（`plan.md` とだけ入力する、チャットに箇条書きを貼る、等）だけで、AI が自動的にプロジェクトをレビューし、正式な計画ファイル群に分解して `.claude/addf/plans/` と `TODO.md` に投入します。
 
-計画ファイルの書式は [CONTRIBUTING.md](../../CONTRIBUTING.md) を参照してください。
+計画ファイルの書式は [CONTRIBUTING.md](../../../CONTRIBUTING.md) を参照してください。
 
 ## 実運用の参考
 
