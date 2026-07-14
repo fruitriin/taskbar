@@ -16,6 +16,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install dependencies
         run: bun install
@@ -34,6 +36,8 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_ID_PASS }}
           APPLE_TEAM_ID: 4Z474DZ677
         with:
+          # 旧リリース（v2系）と同じくユニバーサルバイナリで配布する
+          args: --target universal-apple-darwin
           tagName: ${{ github.ref_name }}
           releaseName: 'taskbar.fm ${{ github.ref_name }}'
           releaseDraft: true
