@@ -442,11 +442,23 @@ export function useReactiveStore<T>(key: string, defaultValue: T): Ref<T> {
 
 ## 完了条件
 
-- [ ] `cargo tauri dev` でアプリが起動し、全機能が動作する
-- [ ] `vp dev` でブラウザテスト用サーバーが起動し、モックで UI が動作する
-- [ ] `vp check` が通る
-- [ ] `vp test` で全テストがパスする
-- [ ] `cargo tauri build` で署名済みバイナリが生成される
-- [ ] Electron, Swift, electron-vite, mise の痕跡がコードベースにゼロ
-- [ ] 設定変更が全ウィンドウにリアクティブに同期される（useReactiveStore 経由）
-- [ ] CLAUDE.md が新アーキテクチャを正確に反映している
+**全達成（2026-07-14。vp 系は鮮度更新節の読み替えどおり bun/cargo で判定）**
+
+- [x] `bun run dev`（tauri dev）でアプリが起動し、全機能が動作する — オーナー実機確認済み（第1〜3ラウンド＋最終確認）
+- [x] `bun run dev:web` でブラウザテスト用サーバーが起動し、モックで UI が動作する
+- [x] `bun run lint && bun run typecheck` が通る
+- [x] `bun run test:all` で全テストがパスする（renderer 63 + Rust 47）
+- [x] `bun run release:mac` で署名済みバイナリが生成される（notarize Accepted・staple・DMG まで検証済み）
+- [x] Electron, Swift, electron-vite, mise の痕跡がコードベースにゼロ（モックの互換命名は意図的残置、スナップショットは tag v2-electron-final）
+- [x] 設定変更が全ウィンドウにリアクティブに同期される（useOptions + updateOptions emit 経由。useReactiveStore は鮮度更新節どおり読み替え）
+- [x] CLAUDE.repo.md / src/renderer/CLAUDE.md / README-developer.md が新アーキテクチャを反映
+
+## 実装完了メモ（2026-07-14）
+
+- 計画からの主な逸脱: 実機確認ポイント1（3.2 後）は 3.4 後に統合。src/renderer/CLAUDE.md は
+  src/CLAUDE.md へのリネームをせず現位置で更新（src/renderer ディレクトリが残るため）
+- 計画に無かった追加実装: accept_first_mouse（1クリック切り替え）、メニュー位置のタスクバー
+  基準化、context_task のクライアント供給値検証（レビュー Critical 対応）、single-flight ガード
+- 残課題（リリース関連）: CI（tauri-action）は初回タグ push まで未検証。v3.0.0 リリースは
+  /addf-release で実施予定
+- 知見: docs/knowhow/rust-port-delegation.md・docs/knowhow/tauri-trust-boundary-and-native-menu.md

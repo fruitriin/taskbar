@@ -1,9 +1,9 @@
 {
   "files": [],
-  "references": [{ "path": "src/main/tsconfig.node.json" }, { "path": "src/renderer/tsconfig.web.json" }],
-  "include": [  "src/renderer", "src/main/type.d.ts"],
+  "references": [{ "path": "src/renderer/tsconfig.web.json" }],
+  "include": ["src/renderer"],
   "exclude": ["**/node_modules", "**/.*/"],
   "compilerOptions": {
-    "esModuleInterop": true,
+    "esModuleInterop": true
   }
 }

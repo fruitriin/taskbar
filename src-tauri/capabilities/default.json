@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions (taskbar-* windows are created dynamically per monitor by display_manager.rs)",
+  "windows": ["taskbar-*", "option", "menu", "fullWindowList"],
+  "permissions": ["core:default"]
+}

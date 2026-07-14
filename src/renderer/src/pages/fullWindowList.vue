@@ -1100,5 +1100,3 @@ onBeforeUnmount(() => {
   margin-left: 1rem;
 }
 </style>
-
-<style lang="sass" scoped></style>

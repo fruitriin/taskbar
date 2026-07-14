@@ -5,37 +5,39 @@ on:
 name: Release
 jobs:
   release:
-    name: Release GitHub Actions
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-15]
+    name: Release (Tauri)
+    runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v3
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          node-version: 20
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
       - name: Install dependencies
-        run: |
-          echo ${{ secrets.CERT }} > encoded.txt
-          base64 -d encoded.txt >> ~/.cert.p12
-      - run: yarn helper
-      - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: bun install
 
+      # 署名・notarize は tauri-action が環境変数から行う。
+      # 必要な Secrets: CERT（Developer ID Application の p12 を base64 化したもの）、
+      # CERT_PASS、APPLE_ID、APPLE_ID_PASS（App 用パスワード）
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
         env:
-          CSC_LINK: ~/.cert.p12
-          CSC_KEY_PASSWORD: ${{ secrets.CERT_PASS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.CERT }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CERT_PASS }}
+          APPLE_SIGNING_IDENTITY: 'Developer ID Application: Rin Nakashima (4Z474DZ677)'
           APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_ID_PASS }}
+          APPLE_TEAM_ID: 4Z474DZ677
+        with:
+          # 旧リリース（v2系）と同じくユニバーサルバイナリで配布する
+          args: --target universal-apple-darwin
+          tagName: ${{ github.ref_name }}
+          releaseName: 'taskbar.fm ${{ github.ref_name }}'
+          releaseDraft: true

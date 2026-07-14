@@ -7,9 +7,6 @@
       <div class="permissions">
         <MainPermissionStatus />
       </div>
-      <div v-if="visibleWindows.length == 0" class="helper-restart">
-        <button class="button is-small" @click="restartHelper()">Helper再起動</button>
-      </div>
       <div v-if="visibleWindows.length == 0" style="width: 100%">
         What display call this bar: {{ displayInfo }}
         <button class="button" @click="dumpTaskbarInfo">dumpTaskbarInfo</button>
@@ -391,10 +388,6 @@ function acticveWindow(win: MacWindow): void {
   ipcSend('activeWindow', win)
 }
 
-function restartHelper(delay?: number): void {
-  ipcSend('restartHelper', delay)
-}
-
 // アイコン更新処理。ref の深いリアクティビティにより代入だけで再描画される
 // （旧実装の $forceUpdate は不要になったため排除 — Phase 1 完了条件）
 function updateWindowIcons(icons: Record<string, string>): void {
@@ -470,13 +463,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.helper-restart {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 8px;
 }
 
 .checkbox:hover {

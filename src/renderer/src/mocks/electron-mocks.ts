@@ -113,7 +113,6 @@ export const createElectronMock = (): { ipcRenderer: IpcRendererMock } => ({
         'openOption',
         'openFullWindowList',
         'closeMenu',
-        'restartHelper',
         'grantPermission',
         'clearSetting',
         'restart',

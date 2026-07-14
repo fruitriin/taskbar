@@ -230,7 +230,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // Electron はテンプレートからも参照される（send は ipc.ts へ委譲済み）
 import { Electron } from '../utils'
-import { ipcListen, ipcSend } from '../composables/ipc'
+import { ipcInvoke, ipcListen, ipcSend } from '../composables/ipc'
 import type { LabeledFilters } from '../types'
 import type { Options } from '../composables/useOptions'
 import draggable from 'vuedraggable'
@@ -243,14 +243,22 @@ const drag = ref(false)
 // 発生しないが、useOptions は内部で ipcListen('updateOptions') を張るため、将来
 // optionWindow を配信対象に加えると本 watch と組み合わさり無限ループになる。
 // 結線する際は等価性ガードとセットで設計すること（レビュー 2026-07-06 で配線を検証済み）
-const options = ref<Options>({ ...window.store.options })
+// Tauri 実行時は preload の window.store が無いため、デフォルト＋onMounted の invoke で初期化する
+const defaultOptions: Options = {
+  layout: 'bottom',
+  windowSortByPositionInApp: false,
+  appOrder: [],
+  headers: [],
+  footers: []
+}
+const options = ref<Options>({ ...defaultOptions, ...window.store?.options })
 const sortRule = ref<Array<{ name: 'headers' | 'footers'; label: string }>>([
   { name: 'headers', label: '先頭' },
   { name: 'footers', label: '末尾' }
 ])
-const labeledFilters = ref<LabeledFilters[]>([
-  ...JSON.parse(JSON.stringify(window.store.labeledFilters))
-])
+const labeledFilters = ref<LabeledFilters[]>(
+  window.store ? [...JSON.parse(JSON.stringify(window.store.labeledFilters))] : []
+)
 const editingLabel = ref('')
 const selectedFilterIndex = ref<number | null>(null)
 const panelPosition = ref<{ top: string; left: string } | null>(null)
@@ -439,7 +447,18 @@ function saveEditCondition(): void {
 
 let unlistenFiltersUpdated: (() => void) | undefined
 
-onMounted(() => {
+onMounted(async () => {
+  // Tauri 実行時（window.store なし）は初期値を invoke で取得する。
+  // options への代入は deep watch を発火させ同値の setOptions が1回飛ぶが、
+  // option ウィンドウは updateOptions を購読しないためループしない（無害な echo）
+  if (!window.store) {
+    try {
+      options.value = await ipcInvoke<Options>('getOptions')
+      labeledFilters.value = await ipcInvoke<LabeledFilters[]>('getLabeledFilters')
+    } catch (e) {
+      console.error('[option] 初期設定の取得に失敗:', e)
+    }
+  }
   // fullWindowListからのフィルター追加を受け取る
   unlistenFiltersUpdated = ipcListen<LabeledFilters[]>('labeledFiltersUpdated', (updated) => {
     labeledFilters.value = [...updated]
