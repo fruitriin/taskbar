@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 HOOK="$PROJECT_DIR/.claude/hooks/reset-turn-count.sh"
 SANDBOX="$(mktemp -d)"
 mkdir -p "$SANDBOX/.claude"

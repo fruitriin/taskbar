@@ -6,7 +6,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 TOOL="$PROJECT_DIR/.claude/addf/addfTools/context-reminder.py"
 PASS=0
 FAIL=0
@@ -48,7 +48,7 @@ assert_empty() {
 make_sandbox() {
   local box
   box="$(mktemp -d)"
-  mkdir -p "$box/.claude"
+  mkdir -p "$box/.claude/addf"
   cat > "$box/.claude/addf/Behavior.toml" <<'EOF'
 [context-reminder]
 threshold_tokens = 100000

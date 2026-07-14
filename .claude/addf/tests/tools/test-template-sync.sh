@@ -6,7 +6,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 LINT="$PROJECT_DIR/.claude/addf/addfTools/lint-template-sync.py"
 PASS=0
 FAIL=0
@@ -44,7 +44,7 @@ make_sandbox() {
   box="$(mktemp -d)"
   mkdir -p "$box/.claude/addf/templates" "$box/.claude/commands" "$box/.claude/addf/guides"
   cp "$PROJECT_DIR/CLAUDE.md" "$PROJECT_DIR/AGENTS.md" "$PROJECT_DIR/.gitignore" "$box/"
-  cp "$PROJECT_DIR/.claude/addf/Progress.md" "$box/.claude/"
+  cp "$PROJECT_DIR/.claude/addf/Progress.md" "$box/.claude/addf/"
   cp "$PROJECT_DIR/.claude/addf/templates/ProgressTemplate.addf.md" \
      "$PROJECT_DIR/.claude/addf/templates/ProgressTemplate.md" "$box/.claude/addf/templates/"
   cp "$PROJECT_DIR/.claude/commands/addf-init.md" "$box/.claude/commands/"

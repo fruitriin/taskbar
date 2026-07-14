@@ -6,7 +6,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 LINT="$PROJECT_DIR/.claude/addf/addfTools/lint-checklist.py"
 PASS=0
 FAIL=0
@@ -54,7 +54,7 @@ assert_not_contains() {
 make_sandbox() {
   local box
   box="$(mktemp -d)"
-  mkdir -p "$box/.claude"
+  mkdir -p "$box/.claude/addf"
   echo "$box"
 }
 

@@ -32,10 +32,10 @@ TAIL_BYTES = 2 * 1024 * 1024  # transcript は末尾だけ読む
 
 
 def read_settings(project_dir):
-    """addf-Behavior.toml の [context-reminder] を依存なしで読む（tomllib 非依存）"""
+    """.claude/addf/Behavior.toml の [context-reminder] を依存なしで読む（tomllib 非依存）"""
     settings = {'threshold_tokens': 180000, 'renotify_step_tokens': 50000}
     effective = {}
-    path = os.path.join(project_dir, '.claude', 'addf-Behavior.toml')
+    path = os.path.join(project_dir, '.claude', 'addf', 'Behavior.toml')
     if not os.path.exists(path):
         return settings, effective
     section = None

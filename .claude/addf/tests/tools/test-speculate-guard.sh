@@ -35,7 +35,7 @@ trap 'rm -rf "$box" "$box-spec-x" "$box-other"' EXIT
   cd "$box"
   git init -q -b main .
   git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
-  mkdir -p .claude
+  mkdir -p .claude/addf
 )
 
 # tomllib（Python 3.11+）前提のため uv があれば 3.11 を明示する（test-optional-skills.sh と同パターン）
