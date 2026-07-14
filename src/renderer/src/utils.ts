@@ -1,12 +1,19 @@
-// @ts-ignore - Import type compatibility
-import { ElectronAPI, IpcRendererEvent } from '@electron-toolkit/preload'
 import type { Store } from './types'
 import { ipcSend } from './composables/ipc'
 
+// Electron 本体は Phase 3 で削除済み。window.electron を注入するのは
+// ブラウザ開発・テスト時のモック（mocks/electron-mocks.ts）のみ
+type MockIpcRenderer = {
+  invoke(channel: string, ...args: any[]): Promise<any>
+  send(channel: string, ...args: any[]): void
+  on(channel: string, listener: (event: unknown, ...args: any[]) => void): void
+  removeListener(channel: string, listener: (event: unknown, ...args: any[]) => void): void
+}
+
 declare global {
   interface Window {
-    // Tauri 実行時はどちらも存在しない（ipc.ts がランタイム判定する）ため optional
-    electron: ElectronAPI
+    // Tauri 実行時はどちらも存在しない（ipc.ts がランタイム判定する）
+    electron: { ipcRenderer: MockIpcRenderer }
     store?: Store
   }
 }
@@ -151,7 +158,7 @@ export function moveApp(apps: string[], dragged: string, target: string): string
 export const Electron = {
   // listen はリスナーが (event, ...args) を受ける旧シグネチャのため委譲しない
   // （ipcListen はペイロードのみを渡す新シグネチャ。移行はコンポーネント側で段階的に行う）
-  listen(channel: string, listener: (event: IpcRendererEvent, ...args: any[]) => void): void {
+  listen(channel: string, listener: (event: unknown, ...args: any[]) => void): void {
     window.electron.ipcRenderer.on(channel, listener)
   },
   // ipc.ts へ委譲（JSON クローンによるプロキシ剥がしの単一ソース化。Phase 3 の差し替え箇所を集約）

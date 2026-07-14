@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ipcInvoke } from '../composables/ipc'
+import { ipcInvoke, ipcSend } from '../composables/ipc'
 type PermissionResult = { accessibility: boolean; screenRecording: boolean }
 import { ref, computed, onMounted } from 'vue'
 
@@ -64,7 +64,7 @@ const checkPermissions = async (): Promise<void> => {
 }
 
 const openSettings = (): void => {
-  window.electron.ipcRenderer.send('openOption')
+  ipcSend('openOption')
 }
 
 onMounted(() => {

@@ -19,9 +19,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg"],
+    "targets": [
+      "dmg"
+    ],
     "macOS": {
-      "minimumSystemVersion": "12.0"
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": "Developer ID Application: Rin Nakashima (4Z474DZ677)"
     }
   }
 }

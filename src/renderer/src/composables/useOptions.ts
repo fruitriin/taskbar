@@ -1,5 +1,5 @@
 // 永続化オプションの composable（リアーキ Phase 1 スライス 1-A）
-// Phase 1 では Electron IPC 経由で electron-store と同期する。
+// ipc.ts 経由でバックエンドの設定ストア（tauri-plugin-store）と同期する。
 // モジュールシングルトン: 全ビューが同じ options を参照する。
 import { ref } from 'vue'
 import type { Ref } from 'vue'

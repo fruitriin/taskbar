@@ -40,12 +40,9 @@
   "permissions": {
     "allow": [
       "Bash(resources/TaskbarHelper:*)",
-      "Bash(bun run swiftbuild)",
       "Bash(bun run build)",
       "Bash(bun run build:mac)",
       "Bash(bun run typecheck)",
-      "Bash(bun run typecheck:node)",
-      "Bash(bun run typecheck:web)",
       "Bash(bun run lint)",
       "Bash(bun run format)",
       "Bash(bun run test)",
@@ -108,7 +105,12 @@
       "Bash(gh pr checks *)",
       "Bash(gh pr checkout *)",
       "Bash(bash .claude/tests/run-all.sh *)",
-      "Bash(uv run --python 3.11 .claude/addfTools/lint *)"
+      "Bash(uv run --python 3.11 .claude/addfTools/lint *)",
+      "Bash(bun run dev:web)",
+      "Bash(cargo check)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo test)",
+      "Bash(cargo fmt)"
     ],
     "ask": [
       "Bash(git push *)",

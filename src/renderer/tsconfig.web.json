@@ -1,17 +1,24 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": [
-    "./src/env.d.ts",
-    "./src/**/*",
-    "./src/**/*.vue",
-    "./*.ts",
-    "../preload/*.d.ts",
-    "../main/type.d.ts"
-  ],
+  "include": ["./src/env.d.ts", "./src/**/*", "./src/**/*.vue", "./*.ts"],
   "exclude": ["**/node_modules", "**/.*/"],
   "compilerOptions": {
-    "composite": true,
+    "target": "esnext",
+    "module": "esnext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "sourceMap": false,
+    "strict": true,
+    "jsx": "preserve",
     "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "composite": true,
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"]

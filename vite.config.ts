@@ -1,5 +1,5 @@
 // Tauri 用のフロントエンド dev/build 設定（リアーキ Phase 3）。
-// electron-vite（electron.vite.config.ts）は移行完了（3.5）まで併存し、その後削除する。
+// Tauri のフロントエンドビルド（frontendDist: ../dist）兼、ブラウザ開発サーバー（bun run dev:web）。
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'

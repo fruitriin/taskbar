@@ -7,12 +7,6 @@ if (typeof window === 'undefined') {
   globalThis.window = globalThis
 }
 
-// Electron APIのモック (renderer側)
-mock.module('@electron-toolkit/preload', () => ({
-  ElectronAPI: {},
-  IpcRendererEvent: {}
-}))
-
 // window.electron のモック（テスト用にmock()でラップ）
 const electronMock = createElectronMock()
 Object.defineProperty(window, 'electron', {
