@@ -6,7 +6,7 @@ import vue from '@vitejs/plugin-vue'
 import UnoCSS from 'unocss/vite'
 
 export default defineConfig({
-  root: 'src/renderer',
+  root: 'src-renderer',
   plugins: [UnoCSS(), vue()],
   server: {
     port: 10234,
@@ -14,7 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@renderer': resolve(__dirname, 'src/renderer/src')
+      '@renderer': resolve(__dirname, 'src-renderer/src')
     }
   },
   build: {

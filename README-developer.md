@@ -11,7 +11,7 @@
 - .github
 - .vscode
 - src-tauri：Rust バックエンド（ウィンドウ列挙・AX 操作・権限・アイコン・設定ストア）
-- src/renderer：UI を構築する部分。Vue 3
+- src-renderer：UI を構築する部分。Vue 3
 - dist(ignored)：vite build の出力（Tauri の frontendDist）
 - docs：計画・ノウハウ・画像
 

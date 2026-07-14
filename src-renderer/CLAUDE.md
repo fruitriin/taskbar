@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Directory Overview
 
-このディレクトリ（`src/renderer`）は、Taskbar.fm のフロントエンド（Tauri の Webview で動く
+このディレクトリ（`src-renderer`）は、Taskbar.fm のフロントエンド（Tauri の Webview で動く
 Vue 3 アプリケーション）です。Composition API と TypeScript で記述されています。
 バックエンドは Rust（`src-tauri/`）で、旧 Electron メインプロセスは Phase 3 で全廃されました。
 なお `electron-mocks.ts` / `window.electron` / `utils.ts` の `Electron` オブジェクトという
@@ -25,7 +25,7 @@ bun run test
 bun run test:all
 
 # 特定のテストファイルを実行
-cd src/renderer && bun test tests/window-sort.test.ts --preload ./tests/setup.ts --env happy-dom
+cd src-renderer && bun test tests/window-sort.test.ts --preload ./tests/setup.ts --env happy-dom
 ```
 
 ### 型チェック
