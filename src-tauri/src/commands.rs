@@ -25,13 +25,13 @@
 //! | closeMenu             | close_menu             |
 //! | restart               | restart                |
 //! | exit                  | exit                   |
-//! | restartHelper         | restart_helper         |
 //! | clearSetting          | clear_setting          |
 //! | dumpTaskbarInfo       | dump_taskbar_info      |
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
+use crate::context_menu;
 use crate::display_manager;
 use crate::filter::{Filter, LabeledFilters};
 use crate::icon_manager;
@@ -432,17 +432,16 @@ fn menu_position(app: &AppHandle) -> Result<(f64, f64), String> {
 /// タスク右クリック時のコンテキストメニュー。
 ///
 /// Electron 原本: events.ts:211-266（contextTask。ネイティブ Menu で
-/// 先頭へ追加/末尾へ追加/閉じる/強制終了を表示）
-///
-/// TODO(3.4 マルチウィンドウ結合): Tauri の Menu API（またはフロント実装の
-/// コンテキストメニュー）で移植する。現状はログのみのスタブ
+/// 先頭へ追加/末尾へ追加/閉じる/強制終了を表示）。
+/// Tauri 版は tauri::menu で構築し、呼び出し元タスクバーウィンドウに
+/// カーソル位置で popup する（設計メモは context_menu.rs 冒頭参照）
 #[tauri::command]
-pub fn context_task(win: MacWindow) {
-    log::info!(
-        "context_task called (stub): {} ({}) TODO(3.4)",
-        win.owner_name,
-        win.window_number
-    );
+pub fn context_task(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    win: MacWindow,
+) -> Result<(), String> {
+    context_menu::show(&app, window, win)
 }
 
 /// メニューウィンドウを閉じる。
@@ -477,16 +476,6 @@ pub fn restart(app: AppHandle) {
 #[tauri::command]
 pub fn exit(app: AppHandle) {
     app.exit(0)
-}
-
-/// Helper プロセスの再起動。Tauri 版は helper プロセス自体が存在しないため no-op。
-///
-/// Electron 原本: events.ts:127-130（recreateAllWindows + scheduleHelperRestart）
-///
-/// TODO(3.5): フロント側の restartHelper 導線（メニュー等）ごと整理して削除する
-#[tauri::command]
-pub fn restart_helper(delay: Option<u64>) {
-    log::info!("restart_helper called: no-op on Tauri (delay={delay:?}). TODO(3.5) remove");
 }
 
 /// 設定を全消去して再起動する。

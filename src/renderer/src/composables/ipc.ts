@@ -21,8 +21,7 @@ const ARG_KEYS: Record<string, string> = {
   addFilter: 'payload',
   activeWindow: 'win',
   closeWindow: 'win',
-  contextTask: 'win',
-  restartHelper: 'delay'
+  contextTask: 'win'
 }
 
 function toArgs(channel: string, args: unknown[]): Record<string, unknown> | undefined {

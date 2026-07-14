@@ -1,4 +1,5 @@
 pub mod commands;
+pub mod context_menu;
 pub mod display_manager;
 pub mod filter;
 pub mod icon_manager;
@@ -7,6 +8,8 @@ pub mod store;
 pub mod window_actions;
 pub mod window_manager;
 pub mod window_observer;
+
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -33,7 +36,6 @@ pub fn run() {
             commands::close_menu,
             commands::restart,
             commands::exit,
-            commands::restart_helper,
             commands::clear_setting,
             commands::dump_taskbar_info,
         ])
@@ -56,6 +58,12 @@ pub fn run() {
 
             // NSWorkspace 通知の監視を開始（setup はメインスレッドで実行される）
             window_observer::start_observation(app.handle().clone());
+
+            // タスク右クリックメニュー: 対象ウィンドウの受け渡し用 state と
+            // メニューイベントハンドラ（on_menu_event は追記型のため登録はここで1回だけ。
+            // 設計メモは context_menu.rs 冒頭参照）
+            app.manage(context_menu::ContextTaskTarget::default());
+            app.on_menu_event(|app, event| context_menu::handle_menu_event(app, &event));
             Ok(())
         })
         .run(tauri::generate_context!())
