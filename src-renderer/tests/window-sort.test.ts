@@ -2,9 +2,11 @@ import { describe, it, expect } from 'bun:test'
 import {
   sortWindowsInApp,
   groupWindowsByApp,
+  chunkIntoGroups,
   moveApp,
   buildAppOrder,
   shouldSwap,
+  rectsSeparated,
   REORDER_COOLDOWN_MS
 } from '../src/utils'
 
@@ -125,6 +127,33 @@ describe('groupWindowsByApp', () => {
   })
 })
 
+describe('chunkIntoGroups', () => {
+  it('同一アプリの連続区間を1グループに束ねる', () => {
+    const result = chunkIntoGroups([win('A', 1), win('A', 3), win('B', 2), win('B', 4)])
+    expect(result).toEqual([
+      { app: 'A', windows: [win('A', 1), win('A', 3)] },
+      { app: 'B', windows: [win('B', 2), win('B', 4)] }
+    ])
+  })
+
+  it('単一ウィンドウのアプリも1要素のグループになる（分岐なしで統一構造）', () => {
+    const result = chunkIntoGroups([win('A', 1), win('B', 2), win('C', 3)])
+    expect(result.map((g) => g.app)).toEqual(['A', 'B', 'C'])
+    expect(result.every((g) => g.windows.length === 1)).toBe(true)
+  })
+
+  it('同一アプリが非連続（groupWindowsByApp を経ていない入力）だと別グループに分かれる', () => {
+    // chunkIntoGroups 自体は「隣接」判定のみで、事前に groupWindowsByApp で
+    // 同一アプリを隣接させておく契約に依存する（呼び出し側の責務）
+    const result = chunkIntoGroups([win('A', 1), win('B', 2), win('A', 3)])
+    expect(result.map((g) => g.app)).toEqual(['A', 'B', 'A'])
+  })
+
+  it('空配列は空配列を返す', () => {
+    expect(chunkIntoGroups([])).toEqual([])
+  })
+})
+
 describe('buildAppOrder', () => {
   it('既存 appOrder の並びを温存し、無いアプリを末尾に追加する', () => {
     const result = buildAppOrder(['X', 'A'], [win('B', 1), win('A', 2), win('C', 3)])
@@ -236,5 +265,41 @@ describe('shouldSwap', () => {
     const smallTarget = { ...base, targetRect: rect(100, 40) }
     expect(shouldSwap({ ...smallTarget, ghostRect: rect(13) })).toBe(true) // 113-100=13
     expect(shouldSwap({ ...smallTarget, ghostRect: rect(11) })).toBe(false)
+  })
+})
+
+describe('rectsSeparated', () => {
+  // 幅100pxの矩形が x=0 と x=100 に並ぶ水平タスクバーを想定
+  const rect = (
+    left: number,
+    width = 100
+  ): { left: number; right: number; top: number; bottom: number } => ({
+    left,
+    right: left + width,
+    top: 0,
+    bottom: 40
+  })
+
+  it('重なっていれば false（完全に離れていない）', () => {
+    expect(rectsSeparated(rect(50), rect(100), true)).toBe(false) // 50-150 と 100-200 は重なる
+  })
+
+  it('隙間なく接しているだけなら true（重なりゼロ）', () => {
+    expect(rectsSeparated(rect(0), rect(100), true)).toBe(true) // 0-100 と 100-200 は接するのみ
+  })
+
+  it('完全に離れていれば true', () => {
+    expect(rectsSeparated(rect(0), rect(200), true)).toBe(true)
+  })
+
+  it('垂直レイアウトでは Y 方向で判定する', () => {
+    const vRect = (top: number): { left: number; right: number; top: number; bottom: number } => ({
+      left: 0,
+      right: 200,
+      top,
+      bottom: top + 40
+    })
+    expect(rectsSeparated(vRect(20), vRect(40), false)).toBe(false) // 20-60 と 40-80 は重なる
+    expect(rectsSeparated(vRect(0), vRect(40), false)).toBe(true)
   })
 })

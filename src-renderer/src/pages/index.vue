@@ -16,8 +16,7 @@
       tag="div"
       name="flip-list"
       class="tasks"
-      :style="{ gridTemplateColumns: visibleWindows.map(() => '1fr').join(' ') }"
-      style="overflow-y: auto"
+      :style="{ gridTemplateColumns: taskColumnWeights.map((n) => `${n}fr`).join(' ') }"
     >
       <button
         v-for="win in headerWindows"
@@ -32,22 +31,35 @@
         </div>
         <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
       </button>
-      <button
-        v-for="win in centerWindows"
-        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
-        class="button task"
-        :class="{ 'drag-source': dragApp === win.kCGWindowOwnerName }"
-        :data-app="win.kCGWindowOwnerName"
-        @click="onTaskClick(win)"
-        @click.right.prevent="test(win)"
-        @pointerdown="onTaskPointerDown($event, win)"
+      <!-- グループ wrapper 自体を入れ子の TransitionGroup にする（外側の flip-list とは
+           独立したインスタンス）。plain div にすると、グループ内ウィンドウの増減時に
+           内部ボタンの FLIP アニメーションが効かなくなる（レビュー指摘）。
+           name は外側と別にする（flip-list-inner）— 同名だと CSS クラスが衝突し、
+           外側のグループ並び替えアニメーションまで効かなくなることがオーナー実機確認で判明 -->
+      <TransitionGroup
+        v-for="group in centerGroups"
+        :key="`group:${group.app}`"
+        tag="div"
+        name="flip-list-inner"
+        class="task-group"
+        :class="{ 'drag-source': dragApp === group.app }"
+        :data-app="group.app"
+        @pointerdown="onGroupPointerDown($event, group)"
       >
-        <img class="icon" :src="win.appIcon" />
-        <div v-if="win.kCGWindowName" class="name">
-          {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
-        </div>
-        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
-      </button>
+        <button
+          v-for="win in group.windows"
+          :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+          class="button task"
+          @click="onTaskClick(win)"
+          @click.right.prevent="test(win)"
+        >
+          <img class="icon" :src="win.appIcon" />
+          <div v-if="win.kCGWindowName" class="name">
+            {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
+          </div>
+          <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+        </button>
+      </TransitionGroup>
       <button
         v-for="win in footerWindows"
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
@@ -63,15 +75,21 @@
       </button>
     </TransitionGroup>
     <div
-      v-if="ghostWindow"
-      class="button task ghost-task"
+      v-if="ghostGroup"
+      class="task-group ghost-task"
       :style="[ghostStyle, { transform: ghostTransform }]"
     >
-      <img class="icon" :src="ghostWindow.appIcon" />
-      <div v-if="ghostWindow.kCGWindowName" class="name">
-        {{ ghostWindow.kCGWindowName }} - {{ ghostWindow.kCGWindowOwnerName }}
-      </div>
-      <div v-else class="name">{{ ghostWindow.kCGWindowOwnerName }}</div>
+      <button
+        v-for="win in ghostGroup.windows"
+        :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
+        class="button task"
+      >
+        <img class="icon" :src="win.appIcon" />
+        <div v-if="win.kCGWindowName" class="name">
+          {{ win.kCGWindowName }} - {{ win.kCGWindowOwnerName }}
+        </div>
+        <div v-else class="name">{{ win.kCGWindowOwnerName }}</div>
+      </button>
     </div>
   </div>
   <div style="height: calc(100% - 56px); overflow-y: auto">
@@ -90,7 +108,8 @@
 import icon from '../assets/icon.png'
 import { computed, markRaw, onBeforeUnmount, onMounted, ref } from 'vue'
 import { createNewSortInstance } from 'fast-sort'
-import { buildAppOrder, groupWindowsByApp } from '../utils'
+import { buildAppOrder, chunkIntoGroups, groupWindowsByApp } from '../utils'
+import type { WindowGroup, Rect } from '../utils'
 import { createDragSession } from '../drag-session'
 import { ipcListen, ipcSend } from '../composables/ipc'
 import { useOptions } from '../composables/useOptions'
@@ -106,16 +125,18 @@ const windows = ref<MacWindow[] | null>([])
 // セッション内でタスクバーに出現したアプリの順序（appOrder 未指定アプリのフォールバック）
 const appearanceOrder = ref<string[]>([])
 // --- Pointer Events ドラッグセッション ---
-// 押下したボタンのウィンドウ（ゴーストの表示内容に使用。矩形は session が保持）
-const pressedWindow = ref<MacWindow | null>(null)
+// 押下したグループ（ゴーストの表示内容に使用。矩形は session が保持）
+// グループ単位でドラッグを扱う（group-drag-swap-fix.md: 判定単位はアプリ＝グループのため、
+// ゴーストや当たり判定もグループ単位の矩形に揃える）
+const pressedGroup = ref<WindowGroup | null>(null)
 // ドラッグ中のアプリ名（drag-source の減光に使用）
 const dragApp = ref<string | null>(null)
 // ドラッグ中のみ使う一時的なアプリ順。centerWindows がこれを優先する
 const dragOrder = ref<string[] | null>(null)
 // ドラッグ直後の click 合成を1回だけ握りつぶす
 const didDrag = ref(false)
-// ゴースト表示
-const ghostWindow = ref<MacWindow | null>(null)
+// ゴースト表示（グループ全体を表示するため WindowGroup を保持）
+const ghostGroup = ref<WindowGroup | null>(null)
 const ghostStyle = ref<Record<string, string>>({})
 const ghostTransform = ref('')
 // ドラッグ中に届いた process 更新の保留分（dragend で反映）
@@ -207,6 +228,19 @@ const centerWindows = computed<MacWindow[]>(() => {
   })
 })
 
+// centerWindows（同一アプリが隣接済みのフラット配列）をグループ単位に束ねる。
+// D&D の当たり判定・ゴースト・wrapper 描画は全てこのグループ単位で行う
+const centerGroups = computed<WindowGroup[]>(() => chunkIntoGroups(centerWindows.value))
+
+// grid レイアウト（bottom）の列幅比率。ヘッダー/フッターは1、センターはグループ内の
+// ウィンドウ数分の重みを与え、複数ウィンドウのグループが見た目上も相応の幅を持つようにする
+// （group-drag-swap-fix.md: グループの表示幅と当たり判定の矩形を一致させる対応の一部）
+const taskColumnWeights = computed<number[]>(() => [
+  ...headerWindows.value.map(() => 1),
+  ...centerGroups.value.map((group) => group.windows.length),
+  ...footerWindows.value.map(() => 1)
+])
+
 // 状態機械に DOM 依存（hitTest）と副作用（ゴースト・永続化）を注入する
 // （script setup 直下の const は reactive 化されないため markRaw は実質 no-op だが、
 // 将来 data 構造へ移す変更に備えた明示として残置）
@@ -214,20 +248,47 @@ const session = markRaw(
   createDragSession({
     getBaseOrder: () => buildAppOrder(options.value.appOrder ?? [], centerWindows.value),
     hitTest: (x, y) => {
-      const button = document.elementFromPoint(x, y)?.closest<HTMLElement>('button[data-app]')
-      const app = button?.dataset.app
-      if (!button || !app) return null
-      const rect = button.getBoundingClientRect()
-      return {
-        app,
-        rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+      // グループ wrapper 単位で当たり判定する（個別ボタンではない）。判定単位（アプリ）と
+      // 幾何情報取得単位を一致させることでフリッカーを解消する
+      const toResult = (el: HTMLElement): { app: string; rect: Rect } | null => {
+        const app = el.dataset.app
+        if (!app) return null
+        const rect = el.getBoundingClientRect()
+        return {
+          app,
+          rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+        }
       }
+      const direct = document.elementFromPoint(x, y)?.closest<HTMLElement>('.task-group[data-app]')
+      if (direct) return toResult(direct)
+
+      // タスクバーのウィンドウ領域からはみ出した場合（縦にはみ出した・末尾を通り過ぎた等）も
+      // 進行軸の座標だけでグループを解決する（Y/X がずれていても無視する）。タスクバーは
+      // 専用ウィンドウで他パネルと同居しないため、帯制限は設けなくてよい
+      // （そこまで正確に戻さないと入れ替えられない問題への対応。オーナー実機確認で追加）
+      const groups = Array.from(
+        document.querySelectorAll<HTMLElement>('.tasks .task-group[data-app]')
+      ).map((el) => ({ el, rect: el.getBoundingClientRect() }))
+      if (groups.length === 0) return null
+      const horizontal = (options.value.layout ?? 'bottom') === 'bottom'
+      // 進行軸の座標がどのグループの範囲に入っているかを探す（列の途中から縦にはみ出した
+      // ケースに対応。先頭/末尾の二択だけだと途中のグループを飛び越してしまう）
+      const inRange = groups.find(({ rect: r }) =>
+        horizontal ? x >= r.left && x <= r.right : y >= r.top && y <= r.bottom
+      )
+      if (inRange) return toResult(inRange.el)
+
+      // どのグループの範囲にも入らない（先頭より前・末尾より後ろ）場合は端にフォールバックする
+      const first = groups[0]
+      const last = groups[groups.length - 1]
+      const beforeFirst = horizontal ? x < first.rect.left : y < first.rect.top
+      return toResult(beforeFirst ? first.el : last.el)
     },
     isHorizontal: () => (options.value.layout ?? 'bottom') === 'bottom',
     onDragStart: (app, rect) => {
       didDrag.value = true
       dragApp.value = app
-      ghostWindow.value = pressedWindow.value
+      ghostGroup.value = pressedGroup.value
       ghostStyle.value = {
         top: `${rect.top}px`,
         left: `${rect.left}px`,
@@ -236,7 +297,10 @@ const session = markRaw(
       }
     },
     onGhostMove: (dx, dy) => {
-      ghostTransform.value = `translate(${dx}px, ${dy}px)`
+      // 並び替えは1軸（水平タスクバーなら横、垂直なら縦）でしか起きないため、
+      // ゴーストも進行軸のみに追従させる（オーナー実機確認で「縦にも動いてしまう」指摘）
+      const horizontal = (options.value.layout ?? 'bottom') === 'bottom'
+      ghostTransform.value = horizontal ? `translate(${dx}px, 0px)` : `translate(0px, ${dy}px)`
     },
     onOrderChange: (order) => {
       dragOrder.value = order
@@ -281,7 +345,9 @@ function onTaskClick(win: MacWindow): void {
   acticveWindow(win)
 }
 
-function onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
+function onGroupPointerDown(event: PointerEvent, group: WindowGroup): void {
+  // リスナーはグループ wrapper に張られているため currentTarget は常にグループ全体の矩形
+  // （グループ内のどのウィンドウを押しても、そのグループ全体をドラッグ対象にする）
   const el = event.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
   const pressedRect = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
@@ -293,11 +359,11 @@ function onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
       buttons: event.buttons,
       button: event.button
     },
-    win.kCGWindowOwnerName,
+    group.app,
     pressedRect
   )
   if (!accepted) return
-  pressedWindow.value = win
+  pressedGroup.value = group
   // TransitionGroup の DOM 並び替えで Pointer Capture は暗黙解放されうるため、
   // capture は使わず document でリッスンする
   document.addEventListener('pointermove', onPointerMove)
@@ -308,6 +374,11 @@ function onTaskPointerDown(event: PointerEvent, win: MacWindow): void {
   window.addEventListener('blur', onWindowBlur)
 }
 
+// rAF 間引きは撤回済み（group-drag-swap-fix.md フェーズ3で導入したが、Vue の
+// TransitionGroup が FLIP に内部で使う rAF ベースの measure/apply シーケンスと競合し、
+// ドラッグ中だけ FLIP アニメーションが効かなくなる副作用がオーナー実機確認で判明した。
+// 振動対策は shouldSwap の2段ヒステリシス＋blockedApp の完全分離待ちで足りているため、
+// rAF 間引きなしの同期呼び出しに戻す）
 function onPointerMove(event: PointerEvent): void {
   session.pointerMove({
     pointerId: event.pointerId,
@@ -356,8 +427,8 @@ function cleanupDrag(): void {
   window.removeEventListener('blur', onWindowBlur)
   dragApp.value = null
   dragOrder.value = null
-  pressedWindow.value = null
-  ghostWindow.value = null
+  pressedGroup.value = null
+  ghostGroup.value = null
   ghostStyle.value = {}
   ghostTransform.value = ''
   // click はこの pointerup の直後に同期発火するため、次のマクロタスクで解除する
@@ -411,7 +482,7 @@ onMounted(() => {
   // 自前リスナーを維持する（統合は保留ガードの composable 化とセットで将来検討）
   unlistenProcess = ipcListen<MacWindow[]>('process', (value) => {
     // ポインタ押下中（閾値未満のプレドラッグ含む）は並びの土台が動くと
-    // 入れ替え判定や pressedWindow が崩れるため、反映を保留する
+    // 入れ替え判定や pressedGroup が崩れるため、反映を保留する
     if (session.isActive) {
       pendingWindows.value = value
       return
@@ -476,6 +547,24 @@ onBeforeUnmount(() => {
   .tasks {
     width: 100%;
     display: grid;
+    // 横一列レイアウトではスクロールは不要（複数行にならず、横方向は grid の
+    // トラック幅で吸収する設計）。auto のままだと、FLIP の transform アニメーション中に
+    // 一時的な描画範囲がコンテナの overflow 判定に含まれ、スワップ中だけ
+    // スクロールバーが出ることがある（オーナー実機確認で発見。縦横とも発生したため
+    // 両軸を hidden にする。詳細は group-drag-swap-fix.md）
+    overflow: hidden;
+  }
+  // グループ wrapper は横並びにし、内側のボタンでトラック幅（ゴースト表示時は押下時矩形の幅）
+  // を均等に分ける。.tasks の外側にあるゴースト要素にも適用されるよう .bottom 直下に置く
+  // （group-drag-swap-fix.md: グループの表示幅を当たり判定の矩形と一致させるための構造）
+  .task-group {
+    display: flex;
+    flex-direction: row;
+    min-width: 0;
+    .task {
+      flex: 1;
+      min-width: 0;
+    }
   }
   .submenu {
     display: flex;
@@ -492,9 +581,18 @@ onBeforeUnmount(() => {
   .tasks {
     display: flex;
     flex-direction: column;
+    // 縦レイアウトはタスク数が多いと画面高を超えうるため縦スクロールが必要
+    // （bottom と異なり、こちらは元々の overflow-y: auto の用途）
+    overflow-y: auto;
     .task {
       justify-content: start;
     }
+  }
+  // 縦レイアウトではグループ内ウィンドウも縦に積む（外側の並びと同じ向き）。
+  // ゴースト要素（.tasks の外側）にも適用されるよう .left/.right 直下に置く
+  .task-group {
+    display: flex;
+    flex-direction: column;
   }
 
   .submenu {
@@ -511,10 +609,17 @@ onBeforeUnmount(() => {
 }
 
 // TransitionGroup(name="flip-list") の FLIP: 並び替え時に各ボタンが滑って移動する
-// duration は入れ替えクールダウン（REORDER_COOLDOWN_MS = 150ms）以内に完走させる。
+// duration は入れ替えクールダウン（REORDER_COOLDOWN_MS = 800ms）以内に完走させる。
 // これより長いと連続で避けるときに完走前へ次の入れ替えが割り込み、等速で流れて見える
+// （オーナー実機確認で 150ms→220ms でも「まだ早い」との指摘があり 800ms に調整）
 .flip-list-move {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+}
+
+// グループ内部（同一アプリの複数ウィンドウ）の増減時の FLIP。外側の .flip-list-move と
+// 同名にすると CSS クラスが衝突するため name="flip-list-inner" に分離している
+.flip-list-inner-move {
+  transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
 }
 
 // ドラッグ元グループの減光

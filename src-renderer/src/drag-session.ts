@@ -1,4 +1,4 @@
-import { moveApp, shouldSwap } from './utils'
+import { moveApp, shouldSwap, rectsSeparated } from './utils'
 import type { Rect } from './utils'
 
 /** ドラッグ開始とみなすポインタ移動量（クリックとの共存のため） */
@@ -75,6 +75,10 @@ export function createDragSession(deps: DragSessionDeps): DragSession {
   let pressedRect: Rect | null = null
   let order: string[] | null = null
   let lastSwapAt = 0
+  // 直前に入れ替えた相手。ゴーストが完全に離れる（rectsSeparated）までは
+  // この相手との再入れ替えを禁止する（振動防止。クールダウン＋しきい値だけでは、
+  // 入れ替え後もゴーストが相手の近くに留まり続けるケースで往復してしまう）
+  let blockedApp: string | null = null
 
   function end(): void {
     state = 'idle'
@@ -82,6 +86,7 @@ export function createDragSession(deps: DragSessionDeps): DragSession {
     app = null
     pressedRect = null
     order = null
+    blockedApp = null
     deps.onEnd()
   }
 
@@ -131,6 +136,12 @@ export function createDragSession(deps: DragSessionDeps): DragSession {
       if (!order || !app || !pressedRect) return
 
       const hit = deps.hitTest(ev.x, ev.y)
+      // 自分自身へのホバーや hit なしでは blockedApp をリセットしない（レビュー指摘）:
+      // FLIP アニメーション中、ドラッグ元の実要素が直前にスワップした相手の旧位置
+      // （＝ゴーストが留まっている境界付近）へ滑り込んでくる過程で、一時的に
+      // 自分自身へのホバーを経由することがある。ここで無条件にリセットすると、
+      // 相手からゴーストが実際には離れていないのに再入れ替えが許可されてしまい、
+      // 振動防止の保証が崩れる。解除は必ず rectsSeparated による確認を経由させる
       if (!hit || hit.app === app) return
 
       // ゴースト矩形は押下時矩形＋移動量から算出（DOM 読み取り不要で決定的）
@@ -140,18 +151,27 @@ export function createDragSession(deps: DragSessionDeps): DragSession {
         top: pressedRect.top + dy,
         bottom: pressedRect.bottom + dy
       }
+      const horizontal = deps.isHorizontal()
+
+      // 直前に入れ替えた相手とは、ゴーストが完全に離れるまで再入れ替えしない
+      if (hit.app === blockedApp) {
+        if (!rectsSeparated(ghostRect, hit.rect, horizontal)) return
+        blockedApp = null
+      }
+
       const swap = shouldSwap({
         fromIndex: order.indexOf(app),
         toIndex: order.indexOf(hit.app),
         ghostRect,
         targetRect: hit.rect,
-        horizontal: deps.isHorizontal(),
+        horizontal,
         lastSwapAt,
         now: now()
       })
       if (swap) {
         order = moveApp(order, app, hit.app)
         lastSwapAt = now()
+        blockedApp = hit.app
         deps.onOrderChange(order)
       }
     },

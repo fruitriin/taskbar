@@ -165,6 +165,98 @@ describe('createDragSession: 入れ替えとクールダウン', () => {
   })
 })
 
+describe('createDragSession: 振動防止（直前に入れ替えた相手との即時再入れ替え禁止）', () => {
+  // hitTest が「現在の並び順」で位置解決する点が createHarness と異なる（FLIP 後の
+  // 実際の再配置を模す。createHarness の既定 hitTest は APPS 固定でこの検証には使えない）
+  function createOrderAwareHarness(): {
+    session: ReturnType<typeof createDragSession>
+    orders: string[][]
+    clock: { now: number }
+  } {
+    let currentOrder = [...APPS]
+    const orders: string[][] = []
+    const clock = { now: 10_000 }
+    const session = createDragSession({
+      getBaseOrder: () => [...APPS],
+      hitTest: (x) => {
+        const index = Math.floor(x / 100)
+        if (x < 0 || index >= currentOrder.length) return null
+        return { app: currentOrder[index], rect: rectOf(index) }
+      },
+      isHorizontal: () => true,
+      onDragStart: () => {},
+      onOrderChange: (order) => {
+        currentOrder = order
+        orders.push(order)
+      },
+      onCommit: () => {},
+      onEnd: () => {},
+      onGhostMove: () => {},
+      now: () => clock.now
+    })
+    return { session, orders, clock }
+  }
+
+  it('入れ替え直後、ゴーストが相手の元位置に戻っても即座には逆再入れ替えしない', () => {
+    const h = createOrderAwareHarness()
+    expect(h.session.pointerDown(p(1, 50), 'A', rectOf(0))).toBe(true)
+
+    // A(index0) → B(index1) へ 1回目の swap。並びは ['B', 'A', 'C'] になる
+    h.session.pointerMove(p(1, 150))
+    expect(h.orders).toHaveLength(1)
+    expect(h.orders[0]).toEqual(['B', 'A', 'C'])
+
+    // クールダウン明け。ゴーストが押下時位置（dx=0）へ戻る = B の現在位置と完全一致する。
+    // 閾値条件だけを見れば逆 swap が成立してしまうが、直前に入れ替えた B からゴーストが
+    // 一度も完全に離れていないため、再入れ替えは起きない
+    h.clock.now += REORDER_COOLDOWN_MS
+    h.session.pointerMove(p(1, 50))
+    expect(h.orders).toHaveLength(1)
+  })
+
+  it('自分自身へのホバーだけでは block が解除されない（レビュー指摘の回帰テスト）', () => {
+    // FLIP アニメーション中、ドラッグ元の実要素が直前にスワップした相手の旧位置
+    // （＝ゴーストが留まっている境界付近）へ滑り込んでくる過程で、一時的に自分自身への
+    // ホバーを経由することがある。ここで block が解除されると振動防止が破られる
+    const h = createOrderAwareHarness()
+    expect(h.session.pointerDown(p(1, 50), 'A', rectOf(0))).toBe(true)
+
+    // A(index0) → B(index1) へ swap。並びは ['B', 'A', 'C']。A は新しい並びで index1（x=100..200）
+    h.session.pointerMove(p(1, 150))
+    expect(h.orders).toHaveLength(1)
+
+    // クールダウン明け。x=150 は新しい並びでは自分自身（A, index1）の領域 → 何もしない
+    h.clock.now += REORDER_COOLDOWN_MS
+    h.session.pointerMove(p(1, 150))
+    expect(h.orders).toHaveLength(1)
+
+    // 自分自身へのホバーの直後でも、B の元位置（x=50）に戻れば依然として block されたまま
+    h.session.pointerMove(p(1, 50))
+    expect(h.orders).toHaveLength(1)
+  })
+
+  it('block された相手とは別のアプリへ乗り換えると、元の相手は再び入れ替え可能に戻る', () => {
+    const h = createOrderAwareHarness()
+    expect(h.session.pointerDown(p(1, 50), 'A', rectOf(0))).toBe(true)
+
+    // A(index0) → B(index1) へ swap。並びは ['B', 'A', 'C']。blockedApp = 'B'
+    h.session.pointerMove(p(1, 150))
+    expect(h.orders).toHaveLength(1)
+
+    // クールダウン明け、C（index2）へ乗り換え swap。並びは ['B', 'C', 'A']。blockedApp = 'C'
+    h.clock.now += REORDER_COOLDOWN_MS
+    h.session.pointerMove(p(1, 250))
+    expect(h.orders).toHaveLength(2)
+    expect(h.orders[1]).toEqual(['B', 'C', 'A'])
+
+    // クールダウン明け、B（index0）へ戻ると block は 'C' に移っているため正当に再入れ替えできる
+    h.clock.now += REORDER_COOLDOWN_MS
+    h.session.pointerMove(p(1, 50))
+    expect(h.orders).toHaveLength(3)
+    expect(h.orders[2]).toEqual(['A', 'B', 'C'])
+  })
+})
+
 describe('createDragSession: キャンセルと自己修復', () => {
   it('cancel（Esc / blur / pointercancel 相当）で commit されず終了する', () => {
     const h = createHarness()

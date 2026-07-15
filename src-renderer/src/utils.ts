@@ -77,6 +77,29 @@ export function groupWindowsByApp(
   return orderedApps.flatMap((app) => sortWindowsInApp(groups.get(app) ?? [], options))
 }
 
+/** 同一アプリのウィンドウをまとめた表示単位。D&D の当たり判定・幾何情報はこの単位で扱う */
+export type WindowGroup = {
+  app: string
+  windows: MacWindow[]
+}
+
+// groupWindowsByApp の戻り値（同一アプリが隣接済み）を連続区間ごとにグループへ束ねる。
+// D&D の判定単位（アプリ）と DOM 上の当たり判定単位を一致させるため、テンプレート側は
+// 個別ウィンドウではなくこのグループ単位で wrapper 要素を描画する
+// （group-drag-swap-fix.md: グループ矩形とサブボタン矩形のズレがフリッカーの原因だった）
+export function chunkIntoGroups(windows: MacWindow[]): WindowGroup[] {
+  const groups: WindowGroup[] = []
+  for (const win of windows) {
+    const last = groups[groups.length - 1]
+    if (last && last.app === win.kCGWindowOwnerName) {
+      last.windows.push(win)
+    } else {
+      groups.push({ app: win.kCGWindowOwnerName, windows: [win] })
+    }
+  }
+  return groups
+}
+
 // D&D 永続化用のアプリ順リストを組み立てる。既存の appOrder の並びを温存し、
 // そこに無い表示中アプリを末尾に追加する（非表示アプリの位置を失わないため）
 export function buildAppOrder(previousOrder: string[], windows: MacWindow[]): string[] {
@@ -90,8 +113,11 @@ export function buildAppOrder(previousOrder: string[], windows: MacWindow[]): st
 // --- ドラッグ中のリアルタイム入れ替え判定 ---
 // 参考: fruitriin/misskey の MkDraggable（Pointer Events 実装）のエッセンス移植
 
+// index.vue の .flip-list-move の transition duration と一致させる（この値以内に
+// FLIP アニメーションを完走させる契約。オーナー実機確認で 150ms→220ms でも「まだ早い」
+// との指摘があり 800ms に調整。変更する場合は両方を揃えて更新すること）
 /** 入れ替え直後の再入れ替えを抑止するクールダウン（振動防止） */
-export const REORDER_COOLDOWN_MS = 150
+export const REORDER_COOLDOWN_MS = 800
 /** ゴーストがターゲットにこの比率以上重なったら入れ替える */
 export const OVERLAP_RATIO = 0.3
 
@@ -143,6 +169,18 @@ export function shouldSwap(input: SwapJudgeInput): boolean {
         : input.targetRect.bottom - input.ghostRect.top
 
   return overlap >= threshold
+}
+
+// 進行方向の主軸でゴーストとターゲットの矩形が完全に離れている（重なりがゼロ以下）かを判定する。
+// 入れ替え直後、同じ相手と即座に逆方向へ再入れ替えされる振動（thrashing）を防ぐために使う:
+// 一度重なって入れ替えた相手とは、ゴーストが完全に離れるまで再入れ替えを禁止する
+// （クールダウン＋30%食い込みしきい値だけでは、入れ替え後もゴーストが相手の近くに
+// 留まり続けるケースで往復してしまうことがある）
+export function rectsSeparated(ghostRect: Rect, targetRect: Rect, horizontal: boolean): boolean {
+  const overlap = horizontal
+    ? Math.min(ghostRect.right, targetRect.right) - Math.max(ghostRect.left, targetRect.left)
+    : Math.min(ghostRect.bottom, targetRect.bottom) - Math.max(ghostRect.top, targetRect.top)
+  return overlap <= 0
 }
 
 // D&D の並び替え: dragged を target の位置に移動した新しい配列を返す

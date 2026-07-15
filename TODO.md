@@ -11,6 +11,7 @@
 |---|---|---|---|
 | 1 | autoUpdate 再起票 | （Q4 回答: Phase 3 完了につき起票可能に） | 未起票: tauri-plugin-updater 前提で設計する |
 | 2 | Plan Audit 棚卸し | [plan-audit-2026-07-14.md](.claude/addf/plans/plan-audit-2026-07-14.md) | オーナー確認待ち: 検出5件（rearch-phase1/2 の完了条件チェックリスト未更新、pointer-drag-animation の実機確認未消化5項目 等）。処置3択の採否待ち。**ツール自体の指摘**: lint-plan-status.py / lint-template-sync.py ペア6 が本プロジェクトの命名規則（非採番 Plan・Markdown リンク形式 TODO）と噛み合わずノーカバレッジな点も要判断 |
+| 3 | グループD&D left/right実機確認 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 残課題: bottomレイアウトはオーナー実機確認済み（「完璧」評価）。left/rightレイアウトのグループ表示崩れの有無が未確認 |
 
 ※優先度は仮置き。オーナーが並べ替えてください。
 
@@ -20,6 +21,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| 単発 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 完了（2026-07-15）。グループD&D高速交互入れ替えバグを修正（判定単位とhitTest幾何取得単位の統一・blockedApp振動防止・末尾ドロップ対応等）。オーナー実機確認（bottomレイアウト）で「完璧」評価。left/right実機確認は残課題としてバックログに別掲 |
 | リリース | v3.0.0（GitHub Releases） | **公開済み（2026-07-14）** 🎉 Tauri 版初リリース。universal DMG・notarize/staple・アイコン検証済み。CI（tauri-action）も実走検証完了 |
 | リアーキ全体 | [rearchitecture-plan.md](.claude/addf/plans/rearchitecture-plan.md) | **完了（2026-07-14）** 🎉 Phase 1〜3 全消化 |
 | リアーキ Phase 1 | [rearch-phase1.md](.claude/addf/plans/rearch-phase1.md) | 完了（2026-07-07）。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照） |
