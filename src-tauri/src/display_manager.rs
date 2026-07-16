@@ -18,6 +18,12 @@
 //!   「あるものは再配置・足りない分は生成・余った分は破棄」のリコンサイル方式に
 //!   変更した（WebView の再ロードが不要になる副次効果もある）
 //!
+//! Electron 原本からの意図的な逸脱（Space 対応）:
+//! 原本はタスクバーの全仮想デスクトップ表示を設定しておらず、Mac 側の Dock 割り当てに
+//! 依存していた。Tauri 版はそれが効かない（詳細は create_taskbar_window のコメント）ため、
+//! visible_on_all_workspaces でアプリ自身が保証する（2026-07-16、Plan:
+//! spaces-all-desktops-visibility.md）。
+//!
 //! モニタ変更検知の判断:
 //! Tauri v2 にはモニタ構成変更の RunEvent / WindowEvent が無い
 //! （WindowEvent::ScaleFactorChanged はウィンドウ単位のみ）ため、AppKit の
@@ -189,6 +195,12 @@ fn create_taskbar_window(
         .decorations(false)
         .transparent(true)
         .always_on_top(true)
+        // 全ての仮想デスクトップ（Space）に表示する（NSWindowCollectionBehavior.canJoinAllSpaces）。
+        // Mac 側の Dock 割り当て「すべてのデスクトップ」はこのウィンドウには効かない
+        // （com.apple.spaces の app-bindings に ":no-bundle:????" として記録され紐付かない）ため、
+        // アプリ自身が保証する。フルスクリーン Space では表示しない（オーナー判断 2026-07-16。
+        // 表示するには fullScreenAuxiliary が別途必要）
+        .visible_on_all_workspaces(true)
         // タスクバーが非アクティブでも最初のクリックをボタンに届ける
         // （macOS は既定で first click をアクティブ化に消費し、2クリック必要になる）
         .accept_first_mouse(true)
