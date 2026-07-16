@@ -20,10 +20,13 @@ status: active
    表示用 computed が `dragOrder ?? options.appOrder` を使う。pointermove 中に `moveApp` で
    `dragOrder` を差し替えると `<TransitionGroup name="flip-list">` の FLIP
    （`.flip-list-move { transition: transform }`）が「滑って避ける」を勝手に演出する
-2. **振動（オシレーション）対策は3段**: 入れ替えクールダウン 800ms ＋ ゴーストの進行方向端が
+2. **振動（オシレーション）対策は3段**: 入れ替えクールダウン 150ms ＋ ゴーストの進行方向端が
    ターゲットに 30% 以上食い込んだら入れ替え（`shouldSwap` 純関数、utils.ts）＋
    直前に入れ替えた相手とはゴーストが完全に離れる（`rectsSeparated`）まで再入れ替えしない
-   （`drag-session.ts` の `blockedApp`）。詳細は「振動対策3段目」節を参照
+   （`drag-session.ts` の `blockedApp`）。**振動対策の主役は`blockedApp`（時間非依存の
+   幾何学的な分離判定）であり、クールダウンは短くてよい**（一時 800ms まで伸ばしたが、
+   隣接スワップが不自然に鈍重になり、かつクールダウン境界のタイミングのずれでアニメーションが
+   完走前に打ち切られる問題も出たため 150ms へ戻した）。詳細は「振動対策3段目」節を参照
 3. **キャンセルの戻りもタダ**: `dragOrder = null` にするだけで computed が元の並びへ戻り、
    FLIP が戻りアニメーションになる
 

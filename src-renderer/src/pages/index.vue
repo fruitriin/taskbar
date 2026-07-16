@@ -609,17 +609,19 @@ onBeforeUnmount(() => {
 }
 
 // TransitionGroup(name="flip-list") の FLIP: 並び替え時に各ボタンが滑って移動する
-// duration は入れ替えクールダウン（REORDER_COOLDOWN_MS = 800ms）以内に完走させる。
-// これより長いと連続で避けるときに完走前へ次の入れ替えが割り込み、等速で流れて見える
-// （オーナー実機確認で 150ms→220ms でも「まだ早い」との指摘があり 800ms に調整）
+// duration は入れ替えクールダウン（REORDER_COOLDOWN_MS = 150ms）以内に完走させる。
+// これより長いと連続で避けるときに完走前へ次の入れ替えが割り込み、途中で打ち切られる。
+// 振動対策の主役は blockedApp（完全分離するまで再入れ替えしない）であり、この時間は
+// 短くてよい。隣接スワップが頻繁に起こるのは自然な操作なので、Sortable.js 系
+// （vue.draggable.next の transition 例）の一般的な速さに合わせて150msへ戻した
 .flip-list-move {
-  transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 0.15s ease;
 }
 
 // グループ内部（同一アプリの複数ウィンドウ）の増減時の FLIP。外側の .flip-list-move と
 // 同名にすると CSS クラスが衝突するため name="flip-list-inner" に分離している
 .flip-list-inner-move {
-  transition: transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 0.15s ease;
 }
 
 // ドラッグ元グループの減光

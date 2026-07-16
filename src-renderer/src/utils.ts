@@ -114,10 +114,14 @@ export function buildAppOrder(previousOrder: string[], windows: MacWindow[]): st
 // 参考: fruitriin/misskey の MkDraggable（Pointer Events 実装）のエッセンス移植
 
 // index.vue の .flip-list-move の transition duration と一致させる（この値以内に
-// FLIP アニメーションを完走させる契約。オーナー実機確認で 150ms→220ms でも「まだ早い」
-// との指摘があり 800ms に調整。変更する場合は両方を揃えて更新すること）
-/** 入れ替え直後の再入れ替えを抑止するクールダウン（振動防止） */
-export const REORDER_COOLDOWN_MS = 800
+// FLIP アニメーションを完走させる契約。振動対策の主役は blockedApp（完全分離するまで
+// 同じ相手と再入れ替えしない、rectsSeparated 参照）であり、このクールダウンは
+// 短くてよい。隣接スワップは頻繁に起こるのが自然なので、Sortable.js 系ライブラリの
+// 一般的な速さ（vue.draggable.next の transition 例等）に合わせて150msへ戻した
+// （800msまで伸ばした結果、境界のタイミングのずれでアニメーションが完走前に
+// 打ち切られる問題が出たため。詳細は group-drag-swap-fix.md）
+/** 入れ替え直後の再入れ替えを抑止するクールダウン（振動防止の補助。主役は blockedApp） */
+export const REORDER_COOLDOWN_MS = 150
 /** ゴーストがターゲットにこの比率以上重なったら入れ替える */
 export const OVERLAP_RATIO = 0.3
 

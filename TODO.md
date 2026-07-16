@@ -21,7 +21,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
-| 単発 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 完了（2026-07-15）。グループD&D高速交互入れ替えバグを修正（判定単位とhitTest幾何取得単位の統一・blockedApp振動防止・末尾ドロップ対応等）。オーナー実機確認（bottomレイアウト）で「完璧」評価。left/right実機確認は残課題としてバックログに別掲 |
+| 単発 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 完了（2026-07-16）。グループD&D高速交互入れ替えバグを修正（判定単位とhitTest幾何取得単位の統一・blockedApp振動防止・末尾ドロップ対応等）。アニメーション速度はCDP実測診断を経て150msに再調整。オーナー実機確認（bottomレイアウト）で「こっちのほうがずっとよさそう」の最終評価。left/right実機確認は残課題としてバックログに別掲 |
 | リリース | v3.0.0（GitHub Releases） | **公開済み（2026-07-14）** 🎉 Tauri 版初リリース。universal DMG・notarize/staple・アイコン検証済み。CI（tauri-action）も実走検証完了 |
 | リアーキ全体 | [rearchitecture-plan.md](.claude/addf/plans/rearchitecture-plan.md) | **完了（2026-07-14）** 🎉 Phase 1〜3 全消化 |
 | リアーキ Phase 1 | [rearch-phase1.md](.claude/addf/plans/rearch-phase1.md) | 完了（2026-07-07）。残課題は pages/→views/ リネーム見送りと既知の負債2件（計画参照） |
