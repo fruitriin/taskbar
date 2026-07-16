@@ -10,7 +10,7 @@
     "build": "vite build --config vite.config.ts",
     "build:mac": "tauri build",
     "release:mac": "sh scripts/build-release.sh",
-    "install-app": "rm -rf /Applications/taskbar.fm.app && cp -a src-tauri/target/release/bundle/macos/taskbar.fm.app /Applications/taskbar.fm.app",
+    "install-app": "sh scripts/install-app.sh",
     "format": "bunx oxfmt src-renderer vite.config.ts uno.config.ts",
     "lint": "bunx oxlint -c .oxlintrc.json .",
     "typecheck": "npx vue-tsc --noEmit -p src-renderer/tsconfig.web.json --composite false",

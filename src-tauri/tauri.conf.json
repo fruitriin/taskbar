@@ -20,6 +20,7 @@
   "bundle": {
     "active": true,
     "targets": [
+      "app",
       "dmg"
     ],
     "macOS": {
