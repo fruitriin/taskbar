@@ -169,3 +169,62 @@ lint 設定側の対応要否をオーナー判断（Plan 側を `NNNN-` 採番�
 検出 5 件（Plan 個別）＋ツール自体の構造的ギャップ1件。
 
 - 処置の最終判断はオーナーが行う <!-- human-judgment -->（本監査は提案と永続化まで）
+
+---
+
+## 再実行（2026-07-16、同月内につき本記録へ追記）
+
+対象: `.claude/addf/plans/` 14 Plan（前回比 +3: 本監査記録・group-drag-swap-fix・
+spaces-all-desktops-visibility）/ 突合 TODO: `TODO.md`
+
+### 層1・層3（構造検査）
+
+前回と同一の結果（層1: 非採番 Plan のため検査対象 0 件 / 層3 ペア6: ダウンストリーム
+TODO 形式のため 0 マッチ）。ツールギャップは前回検出一覧の最終行のとおり継続中。
+
+### 前回検出 #1〜#5 の状態確認
+
+未チェック残数が前回と同一（rearch-phase1: 28 / rearch-phase2: 28 /
+pointer-drag-animation: 5 / release200loadmap: 3）→ **全件未処置のまま**。
+ただしこれは TODO バックログ優先度2「オーナー確認待ち（処置3択の採否待ち）」の
+想定どおりであり、新規の埋没ではない。
+
+### 新規検出（2026-07-14 以降の変更分の読解）
+
+#### #6 pointer-drag-animation.md ⇔ group-drag-swap-fix.md — 「合わせて解消する」宣言の撤回が出典側に未反映
+
+- 該当行（走査時点）:
+  - pointer-drag-animation.md L81: 「onPointerMove 内の elementFromPoint /
+    getBoundingClientRect の rAF 間引き（優先度低）」— 先送り残課題リストに残存
+  - group-drag-swap-fix.md L10: 「レビュー残課題があり、**本計画で合わせて解消する**」
+    / L14: 「あわせて、以前見送られていた pointermove の rAF 間引きも解消する」
+  - group-drag-swap-fix.md L64-68: 「フェーズ3: pointermove の rAF 間引き
+    （**実装後に撤回**）」— TransitionGroup の FLIP と競合しドラッグ中の
+    アニメーションが効かなくなるため撤回、同期呼び出しに戻した
+- 判定: 回収先 Plan（group-drag-swap-fix）は実在し相互リンクも双方向だが、
+  「解消する」と宣言された残課題が**試行の末に撤回（＝解消しないと技術判断）**された
+  決着が、出典側（pointer-drag-animation L81）にも宣言側の目的文（L10/L14）にも
+  反映されていない。読者は L81 を「まだやるべき先送り」と誤読する
+- 処置の提案: **意図的な完了と明記して閉じることを提案する**（実装作業ゼロ。
+  pointer-drag-animation.md L81 に「group-drag-swap-fix で試行→TransitionGroup FLIP
+  競合により撤回。実施しない決定（2026-07-16）」を追記し、group-drag-swap-fix.md
+  L10/L14 の「解消する」に撤回済み注記を添える — 双方向原則）
+
+### 再実行時の整合確認（検出なし＝健全と確認した項目）
+
+- **spaces-all-desktops-visibility.md**（新規 Plan）: ヘッダ「完了（2026-07-16、
+  オーナー実機確認済み）」× 完了条件4項目全チェック済み × TODO アーカイブ登録済み → 整合
+- **group-drag-swap-fix.md**: ヘッダが「実装完了・bottomレイアウトは実機確認済み
+  （left/right実機確認は未実施）」と実態を正確に表記し、未チェック1件（L115:
+  left/right実機確認）は TODO バックログ優先度3に残課題として別掲済み → 整合
+  （適切に管理された一部完了。ただし層1が非採番 Plan を見ないため機械網には
+  乗っていない — ツールギャップの実害例として継続注視）
+- **層3 手動突合**: plans/ 14ファイルと TODO の全行が1:1対応、登録漏れ・参照切れなし
+
+### 再実行の検出一覧
+
+| # | Plan | 層 | 該当行 | 内容（引用） | 処置の提案 |
+|---|---|---|---|---|---|
+| 6 | pointer-drag-animation.md ⇔ group-drag-swap-fix.md | 2 | L81 ⇔ L10/L14/L64-68 | 「本計画で合わせて解消する」と宣言された rAF 間引きが実装後に撤回されたが、出典側の残課題リストと宣言側の目的文に決着が未反映 | 意図的な完了と明記して閉じることを提案（両 Plan に撤回の決着を一行ずつ追記） |
+
+再実行の新規検出 1 件。前回分 #1〜#5 は未処置（オーナー採否待ちの想定どおり）。
