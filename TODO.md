@@ -12,8 +12,6 @@
 | 1 | autoUpdate 再起票 | （Q4 回答: Phase 3 完了につき起票可能に） | 未起票: tauri-plugin-updater 前提で設計する |
 | 2 | Plan Audit 棚卸し | [plan-audit-2026-07-14.md](.claude/addf/plans/plan-audit-2026-07-14.md) | オーナー確認待ち: 検出5件（rearch-phase1/2 の完了条件チェックリスト未更新、pointer-drag-animation の実機確認未消化5項目 等）。処置3択の採否待ち。**ツール自体の指摘**: lint-plan-status.py / lint-template-sync.py ペア6 が本プロジェクトの命名規則（非採番 Plan・Markdown リンク形式 TODO）と噛み合わずノーカバレッジな点も要判断 |
 | 3 | グループD&D left/right実機確認 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 残課題: bottomレイアウトはオーナー実機確認済み（「完璧」評価）。left/rightレイアウトのグループ表示崩れの有無が未確認 |
-| 4 | Spaces全デスクトップ表示・実機確認 | [spaces-all-desktops-visibility.md](.claude/addf/plans/spaces-all-desktops-visibility.md) | 実装・機械検証済み（2026-07-16）: visible_on_all_workspaces(true) 追加。CGWindowList probe の A/B 検証でバグ再現→解消を機械確認済み。残: オーナー実機確認（通常デスクトップ2以降で表示。フルスクリーン Space は隠れる仕様＝オーナー回答どおり） |
-
 ※優先度は仮置き。オーナーが並べ替えてください。
 
 ---
@@ -22,6 +20,7 @@
 
 | Phase | 計画ファイル | 状態 |
 |---|---|---|
+| 単発 | [spaces-all-desktops-visibility.md](.claude/addf/plans/spaces-all-desktops-visibility.md) | **完了（2026-07-16）**。仮想デスクトップ切替でタスクバーが2枚目以降に出ないバグを visible_on_all_workspaces(true) で修正。CGWindowList probe の A/B 機械検証＋オーナー実機確認済み（「よさそうー」）。副産物: install-app スクリプト刷新（bundle.targets に app 追加・dmg 抽出フォールバック） |
 | 単発 | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 完了（2026-07-16）。グループD&D高速交互入れ替えバグを修正（判定単位とhitTest幾何取得単位の統一・blockedApp振動防止・末尾ドロップ対応等）。アニメーション速度はCDP実測診断を経て150msに再調整。オーナー実機確認（bottomレイアウト）で「こっちのほうがずっとよさそう」の最終評価。left/right実機確認は残課題としてバックログに別掲 |
 | リリース | v3.0.0（GitHub Releases） | **公開済み（2026-07-14）** 🎉 Tauri 版初リリース。universal DMG・notarize/staple・アイコン検証済み。CI（tauri-action）も実走検証完了 |
 | リアーキ全体 | [rearchitecture-plan.md](.claude/addf/plans/rearchitecture-plan.md) | **完了（2026-07-14）** 🎉 Phase 1〜3 全消化 |
