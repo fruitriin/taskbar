@@ -72,3 +72,9 @@ taskbar.fm の D&D フリッカー修正（group-drag-swap-fix.md）で、オー
   「手順の骨格」からその都度書き起こす）
 - `src-renderer/src/mocks/electron-mocks.ts`（taskbar.fm のモック実装。他プロジェクトでは
   対象の dev サーバー・モック機構に合わせて読み替える）
+
+## 関連
+
+- [macos-spaces-window-visibility.md](macos-spaces-window-visibility.md) — 同じ
+  「主観フィードバックを実測に置き換える」系譜のネイティブ（WindowServer）側プローブ。
+  CGWindowList + osascript による Space 切替検証
