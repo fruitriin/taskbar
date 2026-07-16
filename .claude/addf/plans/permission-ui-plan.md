@@ -1,5 +1,11 @@
 # 権限取得確認・再取得UI実装計画
 
+> **注記（2026-07-16 plan-audit 検出 #5、オーナー採否「閉じる」）**: 本計画の記述は
+> 旧 Swift Helper（TaskbarHelper）構成前提のまま。Swift Helper は Phase 3（Tauri 移行、
+> 2026-07-14 完了）で全廃されたが、権限確認・再取得 UI 自体は Rust/Tauri 版
+> （permission_manager.rs ＋ PermissionStatus.vue）に引き継がれ機能面は担保済み。
+> 以下は歴史的記録として保存する。
+
 ## 概要
 macOSの権限（アクセシビリティ権限、画面録画権限等）が取得できているかを確認し、必要に応じて再取得を促すUIを実装する。
 

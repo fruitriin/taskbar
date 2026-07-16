@@ -228,3 +228,17 @@ pointer-drag-animation: 5 / release200loadmap: 3）→ **全件未処置のま�
 | 6 | pointer-drag-animation.md ⇔ group-drag-swap-fix.md | 2 | L81 ⇔ L10/L14/L64-68 | 「本計画で合わせて解消する」と宣言された rAF 間引きが実装後に撤回されたが、出典側の残課題リストと宣言側の目的文に決着が未反映 | 意図的な完了と明記して閉じることを提案（両 Plan に撤回の決着を一行ずつ追記） |
 
 再実行の新規検出 1 件。前回分 #1〜#5 は未処置（オーナー採否待ちの想定どおり）。
+
+---
+
+## 採否と処置（2026-07-16、オーナー回答・全件反映済み）
+
+| # | オーナー採否 | 実施した処置 |
+|---|---|---|
+| 1 | 「不要なら閉じる。筋がいいものは新計画に」 | rearch-phase1.md に監査決着節を追加、完了条件7項目を遡及チェック、composables 4点は「実施しない」と明記。**新計画評価**: 現構成（ipc.ts + useOptions + useWindows、計179行）はコンパクトに収まっており、切り出しに値するものは無しと判断 |
+| 2 | 「実態にあわせる」 | rearch-phase2.md 完了条件セクションに無効化注記（vp 不採用・electron-vite 全廃。実態はスライス表を正とする） |
+| 3 | 「(a)」＋新報告 | pointer-drag-animation.md 残5項目を group-drag-swap-fix の left/right 実機確認ラウンドに統合（両 Plan に相互注記、TODO 優先度3を更新）。**オーナー新報告「left/right でスワップ中に縦スクロールバーが出ることがある」**を group-drag-swap-fix.md の実機確認項目に調査対象として記録 |
+| 4 | 「閉じる」 | release200loadmap.md 動作確認3項目を遡及チェック＋実質担保済み注記（`- []` のチェックボックス崩れ2箇所も修正） |
+| 5 | 「閉じる」 | permission-ui-plan.md 冒頭に歴史的記録の注記を追加 |
+| 6 | 「閉じる」 | pointer-drag-animation.md L81 に撤回決着、group-drag-swap-fix.md の関連 Plan・目的文に撤回済み注記（双方向） |
+| ツールギャップ | **未決** | オーナー回答なしのため判断待ち継続（推奨提示中: lint 側パターン拡張 (b)）。TODO バックログに残置 |

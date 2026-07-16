@@ -67,6 +67,11 @@ https://github.com/fruitriin/misskey/commit/3dfe8185447525b4e4b112adc4cdf8d58447
 - [ ] 右クリックメニューが従来どおり動く
 - [ ] left / right レイアウト（縦方向）でも避け方向が正しい
 
+> **回収先（2026-07-16 plan-audit 検出 #3、オーナー採否 (a)）**: 上記未チェック5項目は
+> [group-drag-swap-fix.md](group-drag-swap-fix.md) の left/right レイアウト実機確認と
+> 同一ラウンドで消化する（TODO バックログに統合済み）。個別に踏む価値が高いのは
+> 「再起動後の appOrder 永続化」「pointercancel での巻き戻り」の2つ
+
 ## 未決事項
 
 - ドラッグ開始をつまみ持ち（即時）にするか 8px 閾値にするか → 初版は 8px 閾値（クリックとの共存優先）
@@ -78,4 +83,8 @@ https://github.com/fruitriin/misskey/commit/3dfe8185447525b4e4b112adc4cdf8d58447
 - setOptions → updateOptions echo の理論的競合（連続ドラッグ時に古い並びの echo が後着しうる。
   リクエストにバージョンが無いため。既存パターン由来で実害は未観測。将来 appOrder に
   リビジョンを持たせる等を検討）
-- onPointerMove 内の elementFromPoint / getBoundingClientRect の rAF 間引き（優先度低）
+- ~~onPointerMove 内の elementFromPoint / getBoundingClientRect の rAF 間引き（優先度低）~~
+  → **決着（2026-07-16 plan-audit 検出 #6）**: [group-drag-swap-fix.md](group-drag-swap-fix.md)
+  フェーズ3で実装を試行したが、Vue TransitionGroup の FLIP が内部で使う rAF シーケンスと
+  競合し「ドラッグ中だけアニメーションが効かない」副作用が実機で発覚したため撤回。
+  **実施しない決定**（同期呼び出しのまま。詳細は同 Plan フェーズ3の撤回記録）

@@ -136,6 +136,12 @@ mise がランタイムバージョン管理にも使われている場合の対
 
 ## 完了条件
 
+> **無効化（2026-07-16 plan-audit 検出 #2、オーナー採否「実態に合わせる」）**:
+> vp は不採用（Q2 回答: bun test 継続・oxlint/oxfmt 直接実行に方針転換）となり、
+> electron-vite も Phase 3 で全廃されたため、以下7項目は判定対象自体が消滅しており無効。
+> 実態はスライス表（2-A〜2-D、全て完了/クローズ）と TODO.md の完了記載
+> 「lint=oxlint / fmt=oxfmt / test=bun test / mise 廃止 → bun run」を正とする。
+
 - [ ] `vp lint` が動作し、ESLint と同等以上のチェックが実行される
 - [ ] `vp fmt` が動作し、Prettier と同等のフォーマットが実行される
 - [ ] `vp test` で全テストがパスする

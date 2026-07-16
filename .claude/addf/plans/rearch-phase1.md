@@ -6,6 +6,19 @@
 
 ---
 
+## 監査決着（2026-07-16 plan-audit 検出 #1、オーナー採否済み）
+
+本 Plan は Phase 3（Tauri 移行）完了までに実質完了している。未チェックのまま残っていた
+チェックボックス群は完了時の更新漏れであり、コードベース実態確認（2026-07-14 監査）で
+達成を確認済み — 削除対象依存（bulma/less/dart-sass/pinia/vue-router/unplugin-vue-router）は
+package.json から消滅、`$forceUpdate` は排除済み（index.vue:392 に完了コメント現存）、
+Options API は全滅（script setup 統一）。下記「完了条件」はチェック済みに更新した。
+「その他 composables」4点（useIcons/usePermissions/useLabeledFilters/useDisplayInfo）は
+Tauri 移行後の現構成（ipc.ts + useOptions + useWindows、計179行）では不要と判断し
+**実施しない**（オーナー承認: 「不要なら不要でいい。筋がいいものは新計画に」→ 評価の結果、
+新計画に起こす価値のあるものは無し）。中間セクションの細粒度チェックボックスは
+歴史的記録としてそのまま残す（本節が決着の単一ソース）。
+
 ## 鮮度更新（2026-07-06。計画本文は 2026-03-18 時点の記述）
 
 v2.1.1 リリースまでの変更で、計画の前提がいくつか変わっている:
@@ -184,10 +197,12 @@ export function useWindows() {
 
 #### その他
 
-- [ ] `useIcons.ts` — アイコンデータの管理
-- [ ] `usePermissions.ts` — 権限状態の管理
-- [ ] `useLabeledFilters.ts` — フィルター設定の管理
-- [ ] `useDisplayInfo.ts` — ディスプレイ情報の管理
+- ~~`useIcons.ts` — アイコンデータの管理~~
+- ~~`usePermissions.ts` — 権限状態の管理~~
+- ~~`useLabeledFilters.ts` — フィルター設定の管理~~
+- ~~`useDisplayInfo.ts` — ディスプレイ情報の管理~~
+
+> 4点とも実施しない（2026-07-16 監査決着: Tauri 移行後の現構成では不要。冒頭の監査決着節参照）
 
 ---
 
@@ -273,10 +288,12 @@ export {}
 
 ## 完了条件
 
-- [ ] `bun run dev` で Electron アプリが起動し、全画面（タスクバー、設定、メニュー、ウィンドウリスト）が正常動作
-- [ ] vue-router, unplugin-vue-router, pinia, bulma, less, dart-sass が package.json から消えている
-- [ ] 全コンポーネントが `<script setup lang="ts">` 形式
-- [ ] `$forceUpdate()` がコードベースに存在しない
-- [ ] 全画面で composables 経由のデータアクセスに統一されている
-- [ ] UnoCSS Attributify でスタイリングされている
-- [ ] 既存テストがパスする
+（チェックは 2026-07-16 監査決着時に実態確認に基づき遡及反映。冒頭の監査決着節参照）
+
+- [x] `bun run dev` で Electron アプリが起動し、全画面（タスクバー、設定、メニュー、ウィンドウリスト）が正常動作（Q1 回答: 4画面実機確認済み 2026-07-07）
+- [x] vue-router, unplugin-vue-router, pinia, bulma, less, dart-sass が package.json から消えている
+- [x] 全コンポーネントが `<script setup lang="ts">` 形式
+- [x] `$forceUpdate()` がコードベースに存在しない
+- [x] 全画面で composables 経由のデータアクセスに統一されている（例外は 1-E に明記: index.vue の process リスナーは保留ガードのため意図的に自前維持）
+- [x] UnoCSS でスタイリングされている（Attributify は 1-F で見送り → shortcuts 方式に変更）
+- [x] 既存テストがパスする

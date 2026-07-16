@@ -7,11 +7,11 @@
 ## 関連 Plan
 
 - [app-window-grouping.md](app-window-grouping.md) — アプリグルーピング機能の初版計画。「グループ内ウィンドウ単位の D&D は初版スコープ外、アプリ単位ロジックをそのまま流用」と明記した張本人。本計画はその流用が引き起こした副作用を修正する
-- [pointer-drag-animation.md](pointer-drag-animation.md) — D&D 本体の実装計画。「onPointerMove 内の elementFromPoint/getBoundingClientRect の rAF 間引き（優先度低）」を先送りにしたレビュー残課題があり、本計画で合わせて解消する
+- [pointer-drag-animation.md](pointer-drag-animation.md) — D&D 本体の実装計画。「onPointerMove 内の elementFromPoint/getBoundingClientRect の rAF 間引き（優先度低）」を先送りにしたレビュー残課題があり、本計画で合わせて解消する（→ **実装後に撤回**。TransitionGroup FLIP と競合、フェーズ3参照。決着 2026-07-16 plan-audit #6）
 
 ## 目的
 
-同一アプリの複数ウィンドウがグループ化されているとき、そのグループをドラッグで並び替えようとすると高速に交互スワップしてしまう不具合を修正する。あわせて、以前見送られていた pointermove の rAF 間引きも解消する。
+同一アプリの複数ウィンドウがグループ化されているとき、そのグループをドラッグで並び替えようとすると高速に交互スワップしてしまう不具合を修正する。あわせて、以前見送られていた pointermove の rAF 間引きも解消する（→ 後者は試行の末 TransitionGroup FLIP と競合し**撤回**。フェーズ3参照）。
 
 ## 現状の挙動
 
@@ -113,6 +113,8 @@
 - [x] `bun run build` 通過
 - [x] bottomレイアウトでグループ表示が崩れていないことを実機確認（オーナー確認済み）
 - [ ] left/rightレイアウトでグループ表示が崩れていないことを実機確認（**未確認** — bottomのみ確認済み） <!-- human-judgment -->
+  - **オーナー報告（2026-07-16）**: left/right で**スワップ中に縦スクロールバーが出ることがある**。実機確認ラウンドで調査・修正すること（bottom では横スクロールバー対策を実施済みのため、同種対策の縦方向適用が第一候補）
+  - 同ラウンドで [pointer-drag-animation.md](pointer-drag-animation.md) の実機確認未消化5項目もまとめて消化する（2026-07-16 plan-audit #3 採否 (a)）
 - [x] グループを跨いだドラッグで高速交互入れ替えが再現しないことを実機確認（オーナー確認済み。振動防止の追加対策・末尾ドロップ対応・スクロールバー対応を経て「完璧」との確認を得た後、アニメーション速度をCDP実測を踏まえて800ms→150msへ再調整し「こっちのほうがずっとよさそう」との最終確認も得た）
 
 ## AI 実装時間見積もり
