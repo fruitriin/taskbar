@@ -3,15 +3,16 @@
 `.claude/addf/plans/` の完了状態・優先度をトラックする。
 `.claude/addf/plans/` と TODO が一致しなければ TODO を編集する。
 
-## 現在のフェーズ: v3.0.0 リリース済み（2026-07-14）・次テーマ選定
+## 現在のフェーズ: v3.0.0 リリース済み（2026-07-14）・タイトル追従改善（ax-title-observer）
 
 ## バックログ
 
 | 優先度 | Phase | 計画ファイル | 状態 |
 |---|---|---|---|
-| 1 | 自動アップデート＋利用観測 | [auto-update-tauri.md](.claude/addf/plans/auto-update-tauri.md) | 起票済み（2026-07-18）。設計判断2点のオーナー回答待ち: ①計測方式 (a)ゼロインフラ/(b)自前プロキシ/(c)ハイブリッド推奨 ②更新UX (X)メニュー通知推奨/(Y)サイレント/(Z)ダイアログ。回答が出れば実装着手可 |
-| 2 | Plan Audit ツールギャップ判断 | [plan-audit-2026-07-14.md](.claude/addf/plans/plan-audit-2026-07-14.md) | 検出 #1〜#6 は採否確定・全件反映済み（2026-07-16）。**残: ツールギャップの処置判断のみ** — lint-plan-status.py / lint-template-sync.py ペア6 が本プロジェクトの命名規則（非採番 Plan・Markdown リンク形式 TODO）と噛み合わずノーカバレッジ。選択肢: (a) Plan を NNNN- 採番に寄せる / (b) lint 側パターン拡張（推奨・ADDF 本体候補）/ (c) 現状維持 |
-| 3 | グループD&D left/right実機確認ほか | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 残課題: left/rightレイアウトのグループ表示崩れの有無（bottomは「完璧」評価済み）。**オーナー報告（2026-07-16）: left/right でスワップ中に縦スクロールバーが出ることがある → 同ラウンドで調査・修正**。あわせて [pointer-drag-animation.md](.claude/addf/plans/pointer-drag-animation.md) の実機確認未消化5項目も同ラウンドで消化（plan-audit #3 採否 (a)） |
+| 1 | タイトル追従改善 | [ax-title-observer.md](.claude/addf/plans/ax-title-observer.md) | 着手（2026-10-23）。A案=AXObserver で合意済み。スライス1（デバウンス改修）から実施 |
+| 2 | 自動アップデート＋利用観測 | [auto-update-tauri.md](.claude/addf/plans/auto-update-tauri.md) | 起票済み（2026-07-18）。設計判断2点のオーナー回答待ち: ①計測方式 (a)ゼロインフラ/(b)自前プロキシ/(c)ハイブリッド推奨 ②更新UX (X)メニュー通知推奨/(Y)サイレント/(Z)ダイアログ。回答が出れば実装着手可 |
+| 3 | Plan Audit ツールギャップ判断 | [plan-audit-2026-07-14.md](.claude/addf/plans/plan-audit-2026-07-14.md) | 検出 #1〜#6 は採否確定・全件反映済み（2026-07-16）。**残: ツールギャップの処置判断のみ** — lint-plan-status.py / lint-template-sync.py ペア6 が本プロジェクトの命名規則（非採番 Plan・Markdown リンク形式 TODO）と噛み合わずノーカバレッジ。選択肢: (a) Plan を NNNN- 採番に寄せる / (b) lint 側パターン拡張（推奨・ADDF 本体候補）/ (c) 現状維持 |
+| 4 | グループD&D left/right実機確認ほか | [group-drag-swap-fix.md](.claude/addf/plans/group-drag-swap-fix.md) | 残課題: left/rightレイアウトのグループ表示崩れの有無（bottomは「完璧」評価済み）。**オーナー報告（2026-07-16）: left/right でスワップ中に縦スクロールバーが出ることがある → 同ラウンドで調査・修正**。あわせて [pointer-drag-animation.md](.claude/addf/plans/pointer-drag-animation.md) の実機確認未消化5項目も同ラウンドで消化（plan-audit #3 採否 (a)） |
 ※優先度は仮置き。オーナーが並べ替えてください。
 
 ---
