@@ -6,7 +6,7 @@ image_clarity: balanced
 
 # Plan: AXObserver によるウィンドウタイトル・ウィンドウ増減の検知
 
-**実装状況**: スライス 1 完了（2026-10-23）・スライス 2 未着手
+**実装状況**: 完了（2026-10-23）。スライス 1〜3 実施。VS Code での確認とオーナーの体感確認が残る
 **作成日**: 2026-10-23
 **出自**: オーナーとの考察セッション（タイトル取得タイミングの改善。A案＝AXObserver を採用）
 
@@ -63,25 +63,30 @@ image_clarity: balanced
 
 ### スライス 2: AXObserver 基盤（新モジュール `ax_observer.rs`）
 
-- [ ] **専用スレッド＋自前 CFRunLoop** で動かす
+- [x] **専用スレッド＋自前 CFRunLoop** で動かす
+  - 実装: RunLoop を 250ms ずつ回し、合間に std mpsc の指示と再試行を処理する。observer が 0 件の間は
+    CFRunLoopRunInMode が即座に返るため、チャンネル待ち（recv_timeout）で眠る
+  - コールバックの送信先は static OnceLock に置き、refcon は使わない（refcon の寿命管理を不要にした）
   - `AXObserverAddNotification` は対象プロセスとの IPC で、無応答アプリ相手だとブロックし得る。
     メインスレッドの RunLoop に載せるとタスクバー UI ごと固まるため分離する
   - `AXUIElementSetMessagingTimeout`（window_actions.rs と同じく 1 秒）を observer 対象要素に設定
   - コールバック内は「role 判定 → tokio チャンネルへ送信」だけに留める
-- [ ] pid ごとの observer 管理（`HashMap<pid_t, Observer>`）
+- [x] pid ごとの observer 管理（`HashMap<pid_t, Observer>`）
   - 起動時: `NSWorkspace.runningApplications` のうち activationPolicy が regular のものを登録
   - `didLaunch`: 追加登録。起動直後は AX 未準備で `kAXErrorCannotComplete` 等が返ることがあるため
     **バックオフ付き再試行**（例: 250ms → 500ms → 1s → 2s、最大 4 回）
   - `didTerminate`: observer を RunLoop から外して破棄
   - NSWorkspace 通知（メインスレッド）→ AX スレッドへの指示はチャンネル経由（スレッド境界を明確に）
   - 自プロセス（Taskbar.fm 自身）は登録しない
-- [ ] アクセシビリティ権限がない場合は何もしない（従来の NSWorkspace 3通知のみで動作）。
+- [x] アクセシビリティ権限がない場合は何もしない（従来の NSWorkspace 3通知のみで動作）。
   権限付与後に有効化されるよう、`check_permissions` の結果変化か一定間隔の再チェックで開始する
   （方式は実装時に決める。最小は「起動時に未許可なら再起動まで無効」でも可、その場合は Plan に記録）
-- [ ] objc2-application-services 0.3 に AXObserver 系 API（`AXObserverCreate` /
+  → 実装: AX スレッドが 5 秒ごとに AXIsProcessTrusted を再確認し、許可された時点で監視対象の pid をまとめて登録する
+- [x] objc2-application-services 0.3 に AXObserver 系 API（`AXObserverCreate` /
   `AXObserverAddNotification` / `AXObserverGetRunLoopSource`）のバインディングと必要 feature が
   あるか確認する。無ければ window_actions.rs の `_AXUIElementGetWindow` と同様に extern 宣言する
-- [ ] `window_observer::start_observation` から AX 側の送信端（`tx.clone()`）を渡して接続
+  → 既存の features（AXError / libc を含む既定 feature）で揃っていた。通知名の定数だけは生成されないため文字列で持つ
+- [x] `window_observer::start_observation` から AX 側の送信端（`tx.clone()`）を渡して接続
 
 ### スライス 3: 実機検証（ローカル Mac）
 
@@ -102,14 +107,42 @@ image_clarity: balanced
 
 **エージェントが確認する項目**:
 
-- [ ] Safari / Chrome のタブ切替でタイトル変化の emit が 1 秒以内に出る
-- [ ] Terminal / iTerm2 のタイトル変化が追従する
+- [x] Safari / Chrome のタブ切替でタイトル変化の emit が 1 秒以内に出る
+- [x] Terminal / iTerm2 のタイトル変化が追従する
 - [ ] VS Code（Electron 系）のファイル切替が追従する
-- [ ] Finder の新規ウィンドウ・クローズが即反映される
-- [ ] 背面アプリのタイトル変化が反映される
-- [ ] 無応答アプリがあっても emit が止まらず、UI も固まらない
-- [ ] 待機中の CPU 使用率が導入前と比べて目立って増えていない
-- [ ] タイトル変化が連続しても max_wait（1 秒）ごとに emit され、変化がなければ emit されない
+- [x] Finder の新規ウィンドウ・クローズが即反映される
+- [x] 背面アプリのタイトル変化が反映される
+- [x] 無応答アプリがあっても emit が止まらず、UI も固まらない
+- [x] 待機中の CPU 使用率が導入前と比べて目立って増えていない
+- [x] タイトル変化が連続しても max_wait（1 秒）ごとに emit され、変化がなければ emit されない（単体テストで確認。実機では連続変化を再現していない）
+
+**検証結果（2026-10-23、`TASKBAR_DEBUG_LOG=1 bun run dev` のログで計測）**:
+
+| 操作 | AX 通知 | 'process' emit まで |
+|---|---|---|
+| Terminal 新規ウィンドウ（`osascript` の do script） | AXWindowCreated / AXTitleChanged | 約 1 秒（11→12 windows） |
+| Terminal でコマンド実行（fish がタイトルを `sleep 4` に変更→復帰） | AXTitleChanged | 変更時・復帰時とも約 1 秒 |
+| 背面 Terminal のタイトル変化（前面は別アプリ） | AXTitleChanged | 約 1 秒 |
+| Finder 新規ウィンドウ／クローズ | AXWindowCreated／AXUIElementDestroyed | 約 1 秒（12↔13 windows） |
+| Safari のタブ切替（メニュー「次のタブを表示」） | AXTitleChanged | 切替ごとに約 1 秒 |
+| TextEdit を `kill -STOP` 中に Terminal のタイトル変化・Calculator 起動 | 通常どおり受信 | 止まらず emit。Calculator も即登録 |
+| 待機 30 秒 | 0 件 | CPU 0.0%（インストール版と同等） |
+
+- 変化のない通知（AXUIElementDestroyed のノイズ等）は差分なし emit 抑止で `suppressed` になることを確認した
+- 一部のプロセス（AX 非対応）は CannotComplete（-25204）で再試行のあと諦める。NSWorkspace 通知による更新は従来どおり効く
+- 起動完了前に SIGSTOP したアプリは didLaunch が届かず登録されない（再開・終了後の挙動に問題はない）
+- VS Code はこの時点で起動しておらず未確認。Electron 系は Slack / Discord / Obsidian が登録済みだった
+- Safari への AppleScript 送信は自動操作の許可待ちで止まるため、System Events のメニュー操作で代替した
+
+**レビュー対応と既知の制約（2026-10-23）**:
+
+- 無応答アプリで AX スレッドが長く止まる問題 → AXTitleChanged の登録失敗で残りを打ち切る（1 回の試行で最大約 1 秒）
+- 登録を諦めたアプリ → didActivate のたびに再登録を試みる（起動の遅いアプリの取りこぼし対策）
+- 起動時の列挙は通知の登録後に行う（隙間に起動したアプリの取りこぼし防止）
+- 既知の制約: 実行中にアクセシビリティ権限を取り消した場合は検知しない（再付与後の再登録には再起動が必要）
+- 経過観察: AXUIElementDestroyed はアプリ要素への登録だとリスト行などの破棄でも届く。待機中は 0 件、
+  Finder のスクロール操作中も 0 件・CPU 0.6% だった（キー入力が Finder に届いたかは未確認のため参考値）。
+  負荷が問題になったらレート制限かウィンドウ要素単位の登録に切り替える
 
 **オーナーに確認してもらう項目**（見た目と体感に関わるもの）:
 

@@ -1,3 +1,4 @@
+pub mod ax_observer;
 pub mod commands;
 pub mod context_menu;
 pub mod display_manager;
@@ -41,9 +42,17 @@ pub fn run() {
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
+                // TASKBAR_DEBUG_LOG を設定すると本アプリのモジュールだけ debug ログを出す
+                // （AX 通知・'process' emit の発生状況を実機で追うため）
+                let app_level = if std::env::var_os("TASKBAR_DEBUG_LOG").is_some() {
+                    log::LevelFilter::Debug
+                } else {
+                    log::LevelFilter::Info
+                };
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Info)
+                        .level_for("app_lib", app_level)
                         .build(),
                 )?;
             }

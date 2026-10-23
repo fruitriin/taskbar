@@ -59,3 +59,5 @@ Plan `.claude/addf/plans/spaces-all-desktops-visibility.md` の検証記録を�
   （WindowServer）側の対
 - [multi-display-renderer-state.md](multi-display-renderer-state.md) — タスクバー
   ウィンドウの生成・再構成まわりの既存知見
+- [macos-axobserver-runloop-thread.md](macos-axobserver-runloop-thread.md) — 同じ osascript
+  プローブで AX 通知（タイトル変化・ウィンドウ増減）を実機検証した記録と落とし穴

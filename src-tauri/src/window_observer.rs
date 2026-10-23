@@ -35,13 +35,15 @@ use std::time::Duration;
 
 use block2::RcBlock;
 use objc2_app_kit::{
-    NSWorkspace, NSWorkspaceDidActivateApplicationNotification,
-    NSWorkspaceDidLaunchApplicationNotification, NSWorkspaceDidTerminateApplicationNotification,
+    NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace, NSWorkspaceApplicationKey,
+    NSWorkspaceDidActivateApplicationNotification, NSWorkspaceDidLaunchApplicationNotification,
+    NSWorkspaceDidTerminateApplicationNotification,
 };
 use objc2_foundation::{NSNotification, NSNotificationName};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::mpsc::{self, UnboundedReceiver};
 
+use crate::ax_observer::{self, AxObserverHandle};
 use crate::filter::{self, LabeledFilters};
 use crate::icon_manager;
 use crate::store;
@@ -92,24 +94,38 @@ pub fn start_observation(app: AppHandle) {
 
     let (tx, rx) = mpsc::unbounded_channel::<()>();
 
-    // 監視対象の通知（main.swift:884-905 と同じ3種）
+    // ウィンドウ単位の AX 通知（タイトル変化・ウィンドウ増減）も同じチャンネルに流す。
+    // 監視対象の pid は通知の登録後に初期列挙し、以降は didLaunch / didActivate / didTerminate で増減させる
+    let ax = ax_observer::start(tx.clone());
+    let workspace = NSWorkspace::sharedWorkspace();
+
+    // 監視対象の通知（main.swift:884-905 と同じ3種）。
+    // 2 番目の値は AX observer への指示に変換する通知の種類
     // SAFETY: extern static の参照。AppKit がプロセス起動時に初期化を保証する
-    let names: [&NSNotificationName; 3] = unsafe {
+    let names: [(&NSNotificationName, AxForward); 3] = unsafe {
         [
-            NSWorkspaceDidActivateApplicationNotification,
-            NSWorkspaceDidLaunchApplicationNotification,
-            NSWorkspaceDidTerminateApplicationNotification,
+            (
+                NSWorkspaceDidActivateApplicationNotification,
+                AxForward::Activate,
+            ),
+            (NSWorkspaceDidLaunchApplicationNotification, AxForward::Add),
+            (
+                NSWorkspaceDidTerminateApplicationNotification,
+                AxForward::Terminate,
+            ),
         ]
     };
 
-    let workspace = NSWorkspace::sharedWorkspace();
     let center = workspace.notificationCenter();
-    for name in names {
+    for (name, forward) in names {
         let tx = tx.clone();
+        let ax = ax.clone();
         // 通知ブロックはシグナル送信のみ（unbounded send は非ブロッキング）。
         // 重い処理（ウィンドウリスト取得）は tokio 側のデバウンスループで行う
-        let block = RcBlock::new(move |_notification: NonNull<NSNotification>| {
+        let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
             let _ = tx.send(());
+            // SAFETY: 通知ブロックの実行中は notification が有効
+            forward_to_ax(&ax, forward, unsafe { notification.as_ref() });
         });
         // SAFETY: name は AppKit の静的な通知名、block は 'static クロージャ。
         // queue=None のためブロックは通知を post したスレッドで実行されるが、
@@ -120,6 +136,14 @@ pub fn start_observation(app: AppHandle) {
         // アプリ寿命いっぱい監視し続けるため observer トークンは意図的にリークする
         // （Swift 原本もシングルトンに登録したまま removeObserver しない）
         std::mem::forget(token);
+    }
+
+    // 起動済みの通常アプリを AX observer に初期登録する。通知の登録後に列挙するので、
+    // その間に起動したアプリも didLaunch か列挙のどちらかで拾える（Add は冪等）
+    for app in workspace.runningApplications() {
+        if app.activationPolicy() == NSApplicationActivationPolicy::Regular {
+            ax.send(ax_observer::Command::Add(app.processIdentifier()));
+        }
     }
 
     // TODO(3.4): フィルタ設定変更の監視（Swift 原本 main.swift:907-913 の
@@ -140,6 +164,39 @@ pub fn start_observation(app: AppHandle) {
         })
         .await;
     });
+}
+
+/// NSWorkspace 通知を AX observer への指示に変換する種類
+#[derive(Clone, Copy)]
+enum AxForward {
+    /// didLaunch: 登録する
+    Add,
+    /// didActivate: 未登録なら登録する（起動が遅く登録を諦めたアプリの再試行を兼ねる）
+    Activate,
+    /// didTerminate: 解除する
+    Terminate,
+}
+
+/// NSWorkspace 通知の対象アプリ（userInfo の NSWorkspaceApplicationKey）を
+/// AX observer の登録・解除指示として送る。通常アプリ以外は登録しない
+fn forward_to_ax(ax: &AxObserverHandle, forward: AxForward, notification: &NSNotification) {
+    let Some(app) = notification
+        .userInfo()
+        // SAFETY: extern static の参照。AppKit がプロセス起動時に初期化を保証する
+        .and_then(|info| info.objectForKey(unsafe { NSWorkspaceApplicationKey }))
+        .and_then(|obj| obj.downcast::<NSRunningApplication>().ok())
+    else {
+        return;
+    };
+    let pid = app.processIdentifier();
+    match forward {
+        AxForward::Add | AxForward::Activate => {
+            if app.activationPolicy() == NSApplicationActivationPolicy::Regular {
+                ax.send(ax_observer::Command::Add(pid));
+            }
+        }
+        AxForward::Terminate => ax.send(ax_observer::Command::Remove(pid)),
+    }
 }
 
 /// trailing デバウンス: 最初のシグナルを受けてから、`delay` の間シグナルが
@@ -241,6 +298,7 @@ pub async fn refresh_and_emit(
             if emit {
                 // イベント名 'process' は現行フロントの契約
                 // （src/renderer の ipcListen('process', ...) に対応）
+                log::debug!("'process' emitted ({policy:?}, {} windows)", passed.len());
                 if let Err(e) = app.emit("process", &passed) {
                     log::warn!("failed to emit 'process' event: {e}");
                     // 未配信のまま次回の IfChanged で抑止されないよう記録を消す
