@@ -22,6 +22,9 @@
 
 ## 改善アクション
 
+- 2026-10-23（ax-title-observer）: `scripts/install-app.sh` が起動中のアプリを `pgrep -x "taskbar.fm"` で探していたが、実行ファイル名は `app` のため一致せず、旧バイナリが動き続けたまま `open` で前面化されるだけだった（入れ替えたつもりで旧版が動く）。インストール先パスで `pkill -f` する形に修正済み。osascript の quit は自動操作の許可待ちで止まり得るため使わない。**改善アクション**: アプリの入れ替え後は `ps -o lstart` で起動時刻を、`cmp` でバイナリの一致を確認する
+- 2026-10-23（ax-title-observer）: 「開発環境は Linux」と書かれた Plan がクラウドセッションから来たが、実際はローカル Mac で実機検証できた。**改善アクション**: 別環境で起票された Plan は、着手時に検証手段の前提（実機の有無・ブランチの分岐元）を確かめ直す。今回は分岐元が未 push の master より 17 コミット古く、Plan の置き場所（docs/plans → .claude/addf/plans）もずれていた
+
 - 2026-07-16（spaces-all-desktops-visibility、ADDF 本体へのコントリビューション候補、contribution agent 検出・オーナー判断待ち）: 「主観フィードバックが収束しないときの実測プローブ選定」を ADDF ガイド層（development-process.md 相当）へ汎化する提案。Web 側（cdp-headless-e2e-probe.md）とネイティブ側（macos-spaces-window-visibility.md）で同じ型 —「ドメイン別の実測プローブ＋修正前後の A/B 比較＋対照群設計」— が2回連続で独立に発生しており再現性が裏付けられた。具体技術はダウンストリーム knowhow に留め、方法論のみ抽象度を上げて本体へ、が分離規約と整合
 
 - 2026-07-14（Phase 3.5 レビュー知見）: 委譲実装＋全ゲート緑でも Critical は残りうる（信頼境界・並行性はゲートで検出できない）。**危険な副作用を持つ Tauri コマンドを新設・委譲するときは、依頼文に「クライアント供給値をサーバー側データと照合すること」を要件として明記する**（詳細は .claude/addf/knowhow/tauri-trust-boundary-and-native-menu.md）

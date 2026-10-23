@@ -56,13 +56,22 @@ fi
 echo "==> インストール元: $newest_app"
 
 # --- 3. 起動中なら終了（プロセスが残っていると旧バイナリのまま動き続けるため） ---
-if pgrep -xq "taskbar.fm" 2>/dev/null; then
+# 実行ファイル名は "app"（Cargo の package 名）なので、プロセス名ではなく
+# インストール先のパスで探す
+RUNNING_PATTERN="$DEST/Contents/MacOS/"
+if pgrep -fq "$RUNNING_PATTERN" 2>/dev/null; then
+  # osascript の quit は自動操作の許可ダイアログ待ちで止まることがあるため SIGTERM で終了する
+  # （設定は変更のたびに tauri-plugin-store が保存しているので失われない）
   echo "==> 起動中の taskbar.fm を終了します"
-  osascript -e 'tell application "taskbar.fm" to quit' >/dev/null 2>&1 || true
+  pkill -f "$RUNNING_PATTERN" || true
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    pgrep -xq "taskbar.fm" || break
+    pgrep -fq "$RUNNING_PATTERN" || break
     sleep 0.5
   done
+  if pgrep -fq "$RUNNING_PATTERN"; then
+    echo "error: taskbar.fm が終了しません。手動で終了してから再実行してください。" >&2
+    exit 1
+  fi
 fi
 
 # --- 4. 入れ替えて再起動 ---
