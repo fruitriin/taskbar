@@ -8,7 +8,13 @@
 //! - 通知後 500ms 遅延して再取得（main.swift:922-944）→ tokio 側でデバウンス。
 //!   原本は通知ごとに独立した 500ms 遅延実行（連続通知で複数回実行される）だが、
 //!   Rust 版は「最後の通知から 500ms 静穏」でまとめる trailing デバウンスに改善
-//!   （原本コメントの意図「開いたウィンドウの登録を待つ」は保たれる）
+//!   （原本コメントの意図「開いたウィンドウの登録を待つ」は保たれる）。
+//!   さらに通知が途切れず続いても実行されなくならないよう、最初の通知から
+//!   MAX_WAIT 経過で強制実行する上限を設けている（AX のタイトル変化通知の
+//!   導入に備えた starvation 対策。docs: .claude/addf/plans/ax-title-observer.md）
+//! - observer 経由の再取得では、フィルタ通過リストが前回 emit と同一なら
+//!   'process' を送らない（EmitPolicy::IfChanged）。初期化・フィルタ変更など
+//!   コマンド経由の呼び出しは常に emit する（EmitPolicy::Always）
 //! - FiltersChanged 通知（main.swift:907-913, 947-963）→ フィルタ設定の主管が
 //!   tauri-plugin-store に移るため未移植（下記 TODO 参照）
 //! - 定期ポーリングは原本に存在しない（watch モードの RunLoop 0.5s ループは
@@ -44,6 +50,10 @@ use crate::window_manager::{self, MacWindow};
 /// デバウンス時間（Swift 原本 main.swift:926 の 500ms 遅延に対応）
 const DEBOUNCE: Duration = Duration::from_millis(500);
 
+/// デバウンスの最大待ち時間。通知が DEBOUNCE 未満の間隔で続いても、
+/// 最初の通知からこの時間が経てば1回実行する
+const MAX_WAIT: Duration = Duration::from_secs(1);
+
 /// 直近の除外ウィンドウリスト（tauri State として保持）。
 /// フロントの 'catchExcludeWindow' イベント / getExcludeWindows コマンド
 /// （後続タスクで実装）がここを参照する。
@@ -51,12 +61,34 @@ const DEBOUNCE: Duration = Duration::from_millis(500);
 /// 再計算していたが、Rust 版は filter_windows の除外リストをそのまま保持する
 pub struct ExcludedWindows(pub Mutex<Vec<MacWindow>>);
 
+/// 直近に 'process' で emit したフィルタ通過リスト（アイコン適用前）。
+/// EmitPolicy::IfChanged の差分判定に使う。
+/// 前提: 'process' を購読するビューは初期化時に windowReady コマンドを呼ぶ
+/// （window_ready は Always で emit する）。呼ばない購読者を足すと、
+/// IfChanged の抑止で初期データが届かないことがある
+struct LastEmitted(Mutex<Option<Vec<MacWindow>>>);
+
+/// refresh_and_emit の直列化用ロック。observer 経由（IfChanged）とコマンド経由
+/// （Always）が並行すると、古い取得結果が後から emit され LastEmitted も
+/// 巻き戻る順序逆転が起こり得るため、取得から emit までを1本ずつ実行する
+static REFRESH_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// refresh_and_emit の 'process' 送信方針
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EmitPolicy {
+    /// 常に emit する（新規ビューの初期化・フィルタ変更の反映など）
+    Always,
+    /// フィルタ通過リストが前回 emit と同一なら emit しない（observer 経由の再取得）
+    IfChanged,
+}
+
 /// NSWorkspace 通知の監視を開始する。lib.rs の setup（メインスレッド）から呼ぶ。
 ///
 /// Swift 原本: observeWindowChanges（main.swift:880-914）
 pub fn start_observation(app: AppHandle) {
     // 除外リスト保持用の State を登録
     app.manage(ExcludedWindows(Mutex::new(Vec::new())));
+    app.manage(LastEmitted(Mutex::new(None)));
 
     let (tx, rx) = mpsc::unbounded_channel::<()>();
 
@@ -97,13 +129,13 @@ pub fn start_observation(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         // 初回のウィンドウ情報を遅延なしで送信
         // （Swift 原本 main.swift:1161-1162 の watch モード初回出力に対応）
-        let _ = refresh_and_emit(&app).await;
+        let _ = refresh_and_emit(&app, EmitPolicy::Always).await;
 
         let app_for_action = app.clone();
-        debounce_loop(rx, DEBOUNCE, move || {
+        debounce_loop(rx, DEBOUNCE, Some(MAX_WAIT), move || {
             let app = app_for_action.clone();
             async move {
-                let _ = refresh_and_emit(&app).await;
+                let _ = refresh_and_emit(&app, EmitPolicy::IfChanged).await;
             }
         })
         .await;
@@ -114,20 +146,36 @@ pub fn start_observation(app: AppHandle) {
 /// 来なくなるまで待ち、1回だけ action を実行する。チャンネルが閉じたら終了する
 /// （閉鎖時にシグナルが溜まっていれば最後の1回を実行してから終了）。
 ///
+/// `max_wait` を指定すると、シグナルが `delay` 未満の間隔で続いても最初の
+/// シグナルから `max_wait` 経過した時点で実行する（starvation 防止）。
+/// `max_wait` は `delay` 以上を指定する（未満だと実質 `max_wait` がデバウンス時間になる）。
+/// `None` なら上限なし（純粋な trailing デバウンス）。
+///
 /// 時間は tokio の仮想時計に依存するため、テストでは start_paused で検証できる。
 /// display_manager のスクリーン構成変更監視からも共用される
 pub(crate) async fn debounce_loop<F, Fut>(
     mut rx: UnboundedReceiver<()>,
     delay: Duration,
+    max_wait: Option<Duration>,
     mut action: F,
 ) where
     F: FnMut() -> Fut,
     Fut: Future<Output = ()>,
 {
+    debug_assert!(max_wait.map_or(true, |m| m >= delay));
     while rx.recv().await.is_some() {
-        // 最後のシグナルから delay 経過するまで待つ（追加シグナルでリセット）
+        let deadline = max_wait.map(|m| tokio::time::Instant::now() + m);
+        // 最後のシグナルから delay 経過するまで待つ（追加シグナルでリセット）。
+        // ただし deadline を越えては待たない
         loop {
-            match tokio::time::timeout(delay, rx.recv()).await {
+            let wait = match deadline {
+                Some(d) => delay.min(d.saturating_duration_since(tokio::time::Instant::now())),
+                None => delay,
+            };
+            if wait.is_zero() {
+                break; // max_wait 到達 → 実行
+            }
+            match tokio::time::timeout(wait, rx.recv()).await {
                 Ok(Some(())) => continue, // シグナル追加 → デバウンス窓をリセット
                 Ok(None) => break,        // チャンネル閉鎖 → 最後の1回を実行して終了へ
                 Err(_) => break,          // delay 静穏 → 実行
@@ -141,10 +189,17 @@ pub(crate) async fn debounce_loop<F, Fut>(
 /// 全ウィンドウへ emit する。除外リストは ExcludedWindows State に保持する。
 /// 成功時は (通過リスト, 除外リスト) を返す（getExcludeWindows コマンド等が
 /// emit 後のリストを再利用するため）。
+/// `policy` が IfChanged で通過リストが前回 emit と同一なら、'process' と
+/// アイコンの段階ロードを省く（除外リストの更新は常に行う）。
 ///
 /// Swift 原本: windowDidChange の遅延実行部（main.swift:928-944）＋
 /// getWindowInfoListData のフィルタ適用（main.swift:844-848）
-pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<MacWindow>)> {
+pub async fn refresh_and_emit(
+    app: &AppHandle,
+    policy: EmitPolicy,
+) -> Option<(Vec<MacWindow>, Vec<MacWindow>)> {
+    let _guard = REFRESH_LOCK.lock().await;
+
     // フィルタ設定を tauri-plugin-store（config.json の labeledFilters）から読む。
     // Electron 原本では updateProcessList のたびに exportFiltersToSwift で
     // filter.json に書き出していた（helper.ts:134-151）のと同じく、毎回最新値を読む
@@ -161,11 +216,6 @@ pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<Ma
         Ok(windows) => {
             let (mut passed, excluded) = filter::filter_windows(windows, &filters);
 
-            // FS キャッシュ済みアイコンを appIcon に適用してから emit する
-            // （Electron 原本 helper.ts:513-529 applyProcessChange と同じ順序。
-            // キャッシュ済みアプリは 'process' の時点でアイコン付きになる）
-            icon_manager::apply_cached_icons(&mut passed).await;
-
             // 除外リストを保持（'catchExcludeWindow' / getExcludeWindows 用）
             if let Some(state) = app.try_state::<ExcludedWindows>() {
                 if let Ok(mut guard) = state.0.lock() {
@@ -173,15 +223,42 @@ pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<Ma
                 }
             }
 
-            // イベント名 'process' は現行フロントの契約
-            // （src/renderer の ipcListen('process', ...) に対応）
-            if let Err(e) = app.emit("process", &passed) {
-                log::warn!("failed to emit 'process' event: {e}");
+            // 差分判定はアイコン適用前のリストで行う（appIcon は段階ロードで
+            // 後から埋まるため比較対象に含めない）
+            let emit = match app.try_state::<LastEmitted>() {
+                Some(state) => match state.0.lock() {
+                    Ok(mut last) => should_emit(&mut last, &passed, policy),
+                    Err(_) => true,
+                },
+                None => true,
+            };
+
+            // FS キャッシュ済みアイコンを appIcon に適用してから emit する
+            // （Electron 原本 helper.ts:513-529 applyProcessChange と同じ順序。
+            // キャッシュ済みアプリは 'process' の時点でアイコン付きになる）
+            icon_manager::apply_cached_icons(&mut passed).await;
+
+            if emit {
+                // イベント名 'process' は現行フロントの契約
+                // （src/renderer の ipcListen('process', ...) に対応）
+                if let Err(e) = app.emit("process", &passed) {
+                    log::warn!("failed to emit 'process' event: {e}");
+                    // 未配信のまま次回の IfChanged で抑止されないよう記録を消す
+                    if let Some(state) = app.try_state::<LastEmitted>() {
+                        if let Ok(mut last) = state.0.lock() {
+                            *last = None;
+                        }
+                    }
+                }
+            } else {
+                log::debug!("'process' suppressed (no change)");
             }
 
             // キャッシュミス分のアイコンを非同期で取得して 'iconUpdate' で後追い送信
             // （段階ロード。Swift 原本 ProgressiveIconLoader の簡素化版 —
-            // 判断コメントは icon_manager.rs 冒頭参照）
+            // 判断コメントは icon_manager.rs 冒頭参照）。
+            // 'process' を抑止した回も呼ぶ: 取得に失敗したアイコンの再試行を
+            // ウィンドウ構成が変わるまで止めないため（従来の再試行タイミングを維持）
             icon_manager::load_missing_icons_and_emit(app.clone(), &passed);
 
             Some((passed, excluded))
@@ -192,6 +269,20 @@ pub async fn refresh_and_emit(app: &AppHandle) -> Option<(Vec<MacWindow>, Vec<Ma
             None
         }
     }
+}
+
+/// 'process' を emit すべきか判定し、emit する場合は `last` を `current` で更新する。
+/// Always は常に true、IfChanged は前回と異なる（または前回が無い）ときのみ true
+fn should_emit(
+    last: &mut Option<Vec<MacWindow>>,
+    current: &[MacWindow],
+    policy: EmitPolicy,
+) -> bool {
+    if policy == EmitPolicy::IfChanged && last.as_deref() == Some(current) {
+        return false;
+    }
+    *last = Some(current.to_vec());
+    true
 }
 
 #[cfg(test)]
@@ -205,9 +296,17 @@ mod tests {
     fn spawn_counting_loop(
         rx: UnboundedReceiver<()>,
     ) -> (Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+        spawn_counting_loop_with(rx, None)
+    }
+
+    /// max_wait 付きの debounce_loop を起動する
+    fn spawn_counting_loop_with(
+        rx: UnboundedReceiver<()>,
+        max_wait: Option<Duration>,
+    ) -> (Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
         let count = Arc::new(AtomicUsize::new(0));
         let c = Arc::clone(&count);
-        let handle = tokio::spawn(debounce_loop(rx, DEBOUNCE, move || {
+        let handle = tokio::spawn(debounce_loop(rx, DEBOUNCE, max_wait, move || {
             let c = Arc::clone(&c);
             async move {
                 c.fetch_add(1, Ordering::SeqCst);
@@ -289,5 +388,152 @@ mod tests {
         drop(tx);
         handle.await.unwrap();
         assert_eq!(count.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn シグナルが途切れなくても_max_wait_ごとに実行される() {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let (count, handle) = spawn_counting_loop_with(rx, Some(MAX_WAIT));
+
+        // 300ms 間隔（DEBOUNCE 未満）でシグナルを 5 秒間送り続ける
+        for _ in 0..17 {
+            tx.send(()).unwrap();
+            sleep(Duration::from_millis(300)).await;
+        }
+        // 純 trailing デバウンスなら 0 回のまま。max_wait=1s なら約1秒ごとに実行される
+        // 仮想時計で決定論的: t=1000/2200/3400/4600ms の4回
+        // （実行後の次シグナルから新しい max_wait 窓が始まる）
+        assert_eq!(count.load(Ordering::SeqCst), 4);
+
+        drop(tx);
+        handle.await.unwrap();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn max_wait_なしでは途切れないシグナルの間は実行されない() {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let (count, handle) = spawn_counting_loop(rx);
+
+        for _ in 0..10 {
+            tx.send(()).unwrap();
+            sleep(Duration::from_millis(300)).await;
+        }
+        assert_eq!(
+            count.load(Ordering::SeqCst),
+            0,
+            "display_manager 用の現挙動を維持"
+        );
+
+        sleep(Duration::from_millis(300)).await;
+        assert_eq!(count.load(Ordering::SeqCst), 1, "静穏になれば1回実行");
+
+        drop(tx);
+        handle.await.unwrap();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn max_wait_より早く静穏になればデバウンス時間で実行される() {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let (count, handle) = spawn_counting_loop_with(rx, Some(MAX_WAIT));
+
+        tx.send(()).unwrap();
+        sleep(Duration::from_millis(450)).await;
+        assert_eq!(count.load(Ordering::SeqCst), 0);
+        sleep(Duration::from_millis(100)).await;
+        assert_eq!(count.load(Ordering::SeqCst), 1, "500ms 静穏で実行される");
+
+        drop(tx);
+        handle.await.unwrap();
+    }
+
+    fn window(number: i64, name: &str) -> MacWindow {
+        MacWindow {
+            layer: 0,
+            name: Some(name.to_string()),
+            memory_usage: 0,
+            is_onscreen: Some(1),
+            sharing_state: 1,
+            owner_pid: 100,
+            owner_name: "App".to_string(),
+            window_number: number,
+            store_type: None,
+            bounds: crate::window_manager::WindowBounds {
+                x: 0.0,
+                y: 0.0,
+                width: 800.0,
+                height: 600.0,
+            },
+            app_icon: String::new(),
+        }
+    }
+
+    #[test]
+    fn 初回は_if_changed_でも_emit_する() {
+        let mut last = None;
+        assert!(should_emit(
+            &mut last,
+            &[window(1, "a")],
+            EmitPolicy::IfChanged
+        ));
+        assert_eq!(last, Some(vec![window(1, "a")]));
+    }
+
+    #[test]
+    fn 同一リストなら_if_changed_は_emit_しない() {
+        let mut last = Some(vec![window(1, "a")]);
+        assert!(!should_emit(
+            &mut last,
+            &[window(1, "a")],
+            EmitPolicy::IfChanged
+        ));
+    }
+
+    #[test]
+    fn タイトルが変われば_emit_して記録を更新する() {
+        let mut last = Some(vec![window(1, "a")]);
+        assert!(should_emit(
+            &mut last,
+            &[window(1, "b")],
+            EmitPolicy::IfChanged
+        ));
+        assert_eq!(last, Some(vec![window(1, "b")]));
+    }
+
+    #[test]
+    fn ウィンドウの増減で_emit_する() {
+        let mut last = Some(vec![window(1, "a")]);
+        let added = [window(1, "a"), window(2, "b")];
+        assert!(should_emit(&mut last, &added, EmitPolicy::IfChanged));
+        assert!(should_emit(
+            &mut last,
+            &[window(2, "b")],
+            EmitPolicy::IfChanged
+        ));
+    }
+
+    #[test]
+    fn always_は同一リストでも_emit_する() {
+        let mut last = Some(vec![window(1, "a")]);
+        assert!(should_emit(
+            &mut last,
+            &[window(1, "a")],
+            EmitPolicy::Always
+        ));
+    }
+
+    #[test]
+    fn always_の_emit_は記録を更新し後続の_if_changed_を抑止する() {
+        let mut last = Some(vec![window(1, "a")]);
+        assert!(should_emit(
+            &mut last,
+            &[window(1, "b")],
+            EmitPolicy::Always
+        ));
+        assert_eq!(last, Some(vec![window(1, "b")]));
+        assert!(!should_emit(
+            &mut last,
+            &[window(1, "b")],
+            EmitPolicy::IfChanged
+        ));
     }
 }

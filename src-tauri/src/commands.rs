@@ -67,7 +67,7 @@ pub async fn window_ready(app: AppHandle) -> Result<(), String> {
     // FS キャッシュ済みアイコンは appIcon 適用済みで載り、キャッシュミス分は
     // refresh_and_emit 内の段階ロードが 'iconUpdate' で後追い送信する
     // （Electron 原本で helper の iconUpdate 通知（helper.ts:32-56）が担っていた役割）
-    let _ = window_observer::refresh_and_emit(&app).await;
+    let _ = window_observer::refresh_and_emit(&app, window_observer::EmitPolicy::Always).await;
 
     // 2. 'updateOptions': store の options を送る
     let options = store::get_options(&app)?;
@@ -137,7 +137,7 @@ pub async fn set_labeled_filters(
     store::set_labeled_filters(&app, &filters)?;
 
     // 新しいフィルタでウィンドウリストを再評価して 'process' を emit
-    let _ = window_observer::refresh_and_emit(&app).await;
+    let _ = window_observer::refresh_and_emit(&app, window_observer::EmitPolicy::Always).await;
 
     app.emit("labeledFiltersUpdated", &filters)
         .map_err(|e| format!("failed to emit 'labeledFiltersUpdated': {e}"))
@@ -178,7 +178,9 @@ pub fn add_filter(app: AppHandle, payload: AddFilterPayload) -> Result<(), Strin
 /// キャッシュ済み分のみ（未キャッシュ分の取得までは行わない）
 #[tauri::command]
 pub async fn get_exclude_windows(app: AppHandle) -> Result<(), String> {
-    let Some((passed, mut excluded)) = window_observer::refresh_and_emit(&app).await else {
+    let Some((passed, mut excluded)) =
+        window_observer::refresh_and_emit(&app, window_observer::EmitPolicy::Always).await
+    else {
         return Err("failed to refresh window list".to_string());
     };
 

@@ -304,7 +304,7 @@ pub fn start_screen_observation(app: AppHandle) {
 
     tauri::async_runtime::spawn(async move {
         let app_for_action = app.clone();
-        debounce_loop(rx, SCREEN_DEBOUNCE, move || {
+        debounce_loop(rx, SCREEN_DEBOUNCE, None, move || {
             let app = app_for_action.clone();
             async move {
                 if let Err(e) = sync_taskbar_windows(&app) {
