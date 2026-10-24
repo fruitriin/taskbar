@@ -15,6 +15,8 @@ image_clarity: balanced
 
 ## 関連 Plan
 
+- [context-menu-adjustments.md](context-menu-adjustments.md) — 「フルスクリーンを避ける」（exitFullScreenToAvoidTaskbar）を右クリックメニューからトグルできるようにする
+- [taskbar-app-combining.md](taskbar-app-combining.md) — タスクバーの太さが設定で変わる（矩形は実ウィンドウから取るため追従する見込み）
 - [ax-title-observer.md](ax-title-observer.md) — ウィンドウの生成・移動を検知する AXObserver 基盤。
   本 Plan は同じ基盤に AXMoved / AXResized を足して「調整のきっかけ」に使う
 
