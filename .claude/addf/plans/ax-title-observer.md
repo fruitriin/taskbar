@@ -10,6 +10,10 @@ image_clarity: balanced
 **作成日**: 2026-10-23
 **出自**: オーナーとの考察セッション（タイトル取得タイミングの改善。A案＝AXObserver を採用）
 
+## 関連 Plan
+
+- [window-overlap-avoidance.md](window-overlap-avoidance.md) — 本 Plan の AXObserver 基盤に AXMoved / AXResized を足して、タスクバーとの重なり回避のきっかけに使う
+
 ## 背景・課題
 
 `src-tauri/src/window_observer.rs` が監視しているのは NSWorkspace の
