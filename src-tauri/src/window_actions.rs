@@ -28,8 +28,8 @@ use std::ptr::NonNull;
 use std::time::Duration;
 
 use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
-use objc2_application_services::{AXError, AXUIElement};
-use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType};
+use objc2_application_services::{AXError, AXUIElement, AXValue, AXValueType};
+use objc2_core_foundation::{CFArray, CFBoolean, CFRetained, CFString, CFType, CGPoint, CGSize};
 
 use crate::window_manager::MacWindow;
 
@@ -48,6 +48,9 @@ const AX_MAIN: &str = "AXMain";
 const AX_CLOSE_BUTTON: &str = "AXCloseButton";
 const AX_RAISE_ACTION: &str = "AXRaise";
 const AX_PRESS_ACTION: &str = "AXPress";
+const AX_POSITION: &str = "AXPosition";
+const AX_SIZE: &str = "AXSize";
+const AX_FULL_SCREEN: &str = "AXFullScreen";
 
 extern "C-unwind" {
     /// 非公開 API: AXUIElement（ウィンドウ要素）から CGWindowID を取得する。
@@ -81,6 +84,127 @@ pub async fn activate(win: MacWindow) -> Result<(), String> {
 /// 押せるため共通処理に統一した（実機確認: ignored テスト参照）
 pub async fn close(win: MacWindow) -> Result<(), String> {
     run_blocking("close", move || close_blocking(&win)).await
+}
+
+/// ウィンドウの移動・リサイズ先（CG のグローバル座標 = 左上原点のポイント）
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Frame {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+/// set_frame の結果
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SetFrameOutcome {
+    /// 位置・サイズを書き込んだ
+    Applied,
+    /// フルスクリーンだったので解除だけ行った（解除後の AXWindowResized で再評価される）
+    ExitedFullScreen,
+    /// フルスクリーン・サイズ変更不可などの理由で触らなかった
+    Skipped(&'static str),
+}
+
+/// タスクバーとの重なり回避のため、ウィンドウを移動・リサイズする（overlap.rs から呼ぶ）。
+///
+/// - 対象の特定は CGWindowID の一致だけで行う（タイトル一致のフォールバックは使わない。
+///   他アプリのウィンドウを動かす操作なので、誤ったウィンドウを動かさないことを優先する）
+/// - フルスクリーンのウィンドウは `exit_full_screen` が true なら解除だけ行い、false なら触らない
+/// - サイズを変えられないウィンドウは、サイズ変更が必要なら触らない（移動だけなら行う）
+pub async fn set_frame(
+    win: MacWindow,
+    frame: Frame,
+    exit_full_screen: bool,
+) -> Result<SetFrameOutcome, String> {
+    tokio::time::timeout(
+        ACTION_TIMEOUT,
+        tokio::task::spawn_blocking(move || set_frame_blocking(&win, frame, exit_full_screen)),
+    )
+    .await
+    .map_err(|_| "window_actions::set_frame timed out (2s)".to_string())?
+    .map_err(|e| format!("Thread error: {e}"))?
+}
+
+fn set_frame_blocking(
+    win: &MacWindow,
+    frame: Frame,
+    exit_full_screen: bool,
+) -> Result<SetFrameOutcome, String> {
+    let pid = pid_of(win)?;
+    let ax_window = find_ax_window_by_id(pid, win)?
+        .ok_or_else(|| format!("window {} not found via AX id", win.window_number))?;
+
+    let full_screen = copy_attribute(&ax_window, AX_FULL_SCREEN)
+        .ok()
+        .and_then(|v| v.downcast_ref::<CFBoolean>().map(|b| b.as_bool()))
+        .unwrap_or(false);
+    if full_screen {
+        if !exit_full_screen {
+            return Ok(SetFrameOutcome::Skipped("full screen"));
+        }
+        // SAFETY: ax_window は有効な AXUIElement、値は CFBoolean
+        let err = unsafe {
+            ax_window.set_attribute_value(
+                &CFString::from_static_str(AX_FULL_SCREEN),
+                CFBoolean::new(false).as_ref(),
+            )
+        };
+        if err != AXError::Success {
+            return Err(format!(
+                "AXUIElementSetAttributeValue(AXFullScreen) failed: {err:?}"
+            ));
+        }
+        return Ok(SetFrameOutcome::ExitedFullScreen);
+    }
+
+    let resize = frame.width != win.bounds.width || frame.height != win.bounds.height;
+    if resize && !is_settable(&ax_window, AX_SIZE) {
+        return Ok(SetFrameOutcome::Skipped("size not settable"));
+    }
+    if !is_settable(&ax_window, AX_POSITION) {
+        return Ok(SetFrameOutcome::Skipped("position not settable"));
+    }
+
+    // 縮めてから動かす（先に動かすと、大きいまま画面外にはみ出して
+    // アプリやシステムに位置を補正されることがあるため）
+    if resize {
+        let size = CGSize::new(frame.width, frame.height);
+        set_value(&ax_window, AX_SIZE, AXValueType::CGSize, &size)?;
+    }
+    let point = CGPoint::new(frame.x, frame.y);
+    set_value(&ax_window, AX_POSITION, AXValueType::CGPoint, &point)?;
+    Ok(SetFrameOutcome::Applied)
+}
+
+/// 属性が書き込み可能か（取得に失敗したら不可とみなす）
+fn is_settable(element: &AXUIElement, name: &str) -> bool {
+    let mut settable: u8 = 0;
+    // SAFETY: settable はローカル変数への有効なポインタ
+    let err = unsafe {
+        element.is_attribute_settable(&CFString::from_str(name), NonNull::from(&mut settable))
+    };
+    err == AXError::Success && settable != 0
+}
+
+/// CGPoint / CGSize を AXValue に包んで属性へ書き込む
+fn set_value<T>(
+    element: &AXUIElement,
+    name: &str,
+    value_type: AXValueType,
+    value: &T,
+) -> Result<(), String> {
+    // SAFETY: value は value_type に対応する型（CGPoint / CGSize）への有効な参照
+    let ax_value = unsafe { AXValue::new(value_type, NonNull::from(value).cast()) }
+        .ok_or_else(|| format!("AXValueCreate({name}) failed"))?;
+    // SAFETY: element は有効な AXUIElement、ax_value は CFType
+    let err = unsafe { element.set_attribute_value(&CFString::from_str(name), &ax_value) };
+    if err != AXError::Success {
+        return Err(format!(
+            "AXUIElementSetAttributeValue({name}) failed: {err:?}"
+        ));
+    }
+    Ok(())
 }
 
 /// spawn_blocking + タイムアウトで AX 操作を包む（window_manager.rs:80-88 と同型）。
@@ -168,35 +292,9 @@ fn pid_of(win: &MacWindow) -> Result<libc::pid_t, String> {
 ///    最初の1つに絞る。また原本では kCGWindowName が空文字だと全ウィンドウに
 ///    一致してしまっていたが、Rust 版は空タイトルをフォールバック対象外とする）
 fn find_ax_window(pid: libc::pid_t, win: &MacWindow) -> Result<CFRetained<AXUIElement>, String> {
-    // SAFETY: pid は正の値で、対象プロセスが存在しなくても API は安全に
-    // エラー（後段の copy_attribute_value が非 Success）を返す
-    let app_element = unsafe { AXUIElement::new_application(pid) };
-
-    // 無応答アプリ対策: この要素（と子要素）への AX メッセージを1秒で打ち切る
-    // SAFETY: 正のタイムアウト値を渡している
-    let err = unsafe { app_element.set_messaging_timeout(AX_MESSAGING_TIMEOUT_SECS) };
-    if err != AXError::Success {
-        log::warn!("AXUIElementSetMessagingTimeout failed: {err:?}");
-    }
-
-    let windows = copy_attribute(&app_element, AX_WINDOWS)?
-        .downcast::<CFArray>()
-        .map_err(|_| "AXWindows attribute is not a CFArray".to_string())?;
-    // SAFETY: kAXWindowsAttribute は AXUIElement の CFArray を返すと
-    // API 契約で保証されている
-    let windows: CFRetained<CFArray<AXUIElement>> = unsafe { CFRetained::cast_unchecked(windows) };
-
-    // 1. kCGWindowNumber（CGWindowID）一致
-    let target_id = u32::try_from(win.window_number).ok();
-    if let Some(target_id) = target_id {
-        for ax_window in windows.iter() {
-            let mut window_id: u32 = 0;
-            // SAFETY: out ポインタはローカル変数への有効なポインタ
-            let err = unsafe { _AXUIElementGetWindow(&ax_window, &mut window_id) };
-            if err == AXError::Success && window_id == target_id {
-                return Ok(ax_window);
-            }
-        }
+    let (windows, by_id) = ax_windows_and_id_match(pid, win)?;
+    if let Some(ax_window) = by_id {
+        return Ok(ax_window);
     }
 
     // 2. タイトル一致フォールバック（非公開 API が失敗した場合や、
@@ -221,6 +319,56 @@ fn find_ax_window(pid: libc::pid_t, win: &MacWindow) -> Result<CFRetained<AXUIEl
         win.name.as_deref().unwrap_or(""),
         win.window_number
     ))
+}
+
+/// CGWindowID の一致だけで AX ウィンドウを特定する（見つからなければ None）
+fn find_ax_window_by_id(
+    pid: libc::pid_t,
+    win: &MacWindow,
+) -> Result<Option<CFRetained<AXUIElement>>, String> {
+    Ok(ax_windows_and_id_match(pid, win)?.1)
+}
+
+/// アプリの AXWindows と、そのうち kCGWindowNumber（CGWindowID）が一致するもの
+type AxWindowsAndMatch = (
+    CFRetained<CFArray<AXUIElement>>,
+    Option<CFRetained<AXUIElement>>,
+);
+
+fn ax_windows_and_id_match(pid: libc::pid_t, win: &MacWindow) -> Result<AxWindowsAndMatch, String> {
+    // SAFETY: pid は正の値で、対象プロセスが存在しなくても API は安全に
+    // エラー（後段の copy_attribute_value が非 Success）を返す
+    let app_element = unsafe { AXUIElement::new_application(pid) };
+
+    // 無応答アプリ対策: この要素（と子要素）への AX メッセージを1秒で打ち切る
+    // SAFETY: 正のタイムアウト値を渡している
+    let err = unsafe { app_element.set_messaging_timeout(AX_MESSAGING_TIMEOUT_SECS) };
+    if err != AXError::Success {
+        log::warn!("AXUIElementSetMessagingTimeout failed: {err:?}");
+    }
+
+    let windows = copy_attribute(&app_element, AX_WINDOWS)?
+        .downcast::<CFArray>()
+        .map_err(|_| "AXWindows attribute is not a CFArray".to_string())?;
+    // SAFETY: kAXWindowsAttribute は AXUIElement の CFArray を返すと
+    // API 契約で保証されている
+    let windows: CFRetained<CFArray<AXUIElement>> = unsafe { CFRetained::cast_unchecked(windows) };
+
+    // 1. kCGWindowNumber（CGWindowID）一致
+    let target_id = u32::try_from(win.window_number).ok();
+    let mut found = None;
+    if let Some(target_id) = target_id {
+        for ax_window in windows.iter() {
+            let mut window_id: u32 = 0;
+            // SAFETY: out ポインタはローカル変数への有効なポインタ
+            let err = unsafe { _AXUIElementGetWindow(&ax_window, &mut window_id) };
+            if err == AXError::Success && window_id == target_id {
+                found = Some(ax_window);
+                break;
+            }
+        }
+    }
+    Ok((windows, found))
 }
 
 /// AXUIElementCopyAttributeValue の安全なラッパー。

@@ -4,6 +4,7 @@ pub mod context_menu;
 pub mod display_manager;
 pub mod filter;
 pub mod icon_manager;
+pub mod overlap;
 pub mod permission_manager;
 pub mod store;
 pub mod window_actions;
@@ -66,7 +67,9 @@ pub fn run() {
             store::migrate_from_electron(app.handle());
 
             // NSWorkspace 通知の監視を開始（setup はメインスレッドで実行される）
-            window_observer::start_observation(app.handle().clone());
+            // タスクバーと重なるウィンドウの自動回避（AX 通知を受けて動く）
+            let adjust_tx = overlap::start(app.handle().clone());
+            window_observer::start_observation(app.handle().clone(), adjust_tx);
 
             // タスク右クリックメニュー: 対象ウィンドウの受け渡し用 state と
             // メニューイベントハンドラ（on_menu_event は追記型のため登録はここで1回だけ。

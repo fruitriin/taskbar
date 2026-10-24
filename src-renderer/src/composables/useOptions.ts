@@ -13,7 +13,9 @@ const defaultOptions: Options = {
   windowSortByPositionInApp: false,
   appOrder: [],
   headers: [],
-  footers: []
+  footers: [],
+  autoAvoidTaskbarOverlap: true,
+  exitFullScreenToAvoidTaskbar: false
 }
 
 const options: Ref<Options> = ref({ ...defaultOptions })

@@ -70,7 +70,9 @@ const handleWindowReady = (): void => {
       windowSortByPositionInApp: false,
       appOrder: [],
       headers: [],
-      footers: []
+      footers: [],
+      autoAvoidTaskbarOverlap: true,
+      exitFullScreenToAvoidTaskbar: false
     })
   }, 400)
 }
@@ -145,7 +147,9 @@ export const createStoreMock = (): Store => ({
     windowSortByPositionInApp: false,
     appOrder: [],
     headers: [],
-    footers: []
+    footers: [],
+    autoAvoidTaskbarOverlap: true,
+    exitFullScreenToAvoidTaskbar: false
   },
   filters: [],
   labeledFilters: [

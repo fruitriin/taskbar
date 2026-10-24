@@ -85,9 +85,10 @@ pub enum EmitPolicy {
 }
 
 /// NSWorkspace 通知の監視を開始する。lib.rs の setup（メインスレッド）から呼ぶ。
+/// `adjust_tx` は overlap.rs の送信端（AX のウィンドウ生成・移動・リサイズ通知の送り先）。
 ///
 /// Swift 原本: observeWindowChanges（main.swift:880-914）
-pub fn start_observation(app: AppHandle) {
+pub fn start_observation(app: AppHandle, adjust_tx: mpsc::UnboundedSender<()>) {
     // 除外リスト保持用の State を登録
     app.manage(ExcludedWindows(Mutex::new(Vec::new())));
     app.manage(LastEmitted(Mutex::new(None)));
@@ -96,7 +97,7 @@ pub fn start_observation(app: AppHandle) {
 
     // ウィンドウ単位の AX 通知（タイトル変化・ウィンドウ増減）も同じチャンネルに流す。
     // 監視対象の pid は通知の登録後に初期列挙し、以降は didLaunch / didActivate / didTerminate で増減させる
-    let ax = ax_observer::start(tx.clone());
+    let ax = ax_observer::start(tx.clone(), adjust_tx);
     let workspace = NSWorkspace::sharedWorkspace();
 
     // 監視対象の通知（main.swift:884-905 と同じ3種）。

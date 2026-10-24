@@ -50,6 +50,17 @@ pub struct Options {
     pub app_order: Vec<String>,
     pub headers: Vec<String>,
     pub footers: Vec<String>,
+    /// タスクバーと重なるウィンドウを自動で避けさせる（Plan: window-overlap-avoidance.md）。
+    /// 既存の設定ファイルにはキーが無いため、欠けていれば既定値で補う
+    #[serde(default = "default_true")]
+    pub auto_avoid_taskbar_overlap: bool,
+    /// 重なり回避の対象がフルスクリーンなら、解除してから避ける
+    #[serde(default)]
+    pub exit_full_screen_to_avoid_taskbar: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for Options {
@@ -61,6 +72,8 @@ impl Default for Options {
             app_order: Vec::new(),
             headers: Vec::new(),
             footers: Vec::new(),
+            auto_avoid_taskbar_overlap: true,
+            exit_full_screen_to_avoid_taskbar: false,
         }
     }
 }
@@ -232,6 +245,7 @@ mod tests {
     #[test]
     fn optionsのデフォルトはelectron版storeのdefaultsと一致する() {
         // store.ts:59-65 の defaults.options の JSON 形と突き合わせる
+        // （重なり回避の 2 項目は Tauri 版で追加した。Plan: window-overlap-avoidance.md）
         let value = serde_json::to_value(Options::default()).unwrap();
         assert_eq!(
             value,
@@ -240,7 +254,9 @@ mod tests {
                 "windowSortByPositionInApp": false,
                 "appOrder": [],
                 "headers": [],
-                "footers": []
+                "footers": [],
+                "autoAvoidTaskbarOverlap": true,
+                "exitFullScreenToAvoidTaskbar": false
             })
         );
     }
@@ -416,5 +432,21 @@ mod migration_tests {
     fn キーが無ければ_none_を返す() {
         let (o, f) = extract_electron_config(&json!({}));
         assert!(o.is_none() && f.is_none());
+    }
+
+    #[test]
+    fn 重なり回避の項目が無い旧設定も読め_既定値で補われる() {
+        let old = json!({
+            "layout": "right",
+            "windowSortByPositionInApp": true,
+            "appOrder": ["A"],
+            "headers": [],
+            "footers": []
+        });
+        let o = read_or_default(Some(old), KEY_OPTIONS);
+        assert_eq!(o.layout, Layout::Right, "他の設定は既定値に戻らない");
+        assert!(o.window_sort_by_position_in_app);
+        assert!(o.auto_avoid_taskbar_overlap, "既定で有効");
+        assert!(!o.exit_full_screen_to_avoid_taskbar, "既定で無効");
     }
 }

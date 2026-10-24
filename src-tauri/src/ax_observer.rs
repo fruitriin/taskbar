@@ -7,6 +7,7 @@
 //!
 //! 通知は window_observer のデバウンスチャンネルへのシグナル送信にのみ使い、
 //! ウィンドウ情報の正は従来どおり CGWindowList とする（フロント・IPC 契約は無変更）。
+//! ウィンドウの生成・移動・リサイズは overlap.rs（タスクバーとの重なり回避）にも送る。
 //! 設計の経緯は .claude/addf/plans/ax-title-observer.md を参照。
 //!
 //! スレッド構成:
@@ -57,10 +58,15 @@ impl AxObserverHandle {
 /// 購読する AX 通知。ヘッダでは CFSTR マクロ定義で Rust バインディングに
 /// 定数が生成されないため文字列で持つ（window_actions.rs と同じ扱い）
 const AX_TITLE_CHANGED: &str = "AXTitleChanged";
+const AX_WINDOW_CREATED: &str = "AXWindowCreated";
+const AX_WINDOW_MOVED: &str = "AXWindowMoved";
+const AX_WINDOW_RESIZED: &str = "AXWindowResized";
 /// 先頭は必ず AXTitleChanged（register はこれの失敗で打ち切る）
-const NOTIFICATIONS: [&str; 6] = [
+const NOTIFICATIONS: [&str; 8] = [
     AX_TITLE_CHANGED,
-    "AXWindowCreated",
+    AX_WINDOW_CREATED,
+    AX_WINDOW_MOVED,
+    AX_WINDOW_RESIZED,
     "AXUIElementDestroyed",
     "AXWindowMiniaturized",
     "AXWindowDeminiaturized",
@@ -83,10 +89,15 @@ const TRUST_RECHECK_INTERVAL: Duration = Duration::from_secs(5);
 /// AXObserverAddNotification の refcon には何も渡さない（refcon の寿命管理を不要にする）
 static SIGNAL_TX: OnceLock<UnboundedSender<()>> = OnceLock::new();
 
+/// ウィンドウの生成・移動・リサイズの送信先（overlap.rs の重なり回避）
+static ADJUST_TX: OnceLock<UnboundedSender<()>> = OnceLock::new();
+
 /// AX 専用スレッドを起動し、指示用のハンドルを返す。
-/// `signal_tx` には window_observer のデバウンスチャンネルの送信端を渡す
-pub fn start(signal_tx: UnboundedSender<()>) -> AxObserverHandle {
+/// `signal_tx` には window_observer のデバウンスチャンネル、`adjust_tx` には
+/// overlap.rs のチャンネルの送信端を渡す
+pub fn start(signal_tx: UnboundedSender<()>, adjust_tx: UnboundedSender<()>) -> AxObserverHandle {
     let (tx, rx) = mpsc::channel();
+    let _ = ADJUST_TX.set(adjust_tx);
     if SIGNAL_TX.set(signal_tx).is_err() {
         log::warn!("ax_observer::start called more than once; ignoring");
         return AxObserverHandle { tx };
@@ -334,9 +345,17 @@ unsafe extern "C-unwind" fn on_notification(
     } else {
         None
     };
-    if should_signal(&notification, role.as_deref()) {
+    let route = route(&notification, role.as_deref());
+    if route.refresh || route.adjust {
         log::debug!("AX notification: {notification}");
+    }
+    if route.refresh {
         if let Some(tx) = SIGNAL_TX.get() {
+            let _ = tx.send(());
+        }
+    }
+    if route.adjust {
+        if let Some(tx) = ADJUST_TX.get() {
             let _ = tx.send(());
         }
     }
@@ -363,14 +382,39 @@ fn copy_role(element: &AXUIElement) -> Option<String> {
     value.downcast_ref::<CFString>().map(|s| s.to_string())
 }
 
-/// 通知をデバウンスへのシグナルにするか判定する。
-/// AXTitleChanged はボタン・タブ等のウィンドウ以外の要素でも発火するため、
-/// role が AXWindow のものだけを通す。それ以外の通知は常に通す
-fn should_signal(notification: &str, role: Option<&str>) -> bool {
-    if notification == AX_TITLE_CHANGED {
-        role == Some(AX_WINDOW_ROLE)
-    } else {
-        true
+/// 通知の送り先
+#[derive(Debug, PartialEq, Eq)]
+struct Route {
+    /// window_observer（'process' の再取得）
+    refresh: bool,
+    /// overlap.rs（タスクバーとの重なり回避）
+    adjust: bool,
+}
+
+/// 通知の送り先を決める。
+/// - AXTitleChanged はボタン・タブ等のウィンドウ以外の要素でも発火するため、
+///   role が AXWindow のものだけを再取得に回す
+/// - 移動・リサイズは重なり回避だけに回す（ドラッグ中に連発するため、'process' の
+///   再取得には回さない。位置の変化は従来どおり他の通知のついでに反映される）
+/// - ウィンドウ生成は両方に回す
+fn route(notification: &str, role: Option<&str>) -> Route {
+    match notification {
+        AX_TITLE_CHANGED => Route {
+            refresh: role == Some(AX_WINDOW_ROLE),
+            adjust: false,
+        },
+        AX_WINDOW_MOVED | AX_WINDOW_RESIZED => Route {
+            refresh: false,
+            adjust: true,
+        },
+        AX_WINDOW_CREATED => Route {
+            refresh: true,
+            adjust: true,
+        },
+        _ => Route {
+            refresh: true,
+            adjust: false,
+        },
     }
 }
 
@@ -391,17 +435,54 @@ mod tests {
     use super::*;
 
     #[test]
-    fn タイトル変化はウィンドウ要素のものだけを通す() {
-        assert!(should_signal(AX_TITLE_CHANGED, Some("AXWindow")));
-        assert!(!should_signal(AX_TITLE_CHANGED, Some("AXButton")));
-        assert!(!should_signal(AX_TITLE_CHANGED, None));
+    fn タイトル変化はウィンドウ要素のものだけを再取得に回す() {
+        assert!(route(AX_TITLE_CHANGED, Some("AXWindow")).refresh);
+        assert!(!route(AX_TITLE_CHANGED, Some("AXButton")).refresh);
+        assert!(!route(AX_TITLE_CHANGED, None).refresh);
+        assert!(!route(AX_TITLE_CHANGED, Some("AXWindow")).adjust);
     }
 
     #[test]
-    fn タイトル変化以外の通知は常に通す() {
-        assert!(should_signal("AXWindowCreated", None));
-        assert!(should_signal("AXUIElementDestroyed", None));
-        assert!(should_signal("AXFocusedWindowChanged", Some("AXButton")));
+    fn その他の通知は再取得だけに回す() {
+        for n in [
+            "AXUIElementDestroyed",
+            "AXFocusedWindowChanged",
+            "AXWindowMiniaturized",
+        ] {
+            assert_eq!(
+                route(n, None),
+                Route {
+                    refresh: true,
+                    adjust: false
+                },
+                "{n}"
+            );
+        }
+    }
+
+    #[test]
+    fn 移動とリサイズは重なり回避だけに回す() {
+        for n in [AX_WINDOW_MOVED, AX_WINDOW_RESIZED] {
+            assert_eq!(
+                route(n, None),
+                Route {
+                    refresh: false,
+                    adjust: true
+                },
+                "{n}"
+            );
+        }
+    }
+
+    #[test]
+    fn ウィンドウ生成は両方に回す() {
+        assert_eq!(
+            route(AX_WINDOW_CREATED, None),
+            Route {
+                refresh: true,
+                adjust: true
+            }
+        );
     }
 
     #[test]

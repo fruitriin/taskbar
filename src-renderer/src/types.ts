@@ -38,6 +38,10 @@ export type Store = {
     appOrder?: string[]
     headers: string[]
     footers: string[]
+    /** タスクバーと重なるウィンドウを自動で避けさせる（既定 true） */
+    autoAvoidTaskbarOverlap: boolean
+    /** 重なり回避の対象がフルスクリーンなら解除してから避ける（既定 false） */
+    exitFullScreenToAvoidTaskbar: boolean
   }
   filters?: unknown[]
   labeledFilters: LabeledFilters[]

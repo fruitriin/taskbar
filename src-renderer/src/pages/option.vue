@@ -38,6 +38,35 @@
           </div>
         </div>
       </div>
+      <div class="avoid-overlap field is-horizontal">
+        <div class="field-label is-normal">
+          <label class="label">重なり回避</label>
+        </div>
+        <div class="field-body">
+          <div class="select">
+            <select v-model="options.autoAvoidTaskbarOverlap">
+              <option :value="true">タスクバーと重なるウィンドウを避ける</option>
+              <option :value="false">避けない</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="options.autoAvoidTaskbarOverlap"
+        class="avoid-overlap-fullscreen field is-horizontal"
+      >
+        <div class="field-label is-normal">
+          <label class="label">フルスクリーン</label>
+        </div>
+        <div class="field-body">
+          <div class="select">
+            <select v-model="options.exitFullScreenToAvoidTaskbar">
+              <option :value="false">触らない</option>
+              <option :value="true">解除して避ける（フルスクリーンにできなくなります）</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="sort-rule field is-horizontal">
         <div class="field-label">
           <label class="label">並べ替えルール</label>
@@ -249,7 +278,9 @@ const defaultOptions: Options = {
   windowSortByPositionInApp: false,
   appOrder: [],
   headers: [],
-  footers: []
+  footers: [],
+  autoAvoidTaskbarOverlap: true,
+  exitFullScreenToAvoidTaskbar: false
 }
 const options = ref<Options>({ ...defaultOptions, ...window.store?.options })
 const sortRule = ref<Array<{ name: 'headers' | 'footers'; label: string }>>([
