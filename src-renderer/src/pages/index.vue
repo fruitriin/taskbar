@@ -1,5 +1,7 @@
 <template>
-  <div :class="options.layout">
+  <!-- 余白の右クリック: フルスクリーンを避ける・設定のメニュー。タスクボタンの右クリックは
+       .stop で止めているので、ここに届くのはタスク以外の場所だけ -->
+  <div :class="options.layout" @contextmenu.prevent="openTaskbarMenu">
     <div style="display: flex">
       <div class="icon-area" @click="openMenu">
         <img :src="icon" style="height: 40px" />
@@ -23,7 +25,7 @@
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
         @click="acticveWindow(win)"
-        @click.right.prevent="test(win)"
+        @click.right.prevent.stop="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">
@@ -51,7 +53,7 @@
           :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
           class="button task"
           @click="onTaskClick(win)"
-          @click.right.prevent="test(win)"
+          @click.right.prevent.stop="test(win)"
         >
           <img class="icon" :src="win.appIcon" />
           <div v-if="win.kCGWindowName" class="name">
@@ -65,7 +67,7 @@
         :key="win.kCGWindowOwnerPID + win.kCGWindowNumber"
         class="button task"
         @click="acticveWindow(win)"
-        @click.right.prevent="test(win)"
+        @click.right.prevent.stop="test(win)"
       >
         <img class="icon" :src="win.appIcon" />
         <div v-if="win.kCGWindowName" class="name">
@@ -453,6 +455,13 @@ function dumpTaskbarInfo(): void {
 
 function openMenu(): void {
   ipcSend('contextLogo')
+}
+
+function openTaskbarMenu(): void {
+  // ドラッグ中の右クリックでネイティブメニューを出すと、モーダル中に pointerup が
+  // 届かずドラッグ状態が残りうるため無視する
+  if (dragApp.value) return
+  ipcSend('contextTaskbar')
 }
 
 function acticveWindow(win: MacWindow): void {

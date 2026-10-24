@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'bun:test'
 import {
   sortWindowsInApp,
+  sameJson,
   groupWindowsByApp,
   chunkIntoGroups,
   moveApp,
@@ -301,5 +302,22 @@ describe('rectsSeparated', () => {
     })
     expect(rectsSeparated(vRect(20), vRect(40), false)).toBe(false) // 20-60 と 40-80 は重なる
     expect(rectsSeparated(vRect(0), vRect(40), false)).toBe(true)
+  })
+})
+
+describe('sameJson', () => {
+  it('キーの順序が違っても同じ値なら等しい', () => {
+    expect(
+      sameJson(
+        { a: 1, b: [1, 2], c: { x: true, y: 'z' } },
+        { c: { y: 'z', x: true }, b: [1, 2], a: 1 }
+      )
+    ).toBe(true)
+  })
+  it('値が違えば等しくない', () => {
+    expect(sameJson({ a: 1, b: true }, { a: 1, b: false })).toBe(false)
+  })
+  it('配列の順序は区別する', () => {
+    expect(sameJson({ list: [1, 2] }, { list: [2, 1] })).toBe(false)
   })
 })

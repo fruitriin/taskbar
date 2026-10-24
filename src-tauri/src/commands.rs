@@ -20,6 +20,7 @@
 //! | openSystemPreferences | open_system_preferences|
 //! | contextLogo           | context_logo           |
 //! | contextTask           | context_task           |
+//! | contextTaskbar        | context_taskbar        |
 //! | openOption            | open_option            |
 //! | openFullWindowList    | open_full_window_list  |
 //! | closeMenu             | close_menu             |
@@ -467,7 +468,14 @@ pub async fn context_task(
                 win.owner_pid, win.window_number
             )
         })?;
-    context_menu::show(&app, window, authoritative)
+    context_menu::show(&app, window, Some(authoritative))
+}
+
+/// タスクのない余白の右クリックメニュー（フルスクリーンを避ける・設定）。
+/// Plan: context-menu-adjustments.md（Electron 原本には無い Tauri 版の追加コマンド）
+#[tauri::command]
+pub fn context_taskbar(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+    context_menu::show(&app, window, None)
 }
 
 /// メニューウィンドウを閉じる。

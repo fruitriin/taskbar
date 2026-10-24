@@ -5,11 +5,16 @@
 //!
 //! Electron 原本: src/main/funcs/events.ts:211-266（contextTask）＋
 //! moveAreaMenu / deleteFromAreaMenu / updateOptions（events.ts:270-308）。
-//! メニュー項目は原本と同じ4つ:
-//! 1. 先頭へ追加 / 先頭から削除（options.headers トグル）
-//! 2. 末尾へ追加 / 末尾から削除（options.footers トグル）
+//! タスク上の右クリックのメニュー項目（原本の4つ＋共通項目）:
+//! 1. 先頭にピン留め / 先頭のピン留めを外す（options.headers トグル）
+//! 2. 末尾にピン留め / 末尾のピン留めを外す（options.footers トグル）
 //! 3. 閉じる（activate → close）
 //! 4. 強制終了（SIGTERM。原本の process.kill(pid) と同じシグナル）
+//! 5. （セパレータの下）フルスクリーンを避ける（options.exitFullScreenToAvoidTaskbar のトグル）
+//! 6. 設定（設定画面を開く）
+//!
+//! タスクのない余白の右クリックでは 5・6 だけを出す（commands::context_taskbar）。
+//! Plan: .claude/addf/plans/context-menu-adjustments.md
 //!
 //! スレッド設計メモ:
 //! - tauri のメニュー API は内部で `run_item_main_thread!`（main thread へ
@@ -28,7 +33,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::store::{self, Options};
@@ -41,6 +46,8 @@ pub const MENU_ID_HEADERS: &str = "context-task-headers";
 pub const MENU_ID_FOOTERS: &str = "context-task-footers";
 pub const MENU_ID_CLOSE: &str = "context-task-close";
 pub const MENU_ID_KILL: &str = "context-task-kill";
+pub const MENU_ID_AVOID_FULL_SCREEN: &str = "context-task-avoid-full-screen";
+pub const MENU_ID_SETTINGS: &str = "context-task-settings";
 
 /// コンテキストメニューの状態。lib.rs の setup で `app.manage()` する。
 ///
@@ -93,8 +100,8 @@ pub fn toggle_area(options: &mut Options, owner: &str, area: Area) {
 /// メニュー項目のラベル（原本 events.ts:294 の position < 0 ? へ追加 : から削除）
 pub fn item_label(options: &Options, owner: &str, area: Area) -> &'static str {
     let (list, add, remove) = match area {
-        Area::Headers => (&options.headers, "先頭へ追加", "先頭から削除"),
-        Area::Footers => (&options.footers, "末尾へ追加", "末尾から削除"),
+        Area::Headers => (&options.headers, "先頭にピン留め", "先頭のピン留めを外す"),
+        Area::Footers => (&options.footers, "末尾にピン留め", "末尾のピン留めを外す"),
     };
     if list.iter().any(|name| name == owner) {
         remove
@@ -103,9 +110,23 @@ pub fn item_label(options: &Options, owner: &str, area: Area) -> &'static str {
     }
 }
 
-/// コンテキストメニューを表示する（commands::context_task から呼ばれる）。
+/// 「フルスクリーンを避ける」項目の状態（チェック, 有効）。
+/// 重なり回避そのものがオフのときは効かないので無効表示にする
+pub fn avoid_full_screen_state(options: &Options) -> (bool, bool) {
+    (
+        options.exit_full_screen_to_avoid_taskbar,
+        options.auto_avoid_taskbar_overlap,
+    )
+}
+
+/// コンテキストメニューを表示する（commands::context_task / context_taskbar から呼ばれる）。
+/// `win` が None ならタスクのない余白のメニュー（共通項目だけ）を出す。
 /// メニュー構築と popup を main thread に投げ、即座に return する
-pub fn show(app: &AppHandle, window: tauri::WebviewWindow, win: MacWindow) -> Result<(), String> {
+pub fn show(
+    app: &AppHandle,
+    window: tauri::WebviewWindow,
+    win: Option<MacWindow>,
+) -> Result<(), String> {
     let app_for_task = app.clone();
     app.run_on_main_thread(move || {
         if let Err(e) = show_on_main_thread(&app_for_task, &window, win) {
@@ -119,28 +140,44 @@ pub fn show(app: &AppHandle, window: tauri::WebviewWindow, win: MacWindow) -> Re
 fn show_on_main_thread(
     app: &AppHandle,
     window: &tauri::WebviewWindow,
-    win: MacWindow,
+    win: Option<MacWindow>,
 ) -> Result<(), String> {
     let options = store::get_options(app)?;
-    let owner = &win.owner_name;
 
-    let headers_item =
-        MenuItemBuilder::with_id(MENU_ID_HEADERS, item_label(&options, owner, Area::Headers))
+    let (checked, enabled) = avoid_full_screen_state(&options);
+    let avoid_item =
+        CheckMenuItemBuilder::with_id(MENU_ID_AVOID_FULL_SCREEN, "フルスクリーンを避ける")
+            .checked(checked)
+            .enabled(enabled)
             .build(app)
             .map_err(|e| e.to_string())?;
-    let footers_item =
-        MenuItemBuilder::with_id(MENU_ID_FOOTERS, item_label(&options, owner, Area::Footers))
-            .build(app)
-            .map_err(|e| e.to_string())?;
-    let close_item = MenuItemBuilder::with_id(MENU_ID_CLOSE, "閉じる")
-        .build(app)
-        .map_err(|e| e.to_string())?;
-    let kill_item = MenuItemBuilder::with_id(MENU_ID_KILL, "強制終了")
+    let settings_item = MenuItemBuilder::with_id(MENU_ID_SETTINGS, "設定")
         .build(app)
         .map_err(|e| e.to_string())?;
 
-    let menu = MenuBuilder::new(app)
-        .items(&[&headers_item, &footers_item, &close_item, &kill_item])
+    let mut builder = MenuBuilder::new(app);
+    if let Some(win) = &win {
+        let owner = &win.owner_name;
+        let headers_item =
+            MenuItemBuilder::with_id(MENU_ID_HEADERS, item_label(&options, owner, Area::Headers))
+                .build(app)
+                .map_err(|e| e.to_string())?;
+        let footers_item =
+            MenuItemBuilder::with_id(MENU_ID_FOOTERS, item_label(&options, owner, Area::Footers))
+                .build(app)
+                .map_err(|e| e.to_string())?;
+        let close_item = MenuItemBuilder::with_id(MENU_ID_CLOSE, "閉じる")
+            .build(app)
+            .map_err(|e| e.to_string())?;
+        let kill_item = MenuItemBuilder::with_id(MENU_ID_KILL, "強制終了")
+            .build(app)
+            .map_err(|e| e.to_string())?;
+        builder = builder
+            .items(&[&headers_item, &footers_item, &close_item, &kill_item])
+            .separator();
+    }
+    let menu = builder
+        .items(&[&avoid_item, &settings_item])
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -151,8 +188,9 @@ fn show_on_main_thread(
         return Ok(());
     }
     // 項目選択時に on_menu_event ハンドラが参照する対象を popup 前に保存する
+    // （余白のメニューでは None。前回の取り残しを持ち越さないよう必ず上書きする）
     match state.target.lock() {
-        Ok(mut guard) => *guard = Some(win),
+        Ok(mut guard) => *guard = win,
         Err(_) => {
             state.menu_open.store(false, Ordering::SeqCst);
             return Err("ContextTaskState mutex poisoned".to_string());
@@ -173,7 +211,12 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
     let id = event.id().0.as_str();
     if !matches!(
         id,
-        MENU_ID_HEADERS | MENU_ID_FOOTERS | MENU_ID_CLOSE | MENU_ID_KILL
+        MENU_ID_HEADERS
+            | MENU_ID_FOOTERS
+            | MENU_ID_CLOSE
+            | MENU_ID_KILL
+            | MENU_ID_AVOID_FULL_SCREEN
+            | MENU_ID_SETTINGS
     ) {
         return;
     }
@@ -187,6 +230,22 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
             return;
         }
     };
+
+    // 共通項目は対象ウィンドウを使わない（余白のメニューでも選ばれる）
+    match id {
+        MENU_ID_AVOID_FULL_SCREEN => {
+            toggle_avoid_full_screen(app);
+            return;
+        }
+        MENU_ID_SETTINGS => {
+            if let Err(e) = crate::commands::open_option(app.clone()) {
+                log::warn!("context_task 設定を開けなかった: {e}");
+            }
+            return;
+        }
+        _ => {}
+    }
+
     let Some(win) = target else {
         log::warn!("context_task menu event without target window: {id}");
         return;
@@ -228,6 +287,21 @@ fn toggle_and_notify(app: &AppHandle, owner: &str, area: Area) {
     })();
     if let Err(e) = result {
         log::warn!("context_task {area:?} トグルに失敗: {e}");
+    }
+}
+
+/// 「フルスクリーンを避ける」（exitFullScreenToAvoidTaskbar）を反転して保存し、
+/// 'updateOptions' を emit する（設定画面を開いていれば表示も追従する）
+fn toggle_avoid_full_screen(app: &AppHandle) {
+    let result = (|| -> Result<(), String> {
+        let mut options = store::get_options(app)?;
+        options.exit_full_screen_to_avoid_taskbar = !options.exit_full_screen_to_avoid_taskbar;
+        store::set_options(app, &options)?;
+        app.emit("updateOptions", &options)
+            .map_err(|e| format!("failed to emit 'updateOptions': {e}"))
+    })();
+    if let Err(e) = result {
+        log::warn!("context_task フルスクリーンを避けるの切り替えに失敗: {e}");
     }
 }
 
@@ -325,14 +399,20 @@ mod tests {
         let options = options_with(&["Finder"], &["Safari"]);
         assert_eq!(
             item_label(&options, "Finder", Area::Headers),
-            "先頭から削除"
+            "先頭のピン留めを外す"
         );
-        assert_eq!(item_label(&options, "Safari", Area::Headers), "先頭へ追加");
+        assert_eq!(
+            item_label(&options, "Safari", Area::Headers),
+            "先頭にピン留め"
+        );
         assert_eq!(
             item_label(&options, "Safari", Area::Footers),
-            "末尾から削除"
+            "末尾のピン留めを外す"
         );
-        assert_eq!(item_label(&options, "Finder", Area::Footers), "末尾へ追加");
+        assert_eq!(
+            item_label(&options, "Finder", Area::Footers),
+            "末尾にピン留め"
+        );
     }
 
     fn make_window(pid: i64) -> MacWindow {
@@ -376,5 +456,15 @@ mod tests {
         let result = force_terminate(&make_window(0x7FFF_FFF0));
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("SIGTERM"));
+    }
+
+    #[test]
+    fn フルスクリーンを避ける項目は設定値でチェックし_重なり回避オフなら無効() {
+        let mut options = Options::default();
+        assert_eq!(avoid_full_screen_state(&options), (false, true));
+        options.exit_full_screen_to_avoid_taskbar = true;
+        assert_eq!(avoid_full_screen_state(&options), (true, true));
+        options.auto_avoid_taskbar_overlap = false;
+        assert_eq!(avoid_full_screen_state(&options), (true, false));
     }
 }

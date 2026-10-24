@@ -205,3 +205,25 @@ export const Electron = {
     ipcSend(channel, ...args)
   }
 }
+
+/**
+ * 2 つの値が JSON として等しいか（オブジェクトのキー順は無視する）。
+ * 設定画面が 'updateOptions' を受けたとき、自分が送った値の echo を無視する等価性ガードに使う
+ */
+export function sameJson(a: unknown, b: unknown): boolean {
+  return canonicalJson(a) === canonicalJson(b)
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) => {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const record = v as Record<string, unknown>
+      return Object.fromEntries(
+        Object.keys(record)
+          .sort()
+          .map((k) => [k, record[k]])
+      )
+    }
+    return v
+  })
+}

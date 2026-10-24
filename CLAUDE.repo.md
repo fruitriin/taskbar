@@ -115,7 +115,7 @@ Playwright MCP でブラウザ上の UI 動作を自動テストできます。
 
 ### Rust Backend (src-tauri/src/)
 
-- `commands.rs` - Tauri コマンド22本（フロントの旧 IPC チャンネルとの対応表コメント付き）
+- `commands.rs` - Tauri コマンド23本（フロントの旧 IPC チャンネルとの対応表コメント付き）
 - `window_manager.rs` - CGWindowList によるウィンドウ列挙
 - `filter.rs` - ウィンドウフィルタ判定
 - `window_observer.rs` - NSWorkspace 通知 → 500ms デバウンス → `process` emit

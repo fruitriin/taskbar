@@ -260,6 +260,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // Electron はテンプレートからも参照される（send は ipc.ts へ委譲済み）
 import { Electron } from '../utils'
 import { ipcInvoke, ipcListen, ipcSend } from '../composables/ipc'
+import { sameJson } from '../utils'
 import type { LabeledFilters } from '../types'
 import type { Options } from '../composables/useOptions'
 import draggable from 'vuedraggable'
@@ -267,11 +268,12 @@ import AddFilter from '../components/AddFilter.vue'
 import PermissionStatus from '../components/PermissionStatus.vue'
 
 const drag = ref(false)
-// 注意: useOptions には接続しない。現状 optionWindow は 'updateOptions' の
-// ブロードキャスト対象外（main/funcs/events.ts は taskbars にのみ送信）なので echo は
-// 発生しないが、useOptions は内部で ipcListen('updateOptions') を張るため、将来
-// optionWindow を配信対象に加えると本 watch と組み合わさり無限ループになる。
-// 結線する際は等価性ガードとセットで設計すること（レビュー 2026-07-06 で配線を検証済み）
+// 注意: useOptions には接続しない（useOptions の購読は等価性ガードを持たないため）。
+// Tauri 版の 'updateOptions' は全ウィンドウへのブロードキャストで、設定画面にも届く。
+// 右クリックメニュー等で設定が変わったときに表示を追従させるため onMounted で購読するが、
+// 本 watch の setOptions → バックエンドの 'updateOptions' → 受信 の echo で無限ループに
+// ならないよう、受信値が現在値と等しければ代入しない（sameJson による等価性ガード）。
+// 追従させないと、設定画面で別の項目を触ったときに古い値がストアへ書き戻される
 // Tauri 実行時は preload の window.store が無いため、デフォルト＋onMounted の invoke で初期化する
 const defaultOptions: Options = {
   layout: 'bottom',
@@ -477,6 +479,7 @@ function saveEditCondition(): void {
 }
 
 let unlistenFiltersUpdated: (() => void) | undefined
+let unlistenOptionsUpdated: (() => void) | undefined
 
 onMounted(async () => {
   // Tauri 実行時（window.store なし）は初期値を invoke で取得する。
@@ -490,6 +493,12 @@ onMounted(async () => {
       console.error('[option] 初期設定の取得に失敗:', e)
     }
   }
+  // 右クリックメニュー等で変わった設定を表示に反映する（echo は等価性ガードで止める）
+  unlistenOptionsUpdated = ipcListen<Options>('updateOptions', (updated) => {
+    if (!sameJson(updated, options.value)) {
+      options.value = { ...defaultOptions, ...updated }
+    }
+  })
   // fullWindowListからのフィルター追加を受け取る
   unlistenFiltersUpdated = ipcListen<LabeledFilters[]>('labeledFiltersUpdated', (updated) => {
     labeledFilters.value = [...updated]
@@ -499,6 +508,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   // 解除関数ペア方式（removeAllListeners は他のリスナーを巻き込むため使わない）
   unlistenFiltersUpdated?.()
+  unlistenOptionsUpdated?.()
 })
 </script>
 <style>

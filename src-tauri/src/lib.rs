@@ -33,6 +33,7 @@ pub fn run() {
             commands::open_system_preferences,
             commands::context_logo,
             commands::context_task,
+            commands::context_taskbar,
             commands::open_option,
             commands::open_full_window_list,
             commands::close_menu,
